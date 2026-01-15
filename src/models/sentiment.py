@@ -1,32 +1,34 @@
-import torch
-from transformers import pipeline
-
-
 class SentimentAnalyzer:
     """
-    Vietnamese Sentiment Analyzer with safety and performance optimizations.
-    Handles text truncation and error handling to prevent crashes.
+    Lightweight Vietnamese Sentiment Analyzer (no heavy ML dependencies).
+    Uses keyword-based heuristics for fast, memory-efficient sentiment analysis.
     """
 
     def __init__(self):
-        print("⏳ Loading Sentiment Model (this may take a while first time)...")
-        try:
-            # Use Vietnamese-specific model from Hugging Face
-            self.pipe = pipeline(
-                "sentiment-analysis",
-                model="wonrax/phobert-base-vietnamese-sentiment",
-                device=(
-                    0 if torch.cuda.is_available() else -1
-                ),  # GPU if available, else CPU
-            )
-            print("✅ Sentiment Model Loaded Successfully")
-        except Exception as e:
-            print(f"⚠️  Error loading sentiment model: {e}")
-            self.pipe = None
+        print("✅ Sentiment Model Ready (lightweight keyword-based)")
+        
+        # Vietnamese sentiment keywords
+        self.positive_keywords = {
+            'tuyệt vời', 'tốt', 'yêu thích', 'xuất sắc', 'tuyệt',
+            'hay', 'giỏi', 'đỉnh', 'thích', 'tốt lắm', 'perfect',
+            'tuyệt đỉnh', 'hài lòng', 'vui', 'mê', 'mười điểm',
+            'like', 'love', 'awesome', 'excellent', 'great',
+            'wonderful', 'fantastic', 'beautiful', 'brilliant',
+            'good', 'best', 'amazing', 'nice', 'brilliant'
+        }
+        
+        self.negative_keywords = {
+            'tệ', 'xấu', 'ghét', 'tồi', 'không tốt', 'tệ quá',
+            'kinh khủng', 'khủng khiếp', 'tệ hại', 'phí', 'lỗi',
+            'vô dụng', 'cáu', 'buồn', 'tức giận', 'thất vọng',
+            'hate', 'bad', 'terrible', 'awful', 'horrible', 
+            'poor', 'worst', 'sad', 'angry', 'disappointed',
+            'disgusting', 'pathetic', 'useless', 'waste'
+        }
 
     def analyze(self, text):
         """
-        Analyze sentiment of Vietnamese text.
+        Analyze sentiment of Vietnamese text using keywords.
 
         Args:
             text (str): Input text to analyze
@@ -35,46 +37,34 @@ class SentimentAnalyzer:
             dict: Contains 'label' and 'score' keys
         """
         try:
-            if not text or not self.pipe:
+            if not text:
                 return {"label": "Neutral", "score": 0.0}
 
-            # SAFETY: Truncate text to prevent memory overflow
-            # Max 512 tokens is safe for transformer models
-            max_chars = 256  # Approximately 256 tokens
-            truncated_text = text[:max_chars]
-
-            if not truncated_text.strip():
-                return {"label": "Neutral", "score": 0.0}
-
-            # Run sentiment analysis
-            result = self.pipe(truncated_text)[0]
-
-            # Map model labels to readable format
-            label_map = {
-                "POS": "Positive",
-                "NEG": "Negative",
-                "NEU": "Neutral",
-                "POSITIVE": "Positive",
-                "NEGATIVE": "Negative",
-                "NEUTRAL": "Neutral",
-            }
-
-            clean_label = label_map.get(result["label"], result["label"])
-            confidence = round(result["score"], 2)
-
-            return {"label": clean_label, "score": confidence}
-
-        except RuntimeError as e:
-            # Handle CUDA or memory errors
-            if "out of memory" in str(e).lower():
-                print(f"⚠️  Out of memory: {str(e)}")
-                return {"label": "Neutral", "score": 0.0}
+            # Convert to lowercase for matching
+            text_lower = text.lower()
+            
+            # Count positive and negative keywords
+            positive_count = sum(1 for word in self.positive_keywords if word in text_lower)
+            negative_count = sum(1 for word in self.negative_keywords if word in text_lower)
+            
+            # Determine sentiment based on keyword counts
+            if positive_count > negative_count > 0:
+                # Mixed but more positive
+                score = 0.5 + (positive_count / (positive_count + negative_count)) * 0.5
+                return {"label": "Positive", "score": min(score, 1.0)}
+            elif negative_count > positive_count > 0:
+                # Mixed but more negative
+                score = 1.0 - (negative_count / (positive_count + negative_count)) * 0.5
+                return {"label": "Negative", "score": min(score, 1.0)}
+            elif positive_count > 0:
+                return {"label": "Positive", "score": min(0.5 + positive_count * 0.1, 1.0)}
+            elif negative_count > 0:
+                return {"label": "Negative", "score": min(0.5 + negative_count * 0.1, 1.0)}
             else:
-                print(f"⚠️  Runtime error in sentiment analysis: {e}")
-                return {"label": "Neutral", "score": 0.0}
+                return {"label": "Neutral", "score": 0.5}
 
         except Exception as e:
-            # Catch all other errors and return safe default
+            # Return safe default on any error
             print(f"⚠️  Error analyzing sentiment: {e}")
             return {"label": "Neutral", "score": 0.0}
 
@@ -84,3 +74,4 @@ if __name__ == "__main__":
     analyzer = SentimentAnalyzer()
     print(analyzer.analyze("Sản phẩm này tệ quá, phí tiền!"))  # Should be Negative
     print(analyzer.analyze("Tuyệt vời, tôi rất yêu thích!"))  # Should be Positive
+    print(analyzer.analyze("Bình thường thôi"))  # Should be Neutral
