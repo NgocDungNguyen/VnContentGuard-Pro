@@ -9,13 +9,10 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Model fallback chain - ordered by preference (only verified available models)
+# Model fallback chain - only REAL available models for v1beta API
 MODEL_FALLBACK_CHAIN = [
-    "gemini-2.0-flash",  # Latest flash model (2025)
-    "gemini-2.0-flash-lite",  # Lightweight variant
-    "gemini-2.0-pro",  # Pro model
-    "gemini-1.5-flash",  # Reliable older model
-    "gemini-1.5-pro",  # Pro older model
+    "gemini-1.5-flash",  # Best for speed and cost
+    "gemini-1.5-pro",  # Best for accuracy
     "gemini-pro",  # Legacy fallback
 ]
 
