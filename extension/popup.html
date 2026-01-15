@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h2>🛡️ VnContentGuard</h2>
+        <div id="status" class="status-badge">Ready to Scan</div>
+        
+        <button id="scanBtn" class="btn-primary">🚀 SCAN THIS PAGE</button>
+        
+        <div id="confirmation" class="hidden">
+            <div class="card">
+                <h3>📋 Confirm Scan</h3>
+                <div style="font-size: 12px; margin-bottom: 10px;">
+                    <strong>📍 Link:</strong>
+                    <div id="confirmUrl" style="font-size: 10px; color: #666; word-break: break-all; margin: 4px 0;"></div>
+                    <strong style="display: block; margin-top: 8px;">📝 Preview:</strong>
+                    <div id="confirmPreview" style="background: #f9f9f9; padding: 8px; border-radius: 3px; font-size: 11px; max-height: 80px; overflow-y: auto; margin: 4px 0;"></div>
+                    <strong style="display: block; margin-top: 8px;">💬 Comments: <span id="confirmComments">0</span></strong>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button id="confirmYes" class="btn-primary" style="flex: 1; margin: 0; padding: 8px;">✅ Scan</button>
+                    <button id="confirmNo" class="btn-secondary" style="flex: 1; padding: 8px;">❌ Cancel</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- WARNING MODAL FOR FLAGGED CONTENT -->
+        <div id="warningModal" class="hidden warning-overlay">
+            <div class="warning-box">
+                <div class="warning-header">⚠️ CONTENT WARNING</div>
+                <div id="warningContent" class="warning-content"></div>
+                <div class="warning-buttons">
+                    <button id="warningContinue" class="btn-primary">✅ Continue Reading</button>
+                    <button id="warningLeave" class="btn-secondary">❌ Go Back to Site</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="results" class="hidden">
+            <div class="card">
+                <h3>🎭 Sentiment</h3>
+                <div id="sentimentStatus" class="card-content">...</div>
+            </div>
+
+            <div class="card">
+                <h3>📰 Fact Check</h3>
+                <div id="fakeStatus" class="card-content">Waiting...</div>
+                <div id="fakeSummary" class="details"></div>
+            </div>
+            
+            <div class="card">
+                <h3>💬 Toxicity Detection Results</h3>
+                <div id="toxicStatus" class="card-content">Waiting...</div>
+                <div id="toxicDetails" class="details"></div>
+                <div id="toxicFindings" class="findings"></div>
+            </div>
+
+            <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px; text-align: center;">
+                <button id="clearCache" class="btn-secondary" style="width: 100%; padding: 8px;">🗑️ Clear Cached Results</button>
+            </div>
+        </div>
+
+        <div id="errorBox" class="hidden">
+            <div class="error-title">❌ Error</div>
+            <div id="errorMessage" class="card-content"></div>
+            <button id="retryBtn" class="btn-secondary" style="margin-top: 10px;">Retry</button>
+        </div>
+    </div>
+    <script src="popup.js"></script>
+</body>
+</html>
