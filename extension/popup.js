@@ -136,7 +136,7 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
 
     try {
         // Send to API
-        const response = await fetch("http://localhost:8000/analyze/full_scan", {
+        const response = await fetch("https://vncontentguard-pro.onrender.com/analyze/full_scan", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
