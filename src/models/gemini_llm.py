@@ -9,11 +9,11 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Model fallback chain - only REAL available models for v1beta API
+# Model fallback chain - ONLY models available in v1beta API (google.generativeai package)
+# Note: Newer models require google-genai package instead
 MODEL_FALLBACK_CHAIN = [
-    "gemini-1.5-flash",  # Best for speed and cost
-    "gemini-1.5-pro",  # Best for accuracy
-    "gemini-pro",  # Legacy fallback
+    "gemini-pro",  # Only model reliably available in v1beta
+    "gemini-pro-vision",  # Fallback with vision support
 ]
 
 
