@@ -9,19 +9,14 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Model fallback chain - ordered by preference
+# Model fallback chain - ordered by preference (only verified available models)
 MODEL_FALLBACK_CHAIN = [
-    "gemini-3-flash",  # Newer flash model
-    "gemini-2.5-flash-8b",  # 8B parameter variant
-    "gemini-2.5-flash-tts",  # Multi-modal with TTS
-    "gemini-1.5-flash",  # Older but reliable
-    "gemini-robotics-er-1.5-preview",  # Specialized robotics model
-    "gemma-3-27b",  # Largest Gemma model
-    "gemma-3-12b",  # Large Gemma model
-    "gemma-3-4b",  # Medium Gemma model
-    "gemma-3-2b",  # Small Gemma model
-    "gemma-3-1b",  # Smallest Gemma model
-    "gemini-pro",  # Last resort
+    "gemini-2.0-flash",  # Latest flash model (2025)
+    "gemini-2.0-flash-lite",  # Lightweight variant
+    "gemini-2.0-pro",  # Pro model
+    "gemini-1.5-flash",  # Reliable older model
+    "gemini-1.5-pro",  # Pro older model
+    "gemini-pro",  # Legacy fallback
 ]
 
 
