@@ -581,14 +581,7 @@ function renderResults(data, urlInfo) {
     const hasToxicity = toxicity.toxic_count > 0;
     const isRisky = isFakeNews || isNegativeSentiment || hasToxicity;
 
-    // ===== IF RISKY, SHOW WARNING MODAL INSTEAD OF RESULTS =====
-    if (isRisky) {
-        showWarningModal(fake, sentiment, toxicity);
-        // Don't render results yet - wait for user to click "Continue"
-        return;
-    }
-
-    // ===== IF SAFE, SHOW RESULTS NORMALLY =====
+    // ===== ALWAYS SHOW RESULTS FIRST (don't return) =====
     document.getElementById('results').classList.remove('hidden');
 
     // Sentiment
@@ -662,6 +655,13 @@ function renderResults(data, urlInfo) {
     }
 
     console.log("✅ Rendered");
+
+    // ===== SHOW WARNING MODAL AFTER RESULTS ARE RENDERED (10-15 second delay) =====
+    if (isRisky) {
+        setTimeout(() => {
+            showWarningModal(fake, sentiment, toxicity);
+        }, 12000); // 12 second delay for user to read results
+    }
 }
 
 // ============================================================================
