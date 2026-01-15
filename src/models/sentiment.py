@@ -1,77 +1,45 @@
-class SentimentAnalyzer:
-    """
-    Lightweight Vietnamese Sentiment Analyzer (no heavy ML dependencies).
-    Uses keyword-based heuristics for fast, memory-efficient sentiment analysis.
-    """
+import google.generativeai as genai
+import os
+import re
+import json
+from dotenv import load_dotenv
 
+load_dotenv()
+API_KEY = os.getenv("GEMINI_API_KEY")
+
+
+class SentimentAnalyzer:
     def __init__(self):
-        print("✅ Sentiment Model Ready (lightweight keyword-based)")
-        
-        # Vietnamese sentiment keywords
-        self.positive_keywords = {
-            'tuyệt vời', 'tốt', 'yêu thích', 'xuất sắc', 'tuyệt',
-            'hay', 'giỏi', 'đỉnh', 'thích', 'tốt lắm', 'perfect',
-            'tuyệt đỉnh', 'hài lòng', 'vui', 'mê', 'mười điểm',
-            'like', 'love', 'awesome', 'excellent', 'great',
-            'wonderful', 'fantastic', 'beautiful', 'brilliant',
-            'good', 'best', 'amazing', 'nice', 'brilliant'
-        }
-        
-        self.negative_keywords = {
-            'tệ', 'xấu', 'ghét', 'tồi', 'không tốt', 'tệ quá',
-            'kinh khủng', 'khủng khiếp', 'tệ hại', 'phí', 'lỗi',
-            'vô dụng', 'cáu', 'buồn', 'tức giận', 'thất vọng',
-            'hate', 'bad', 'terrible', 'awful', 'horrible', 
-            'poor', 'worst', 'sad', 'angry', 'disappointed',
-            'disgusting', 'pathetic', 'useless', 'waste'
-        }
+        if not API_KEY:
+            print("⚠️ No API Key for Sentiment!")
+        else:
+            genai.configure(api_key=API_KEY)
+            self.model = genai.GenerativeModel("gemini-1.5-flash")
 
     def analyze(self, text):
-        """
-        Analyze sentiment of Vietnamese text using keywords.
-
-        Args:
-            text (str): Input text to analyze
-
-        Returns:
-            dict: Contains 'label' and 'score' keys
-        """
-        try:
-            if not text:
-                return {"label": "Neutral", "score": 0.0}
-
-            # Convert to lowercase for matching
-            text_lower = text.lower()
-            
-            # Count positive and negative keywords
-            positive_count = sum(1 for word in self.positive_keywords if word in text_lower)
-            negative_count = sum(1 for word in self.negative_keywords if word in text_lower)
-            
-            # Determine sentiment based on keyword counts
-            if positive_count > negative_count > 0:
-                # Mixed but more positive
-                score = 0.5 + (positive_count / (positive_count + negative_count)) * 0.5
-                return {"label": "Positive", "score": min(score, 1.0)}
-            elif negative_count > positive_count > 0:
-                # Mixed but more negative
-                score = 1.0 - (negative_count / (positive_count + negative_count)) * 0.5
-                return {"label": "Negative", "score": min(score, 1.0)}
-            elif positive_count > 0:
-                return {"label": "Positive", "score": min(0.5 + positive_count * 0.1, 1.0)}
-            elif negative_count > 0:
-                return {"label": "Negative", "score": min(0.5 + negative_count * 0.1, 1.0)}
-            else:
-                return {"label": "Neutral", "score": 0.5}
-
-        except Exception as e:
-            # Return safe default on any error
-            print(f"⚠️  Error analyzing sentiment: {e}")
+        if not text:
             return {"label": "Neutral", "score": 0.0}
 
+        try:
+            # Ask Gemini to do the work. It is smarter than keywords.
+            prompt = f"""
+            Analyze the sentiment of this Vietnamese text: "{text[:1000]}"
+            Classify as: Positive, Negative, or Neutral.
+            Provide a confidence score (0.0 to 1.0).
+            
+            Return ONLY JSON:
+            {{ "label": "String", "score": Float }}
+            """
 
-# Test
-if __name__ == "__main__":
-    analyzer = SentimentAnalyzer()
-    print(analyzer.analyze("Sản phẩm này tệ quá, phí tiền!"))  # Should be Negative
-    print(analyzer.analyze("Tuyệt vời, tôi rất yêu thích!"))  # Should be Positive
-    print(analyzer.analyze("Bình thường thôi"))  # Should be Neutral
+            response = self.model.generate_content(prompt)
+            clean_res = re.sub(r"```json|```", "", response.text).strip()
+            data = json.loads(clean_res)
+
+            return {
+                "label": data.get("label", "Neutral"),
+                "score": data.get("score", 0.0),
+            }
+        except Exception as e:
+            print(f"Sentiment Error: {e}")
+            # Fallback
+            return {"label": "Neutral", "score": 0.0}
