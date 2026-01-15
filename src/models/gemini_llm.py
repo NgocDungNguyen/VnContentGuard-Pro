@@ -11,8 +11,6 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 
 # Model fallback chain - ordered by preference
 MODEL_FALLBACK_CHAIN = [
-    "gemini-2.5-flash-lite",  # Primary: Lightweight, fast
-    "gemini-2.5-flash",  # Secondary: Full flash model
     "gemini-3-flash",  # Newer flash model
     "gemini-2.5-flash-8b",  # 8B parameter variant
     "gemini-2.5-flash-tts",  # Multi-modal with TTS
