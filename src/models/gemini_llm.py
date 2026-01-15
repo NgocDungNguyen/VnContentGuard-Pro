@@ -9,11 +9,18 @@ from dotenv import load_dotenv
 load_dotenv()
 API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Model fallback chain - ONLY models available in v1beta API (google.generativeai package)
-# Note: Newer models require google-genai package instead
+# Model fallback chain - Updated with available models from Google AI Studio
+# Ordered by quota availability and reliability
 MODEL_FALLBACK_CHAIN = [
-    "gemini-pro",  # Only model reliably available in v1beta
-    "gemini-pro-vision",  # Fallback with vision support
+    "gemini-2.5-flash",  # Has 3/5 quota - primary
+    "gemini-2.5-flash-lite",  # Has quota
+    "gemini-3-flash",  # Has 0/5 quota
+    "gemini-2.5-flash-tts",  # Has quota
+    "gemma-3-4b",  # Has 0/30 quota
+    "gemma-3-12b",  # Has 0/30 quota
+    "gemma-3-27b",  # Has 0/30 quota
+    "gemini-robotics-er-1.5-preview",  # Has quota
+    "gemini-pro",  # Fallback v1beta
 ]
 
 
