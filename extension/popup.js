@@ -135,7 +135,7 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
     btn.textContent = '⏳ Analyzing...';
 
     try {
-        // Send to API
+        // Send to API (CLOUD - Production ready)
         const response = await fetch("https://vncontentguard-pro.onrender.com/analyze/full_scan", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
