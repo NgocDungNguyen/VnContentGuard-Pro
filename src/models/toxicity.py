@@ -216,7 +216,7 @@ class ToxicityAnalyzer:
             ),
             # 20. THREATS & INTIMIDATION
             (
-                r"\b(tao giết|tao đánh|coi chừng|ra đường cẩn thận|biết bố mày là ai không|gọi hội|xử mày|đập nát|đốt nhà|xin cái tay|xin cái chân)\b",
+                r"\b(tao giết|tao đánh|ra đường cẩn thận|biết bố mày là ai không|gọi hội|xử mày|đập nát|đốt nhà|xin cái tay|xin cái chân)\b",
                 "Threat: Violent Intent",
             ),
             (
