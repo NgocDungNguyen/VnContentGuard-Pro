@@ -22,7 +22,7 @@ All critical components have been checked and verified for:
 - **Status**: READY (keys exhausted today, resets tomorrow UTC 00:00)
 - **Total Keys**: 10
 - **Capacity**: 200 requests/day (20 per key × 10)
-- **Model**: gemini-2.0-flash-exp
+- **Model**: gemini-2.5-flash-lite
 - **Fallback**: Graceful message when exhausted
 - **Auto-Reset**: Daily at UTC midnight
 
@@ -199,7 +199,7 @@ curl https://vncontentguard-pro.onrender.com/health
 - [x] 10 API keys configured
 - [x] Daily reset tracking implemented
 - [x] Request counting per key
-- [x] Model: gemini-2.0-flash-exp (free tier compatible)
+- [x] Model: gemini-2.5-flash-lite (free tier compatible, 20 RPD)
 
 ### Frontend ✓
 - [x] Extension manifest V3 valid

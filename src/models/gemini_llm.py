@@ -28,7 +28,7 @@ if not any(API_KEY_POOL):
     API_KEY_POOL = [os.getenv("GEMINI_API_KEY", "")]
 
 # Model configuration
-MODEL_NAME = "gemini-2.5-flash"  # Updated to available model (20 RPD limit)
+MODEL_NAME = "gemini-2.5-flash-lite"  # Optimized model (20 RPD limit, 10 RPM)
 
 
 class APIKeyRotator:

@@ -205,7 +205,7 @@ for ($i=1; $i -le 25; $i++) {
 ### Gemini API Configuration
 - [x] **10 API keys** from Google AI Studio
 - [x] **All keys active** and not expired
-- [x] **Model**: gemini-2.0-flash-exp (free tier compatible)
+- [x] **Model**: gemini-2.5-flash-lite (free tier compatible, 20 RPD)
 - [x] **Quota tracking** per key
 - [x] **Daily reset** at UTC midnight
 - [x] **Fallback message** when exhausted
