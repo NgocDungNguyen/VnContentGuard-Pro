@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "VnContentGuard Pro",
-  "version": "2.1",
+  "version": "2.2",
   "description": "AI-powered Vietnamese content safety scanner. Detects fake news, toxicity, and analyzes sentiment in real-time.",
   "permissions": [
     "activeTab",
