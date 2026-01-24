@@ -1,222 +1,311 @@
 import json
 import os
 import re
-
-import google.generativeai as genai
+from datetime import datetime, timedelta
+from typing import Optional, Dict, List
+from google import genai
 from dotenv import load_dotenv
 
-# Load API Key
+# Load API Keys
 load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
 
-# Model fallback chain - Updated with available models from Google AI Studio
-# Ordered by quota availability and reliability
-MODEL_FALLBACK_CHAIN = [
-    "gemini-2.5-flash",  # Has 3/5 quota - primary
-    "gemini-2.5-flash-lite",  # Has quota
-    "gemini-3-flash",  # Has 0/5 quota
-    "gemini-2.5-flash-tts",  # Has quota
-    "gemma-3-4b",  # Has 0/30 quota
-    "gemma-3-12b",  # Has 0/30 quota
-    "gemma-3-27b",  # Has 0/30 quota
-    "gemini-robotics-er-1.5-preview",  # Has quota
-    "gemini-pro",  # Fallback v1beta
+# Multi-API-Key Pool (10 projects)
+API_KEY_POOL = [
+    "AIzaSyDLfQQbPwVYeUvfCkGczdJhU0WGoW-sgEs",  # Content 1
+    "AIzaSyDYQSjLMkBfW7-c7oxKo56lzZy7_Tr_gho",  # Content 2
+    "AIzaSyATGhcYa2velyCNJiiMBfVpHYU2DueYhTI",  # Content 3
+    "AIzaSyDqGCabMYCEEFKcWATsQGtnXmJolEUcZSQ",  # Content 4
+    "AIzaSyDxeWVz_BDO5qejavpjyxgh39OCFm6IGis",  # Content 5
+    "AIzaSyB6FJdtVCO1l4rQwuP-RCo-eURCx4CxIKw",  # Content 6
+    "AIzaSyAIAV_k7cBwNMbk3Upc5rddcIluq5sebjQ",  # Content 7
+    "AIzaSyAnBV7TAjuOiGISrvcLaPvaLyRb2zjxKfU",  # Content 8
+    "AIzaSyDnRJMsAgM6SRJUhTNeSVpR3qbt7JFNKX4",  # Content 9
+    "AIzaSyD7infwFhcu_ZdbLsbs0v9mDa7q0PLT5aE",  # Content 10
 ]
+
+# Fallback to environment variable if pool is empty
+if not any(API_KEY_POOL):
+    API_KEY_POOL = [os.getenv("GEMINI_API_KEY", "")]
+
+# Model configuration
+MODEL_NAME = "gemini-2.0-flash-exp"  # Best model for free tier
+
+
+class APIKeyRotator:
+    """
+    Intelligent API Key Rotation System
+    - Automatically switches to next key when quota exhausted
+    - Tracks exhausted keys
+    - Resets daily (quota resets at UTC midnight)
+    """
+    
+    def __init__(self, api_keys: List[str]):
+        self.api_keys = [key for key in api_keys if key and key.strip()]
+        self.current_index = 0
+        self.exhausted_keys = set()
+        self.last_reset_date = datetime.utcnow().date()
+        self.request_counts = {i: 0 for i in range(len(self.api_keys))}
+        
+        if not self.api_keys:
+            raise ValueError("❌ No valid API keys provided!")
+        
+        print(f"✅ API Key Rotator initialized with {len(self.api_keys)} keys")
+    
+    def _check_daily_reset(self):
+        """Check if we need to reset exhausted keys (new day in UTC)"""
+        current_date = datetime.utcnow().date()
+        if current_date > self.last_reset_date:
+            print(f"🔄 Daily reset: Clearing exhausted keys")
+            self.exhausted_keys.clear()
+            self.request_counts = {i: 0 for i in range(len(self.api_keys))}
+            self.last_reset_date = current_date
+            self.current_index = 0
+    
+    def get_current_key(self) -> Optional[str]:
+        """Get the current API key"""
+        self._check_daily_reset()
+        
+        if self.current_index in self.exhausted_keys:
+            # Current key exhausted, try to find next available
+            if not self._rotate_to_next_available():
+                return None
+        
+        return self.api_keys[self.current_index]
+    
+    def mark_key_exhausted(self):
+        """Mark current API key as exhausted and rotate to next"""
+        print(f"🚫 API Key #{self.current_index + 1} exhausted (used {self.request_counts[self.current_index]} times)")
+        self.exhausted_keys.add(self.current_index)
+        
+        if not self._rotate_to_next_available():
+            print("❌ All API keys exhausted! Waiting for daily reset...")
+            return False
+        return True
+    
+    def _rotate_to_next_available(self) -> bool:
+        """Rotate to next available (non-exhausted) key"""
+        start_index = self.current_index
+        
+        for _ in range(len(self.api_keys)):
+            self.current_index = (self.current_index + 1) % len(self.api_keys)
+            
+            if self.current_index not in self.exhausted_keys:
+                print(f"🔄 Switched to API Key #{self.current_index + 1}")
+                return True
+            
+            # Avoid infinite loop
+            if self.current_index == start_index:
+                break
+        
+        return False
+    
+    def increment_request_count(self):
+        """Track successful request"""
+        self.request_counts[self.current_index] += 1
+    
+    def get_status(self) -> Dict:
+        """Get current status of all keys"""
+        return {
+            "total_keys": len(self.api_keys),
+            "current_key": self.current_index + 1,
+            "exhausted_count": len(self.exhausted_keys),
+            "available_count": len(self.api_keys) - len(self.exhausted_keys),
+            "request_counts": self.request_counts,
+            "last_reset": self.last_reset_date.isoformat()
+        }
 
 
 class GeminiAgent:
+    """
+    Advanced Gemini Agent with:
+    - Multi-API-key rotation
+    - Intelligent quota handling
+    - Static fallbacks
+    - New google-genai package
+    """
+    
     def __init__(self):
-        if not API_KEY:
-            raise ValueError("❌ No API Key found in .env file!")
-
-        genai.configure(api_key=API_KEY)
-
-        # Try models in fallback order
-        self.model = None
-        self.current_model_name = None
-        self.failed_models = set()
-        self.retry_count = 0  # Track retry attempts
-        self.max_retries = 5  # Prevent infinite loops
-
-        for model_name in MODEL_FALLBACK_CHAIN:
-            try:
-                test_model = genai.GenerativeModel(model_name)
-                self.model = test_model
-                self.current_model_name = model_name
-                print(f"✅ Using model: {model_name}")
-                break
-            except Exception as e:
-                self.failed_models.add(model_name)
-                print(f"⚠️  {model_name} not available: {e}")
-                continue
-
-        if not self.model:
-            raise ValueError("❌ No Gemini models available!")
-
-    def _try_next_model(self, skip_current=True):
-        """
-        Switch to the next available model in the fallback chain.
-
-        Args:
-            skip_current (bool): If True, skip the current model
-
-        Returns:
-            bool: True if successfully switched to a new model, False if no models left
-        """
-        for model_name in MODEL_FALLBACK_CHAIN:
-            # Skip the current model and previously failed models
-            if skip_current and model_name == self.current_model_name:
-                continue
-            if model_name in self.failed_models:
-                continue
-
-            try:
-                new_model = genai.GenerativeModel(model_name)
-                self.model = new_model
-                self.current_model_name = model_name
-                print(f"🔄 Switched to model: {model_name}")
-                return True
-            except Exception as e:
-                self.failed_models.add(model_name)
-                print(f"⚠️  Failed to switch to {model_name}: {e}")
-                continue
-
+        # Initialize key rotator
+        self.key_rotator = APIKeyRotator(API_KEY_POOL)
+        self.client: Optional[genai.Client] = None
+        self.model_name = MODEL_NAME
+        
+        # Initialize with first key
+        self._initialize_client()
+        
+        # Retry configuration
+        self.max_retries = len(API_KEY_POOL)  # Try all keys before giving up
+        self.retry_count = 0
+    
+    def _initialize_client(self) -> bool:
+        """Initialize Gemini client with current API key"""
+        try:
+            api_key = self.key_rotator.get_current_key()
+            if not api_key:
+                print("❌ No available API keys")
+                return False
+            
+            self.client = genai.Client(api_key=api_key)
+            print(f"✅ Gemini client initialized with API Key #{self.key_rotator.current_index + 1}")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Failed to initialize Gemini client: {e}")
+            return False
+    
+    def _is_quota_error(self, error: Exception) -> bool:
+        """Check if error is quota/rate limit related"""
+        error_str = str(error).lower()
+        quota_indicators = [
+            "429",
+            "quota",
+            "exceeded",
+            "rate limit",
+            "too many requests",
+            "resource_exhausted",
+            "resourceexhausted"
+        ]
+        return any(indicator in error_str for indicator in quota_indicators)
+    
+    def _rotate_key_and_retry(self) -> bool:
+        """Rotate to next API key and reinitialize client"""
+        if self.key_rotator.mark_key_exhausted():
+            return self._initialize_client()
         return False
-
-    def check_fake_news(self, article_text):
+    
+    def check_fake_news(self, article_text: str) -> str:
         """
-        Analyze article for misinformation with 2026 date context.
-        Automatically falls back to alternative models if quota exceeded.
-
-        Args:
-            article_text (str): The article text to analyze
-
-        Returns:
-            str: JSON string with analysis results
+        Analyze article for misinformation with API key rotation.
         """
-        if not self.model:
-            return '{"risk_score": 0, "verdict": "Service Unavailable", "summary": "Model not loaded"}'
-
-        # CRITICAL: Inject 2026 date context to prevent false positives on future events
+        if not self.client:
+            return self._get_fallback_fake_news()
+        
+        # Truncate to save tokens
+        max_chars = 5000
+        if len(article_text) > max_chars:
+            print(f"⚠️ Article too long ({len(article_text)} chars), truncating to {max_chars}")
+            article_text = article_text[:max_chars]
+        
+        # Build prompt
         prompt = f"""You are a professional Fact Checker specializing in Vietnamese content.
 
-ESSENTIAL CONTEXT: Today is January 15, 2026.
-- Events from 2024-2025 are HISTORICAL FACTS - evaluate them normally
-- Events dated 2026 are CURRENT or FUTURE - do NOT automatically flag them as fake
-- Accept 2026 events as potentially legitimate unless they contradict known facts
+ESSENTIAL CONTEXT: Today is January 24, 2026.
+- Events from 2024-2025 are HISTORICAL FACTS
+- Events dated 2026 are CURRENT - do NOT flag them as fake
+- Accept 2026 events unless they contradict known facts
 
-ARTICLE TO ANALYZE:
-"{article_text[:2000]}"
+Analyze this article and determine if it's reliable or potentially fake news.
 
-TASK:
-1. Assess if this content is reliable, opinionated, or misinformation
-2. Consider the 2026 date context - do not penalize future-dated claims
-3. Provide a 1-sentence summary
+ARTICLE:
+{article_text}
 
-RESPONSE (VALID JSON ONLY, NO MARKDOWN):
+Return ONLY a JSON object (no markdown):
 {{
     "risk_score": (1-10 integer, 1=Safe, 10=Definitely Fake),
     "verdict": ("Reliable", "Opinion Piece", or "Likely Fake"),
     "summary": "One sentence assessment"
 }}"""
-
-        try:
-            response = self.model.generate_content(prompt)
-            raw_text = response.text
-
-            # Clean markdown formatting if present
-            clean_text = re.sub(r"```json\s*", "", raw_text)  # Remove ```json
-            clean_text = re.sub(r"```\s*", "", clean_text)  # Remove trailing ```
-            clean_text = clean_text.strip()
-
-            # Validate JSON before returning
+        
+        # Retry with key rotation
+        for attempt in range(self.max_retries):
             try:
-                json.loads(clean_text)  # Test if valid JSON
-                return clean_text
-            except json.JSONDecodeError:
-                # If JSON is invalid, try to extract it
-                return self._extract_json(clean_text)
-
-        except Exception as e:
-            error_msg = str(e).lower()
-            error_full = str(e)
-            print(f"❌ Current model ({self.current_model_name}) error: {error_full}")
-
-            # Check if it's a quota/rate limit error
-            is_quota_error = (
-                "429" in error_full
-                or "quota" in error_msg
-                or "exceeded" in error_msg
-                or "rate limit" in error_msg
-                or "too many requests" in error_msg
-            )
-
-            # If quota error, try next model
-            if is_quota_error:
-                print(
-                    f"⚠️  Quota limit reached for {self.current_model_name}. Trying alternative models..."
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt
                 )
-
-                # Mark current model as failed to prevent infinite loop
-                self.failed_models.add(self.current_model_name)
-                print(
-                    f"🚫 Marked {self.current_model_name} as failed (quota exhausted)"
-                )
-
-                # Increment retry counter
-                self.retry_count += 1
-
-                # Check if we've exceeded max retries
-                if self.retry_count > self.max_retries:
-                    print(f"❌ Max retries ({self.max_retries}) exceeded!")
-                    raise Exception(
-                        "All Gemini models have exceeded their quota limits. Please try again later."
-                    )
-
-                if self._try_next_model(skip_current=True):
-                    print(
-                        f"🔄 Retrying with {self.current_model_name}... (Attempt {self.retry_count}/{self.max_retries})"
-                    )
-                    # Recursively retry with new model
-                    return self.check_fake_news(article_text)
+                
+                # Track successful request
+                self.key_rotator.increment_request_count()
+                
+                # Extract text
+                if hasattr(response, 'text') and response.text:
+                    raw_text = response.text
+                    clean_text = re.sub(r"```json\s*", "", raw_text)
+                    clean_text = re.sub(r"```\s*", "", clean_text)
+                    clean_text = clean_text.strip()
+                    
+                    # Validate JSON
+                    try:
+                        json.loads(clean_text)
+                        return clean_text
+                    except json.JSONDecodeError:
+                        return self._extract_json(clean_text)
+                
+            except Exception as e:
+                error_msg = str(e)
+                print(f"❌ Attempt {attempt + 1}/{self.max_retries} failed: {error_msg[:100]}")
+                
+                # Check if quota error
+                if self._is_quota_error(e):
+                    print(f"⚠️ Quota exceeded for API Key #{self.key_rotator.current_index + 1}")
+                    
+                    # Try to rotate to next key
+                    if self._rotate_key_and_retry():
+                        print(f"🔄 Retrying with API Key #{self.key_rotator.current_index + 1}...")
+                        continue
+                    else:
+                        # All keys exhausted
+                        print("❌ All API keys exhausted!")
+                        return self._get_fallback_fake_news()
                 else:
-                    print("❌ All models exhausted their quota!")
-                    raise Exception(
-                        "All Gemini models have exceeded their quota limits. Please try again later."
-                    )
-
-            # If it's not a quota error, just re-raise
-            raise e
-
-    def _extract_json(self, text):
-        """
-        Attempt to extract valid JSON from malformed responses.
-
-        Args:
-            text (str): Response text that may contain JSON
-
-        Returns:
-            str: Valid JSON string or error response
-        """
+                    # Non-quota error, return fallback
+                    print(f"❌ Non-quota error: {error_msg[:100]}")
+                    return self._get_fallback_fake_news()
+        
+        # Max retries reached
+        return self._get_fallback_fake_news()
+    
+    def _get_fallback_fake_news(self) -> str:
+        """Return safe fallback when all API keys exhausted"""
+        return json.dumps({
+            "risk_score": 5,
+            "verdict": "Unable to Verify",
+            "summary": "AI verification temporarily unavailable due to high demand. Please verify source credibility manually and check official news sources."
+        })
+    
+    def _extract_json(self, text: str) -> str:
+        """Extract JSON from messy text"""
         try:
-            # Find JSON object boundaries
-            start = text.find("{")
-            end = text.rfind("}") + 1
-            if start >= 0 and end > start:
-                json_str = text[start:end]
+            # Try to find JSON pattern
+            json_match = re.search(r'\{[^{}]*"risk_score"[^{}]*\}', text, re.DOTALL)
+            if json_match:
+                json_str = json_match.group(0)
                 json.loads(json_str)  # Validate
                 return json_str
         except:
             pass
+        
+        return self._get_fallback_fake_news()
+    
+    def get_status(self) -> Dict:
+        """Get current status of API key rotation"""
+        return self.key_rotator.get_status()
 
-        # Return safe default if extraction fails
-        return '{"risk_score": 5, "verdict": "Unable to process", "summary": "Could not analyze content"}'
 
-
+# Test function
 if __name__ == "__main__":
+    print("=" * 80)
+    print("Testing Multi-API-Key Gemini Agent")
+    print("=" * 80)
+    
     agent = GeminiAgent()
-    if agent.model:
-        test_result = agent.check_fake_news(
-            "Công ty XYZ sẽ phát hành sản phẩm mới vào tháng 6 năm 2026."
-        )
-        print("Test Result:", test_result)
+    
+    # Show initial status
+    print("\n📊 Initial Status:")
+    status = agent.get_status()
+    print(json.dumps(status, indent=2))
+    
+    # Test with sample article
+    test_article = """
+    Breaking News: Thủ tướng Phạm Minh Chính công bố kế hoạch phát triển AI Việt Nam 2026.
+    Chính phủ sẽ đầu tư 10 tỷ USD vào nghiên cứu trí tuệ nhân tạo trong 5 năm tới.
+    """
+    
+    print("\n🧪 Testing fake news detection...")
+    result = agent.check_fake_news(test_article)
+    print(f"\nResult:\n{result}")
+    
+    # Show final status
+    print("\n📊 Final Status:")
+    status = agent.get_status()
+    print(json.dumps(status, indent=2))

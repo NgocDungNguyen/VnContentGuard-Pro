@@ -135,20 +135,49 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
     btn.textContent = '⏳ Analyzing...';
 
     try {
-        // Send to API (CLOUD - Production ready)
-        const response = await fetch("https://vncontentguard-pro.onrender.com/analyze/full_scan", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                url: currentTabUrl,
-                article_text: scannedDataCache.text,
-                comments: scannedDataCache.comments
-            }),
-            timeout: 30000
-        });
+        // AUTO-DETECT: Try localhost first (for local testing), fallback to cloud
+        const API_ENDPOINTS = [
+            "http://127.0.0.1:8000/analyze/full_scan",     // Local server (try first)
+            "http://localhost:8000/analyze/full_scan",      // Alternative localhost
+            "https://vncontentguard-pro.onrender.com/analyze/full_scan"  // Cloud (fallback)
+        ];
 
-        if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
+        let response = null;
+        let lastError = null;
+        
+        for (const endpoint of API_ENDPOINTS) {
+            try {
+                console.log(`🔄 Trying: ${endpoint}`);
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout for local
+                
+                response = await fetch(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        url: currentTabUrl,
+                        article_text: scannedDataCache.text,
+                        comments: scannedDataCache.comments
+                    }),
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    console.log(`✅ Connected to: ${endpoint}`);
+                    break; // Success! Stop trying other endpoints
+                }
+            } catch (err) {
+                console.log(`❌ Failed: ${endpoint} (${err.message})`);
+                lastError = err;
+                response = null;
+                // Continue to next endpoint
+            }
+        }
+
+        if (!response || !response.ok) {
+            throw new Error(lastError?.message || "All API endpoints failed");
         }
 
         const data = await response.json();

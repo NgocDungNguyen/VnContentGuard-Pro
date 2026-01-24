@@ -3,6 +3,12 @@
   "name": "VnContentGuard Pro",
   "version": "2.1",
   "description": "AI-powered Vietnamese content safety scanner. Detects fake news, toxicity, and analyzes sentiment in real-time.",
+  "icons": {
+    "16": "icons/icon-128.png",
+    "32": "icons/icon-128.png",
+    "48": "icons/icon-128.png",
+    "128": "icons/icon-128.png"
+  },
   "permissions": [
     "activeTab",
     "scripting",
@@ -11,6 +17,7 @@
   "host_permissions": [
     "http://localhost:8000/*",
     "http://127.0.0.1:8000/*",
+    "https://vncontentguard-pro.onrender.com/*",
     "https://*.facebook.com/*",
     "https://*.vnexpress.net/*",
     "https://*.dantri.com.vn/*",
@@ -18,6 +25,12 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "VnContentGuard Pro - Safety Scan"
+    "default_title": "VnContentGuard Pro - Safety Scan",
+    "default_icon": {
+      "16": "icons/icon-128.png",
+      "32": "icons/icon-128.png",
+      "48": "icons/icon-128.png",
+      "128": "icons/icon-128.png"
+    }
   }
 }

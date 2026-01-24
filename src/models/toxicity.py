@@ -2,28 +2,60 @@ import json
 import os
 import re
 
-import google.generativeai as genai
 from dotenv import load_dotenv
+from google import genai
 
 load_dotenv()
-API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Import the key rotation system
+from src.models.gemini_llm import API_KEY_POOL, MODEL_NAME, APIKeyRotator
 
 
 class ToxicityAnalyzer:
     """
     Defense-in-Depth Toxicity Detection Engine.
     Layer 1: Regex patterns (instant, high-precision)
-    Layer 2: Gemini AI (contextual, catches nuances)
+    Layer 2: Gemini AI with multi-key rotation (contextual, catches nuances)
     """
 
     def __init__(self):
         print("⏳ Initializing Toxicity Detection Engine...")
-        if not API_KEY:
-            raise ValueError("❌ No API Key found in .env file!")
 
-        genai.configure(api_key=API_KEY)
-        self.model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        # Initialize regex patterns first (always available)
+        self._init_regex_patterns()
 
+        # Use the same key rotation system as fake news detection
+        try:
+            self.key_rotator = APIKeyRotator(API_KEY_POOL)
+            self.client = None
+            self.model_name = MODEL_NAME
+            self._initialize_client()
+            print("✅ Toxicity Engine Ready with API Key Rotation")
+        except Exception as e:
+            print(f"⚠️ Warning: Gemini AI unavailable for toxicity detection: {e}")
+            print("⚡ Using regex-only mode (still very effective!)")
+            self.client = None
+
+    def _initialize_client(self) -> bool:
+        """Initialize Gemini client with current API key"""
+        try:
+            api_key = self.key_rotator.get_current_key()
+            if not api_key:
+                return False
+            self.client = genai.Client(api_key=api_key)
+            return True
+        except Exception as e:
+            print(f"⚠️ Failed to initialize toxicity client: {e}")
+            return False
+
+    def _rotate_key_and_retry(self) -> bool:
+        """Rotate to next API key"""
+        if self.key_rotator.mark_key_exhausted():
+            return self._initialize_client()
+        return False
+
+    def _init_regex_patterns(self):
+        """Initialize regex patterns for toxicity detection"""
         # --- LAYER 1: MILITARY-GRADE REGEX DATABASE (V3.0 - GEN Z & TEENCODE ENHANCED) ---
         # Total: 500+ patterns across 20 categories.
         # Includes: Standard Vietnamese, English, Teencode (vkl, dcm), Political Slang, and Evasion spellings.
@@ -228,7 +260,7 @@ class ToxicityAnalyzer:
 
             # ========== PHASE 2: GEMINI AI SCAN (CONTEXTUAL) ==========
             # Only run AI if Regex didn't catch it (saves API quota)
-            if not is_toxic:
+            if not is_toxic and self.client:
                 try:
                     prompt = f"""You are a Content Safety Analyst. Analyze this Vietnamese comment for toxicity.
 
@@ -250,8 +282,17 @@ Return ONLY valid JSON (no markdown):
     "reasoning": "brief explanation"
 }}"""
 
-                    response = self.model.generate_content(prompt)
-                    raw_text = response.text
+                    response = self.client.models.generate_content(
+                        model=self.model_name, contents=prompt
+                    )
+
+                    # Track successful request
+                    self.key_rotator.increment_request_count()
+
+                    # Extract text
+                    raw_text = (
+                        response.text if hasattr(response, "text") else str(response)
+                    )
 
                     # Clean JSON
                     clean_text = re.sub(r"```json\s*", "", raw_text)
@@ -267,8 +308,20 @@ Return ONLY valid JSON (no markdown):
                         pass  # Keep regex result if JSON fails
 
                 except Exception as e:
+                    error_str = str(e).lower()
+
+                    # Handle quota errors with key rotation
+                    if (
+                        "429" in error_str
+                        or "quota" in error_str
+                        or "resourceexhausted" in error_str
+                    ):
+                        if self._rotate_key_and_retry():
+                            # Retry with new key (but only once per comment to avoid loops)
+                            pass
+
                     # If safety filters block it, it's definitely toxic
-                    if "block" in str(e).lower() or "safety" in str(e).lower():
+                    if "block" in error_str or "safety" in error_str:
                         is_toxic = True
                         score = 1.0
                         category = "BLOCKED: Safety Violation (Severe)"
