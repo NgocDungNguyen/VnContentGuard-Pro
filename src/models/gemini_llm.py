@@ -10,22 +10,26 @@ from google import genai
 # Load API Keys
 load_dotenv()
 
-# Multi-API-Key Pool (10 projects)
+# Multi-API-Key Pool (10 projects) - Load from environment variables ONLY
 API_KEY_POOL = [
-    "AIzaSyDLfQQbPwVYeUvfCkGczdJhU0WGoW-sgEs",  # Content 1
-    "AIzaSyDYQSjLMkBfW7-c7oxKo56lzZy7_Tr_gho",  # Content 2
-    "AIzaSyATGhcYa2velyCNJiiMBfVpHYU2DueYhTI",  # Content 3
-    "AIzaSyDqGCabMYCEEFKcWATsQGtnXmJolEUcZSQ",  # Content 4
-    "AIzaSyDxeWVz_BDO5qejavpjyxgh39OCFm6IGis",  # Content 5
-    "AIzaSyB6FJdtVCO1l4rQwuP-RCo-eURCx4CxIKw",  # Content 6
-    "AIzaSyAIAV_k7cBwNMbk3Upc5rddcIluq5sebjQ",  # Content 7
-    "AIzaSyAnBV7TAjuOiGISrvcLaPvaLyRb2zjxKfU",  # Content 8
-    "AIzaSyDnRJMsAgM6SRJUhTNeSVpR3qbt7JFNKX4",  # Content 9
-    "AIzaSyD7infwFhcu_ZdbLsbs0v9mDa7q0PLT5aE",  # Content 10
+    os.getenv("GEMINI_API_KEY"),
+    os.getenv("GEMINI_API_KEY_2"),
+    os.getenv("GEMINI_API_KEY_3"),
+    os.getenv("GEMINI_API_KEY_4"),
+    os.getenv("GEMINI_API_KEY_5"),
+    os.getenv("GEMINI_API_KEY_6"),
+    os.getenv("GEMINI_API_KEY_7"),
+    os.getenv("GEMINI_API_KEY_8"),
+    os.getenv("GEMINI_API_KEY_9"),
+    os.getenv("GEMINI_API_KEY_10"),
 ]
 
-# Fallback to environment variable if pool is empty
-if not any(API_KEY_POOL):
+# Filter out None values
+API_KEY_POOL = [key for key in API_KEY_POOL if key]
+
+if not API_KEY_POOL:
+    raise ValueError("❌ No API keys found! Please set GEMINI_API_KEY_* in environment variables or .env file")
+
     API_KEY_POOL = [os.getenv("GEMINI_API_KEY", "")]
 
 # Model configuration
