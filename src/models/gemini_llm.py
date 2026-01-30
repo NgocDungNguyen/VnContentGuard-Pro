@@ -28,7 +28,9 @@ API_KEY_POOL = [
 API_KEY_POOL = [key for key in API_KEY_POOL if key]
 
 if not API_KEY_POOL:
-    raise ValueError("❌ No API keys found! Please set GEMINI_API_KEY_* in environment variables or .env file")
+    raise ValueError(
+        "❌ No API keys found! Please set GEMINI_API_KEY_* in environment variables or .env file"
+    )
 
     API_KEY_POOL = [os.getenv("GEMINI_API_KEY", "")]
 
