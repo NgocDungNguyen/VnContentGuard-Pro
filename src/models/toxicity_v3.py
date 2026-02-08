@@ -198,9 +198,19 @@ class ToxicityAnalyzerV3:
             return None
 
     def _analyze_perspective(self, text: str) -> Optional[Dict]:
-        """Analyze using Google Perspective API"""
+        """Analyze using Google Perspective API (English text only)"""
         if not self.perspective_api_key:
             return None
+
+        # Skip for Vietnamese text — Perspective doesn't support Vietnamese well
+        # even with languages=["en"]. Only use for English-dominant text.
+        import re as _re
+        vietnamese_chars = _re.search(
+            r'[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]',
+            text.lower()
+        )
+        if vietnamese_chars:
+            return None  # Skip — Perspective can't handle Vietnamese
 
         try:
             import requests

@@ -505,10 +505,30 @@ def _analyze_comments_v31(
             print(f"✅ [v3.1] Batch cache hit ({len(still_ambiguous)} comments)")
             all_results.extend(cached)
         else:
-            batch_results = _batch_gemini_analyze(still_ambiguous, article_summary)
-            all_results.extend(batch_results)
-            if batch_results:
-                cache_manager.set(cache_key, batch_results)
+            # Process in chunks of 25 (safe token limit) with rate limit sleep
+            import time
+            BATCH_SIZE = 25
+            all_batch_results = []
+
+            for chunk_idx in range(0, len(still_ambiguous), BATCH_SIZE):
+                chunk = still_ambiguous[chunk_idx:chunk_idx + BATCH_SIZE]
+                chunk_num = chunk_idx // BATCH_SIZE + 1
+                total_chunks = (len(still_ambiguous) + BATCH_SIZE - 1) // BATCH_SIZE
+
+                if total_chunks > 1:
+                    print(f"⚡ Batch {chunk_num}/{total_chunks}: Analyzing {len(chunk)} comments...")
+
+                chunk_results = _batch_gemini_analyze(chunk, article_summary)
+                all_batch_results.extend(chunk_results)
+
+                # Rate limit protection: sleep between chunks (10 RPM = ~6s between calls)
+                if chunk_idx + BATCH_SIZE < len(still_ambiguous):
+                    print(f"   ⏳ Rate limit protection: sleeping 7s...")
+                    time.sleep(7)
+
+            all_results.extend(all_batch_results)
+            if all_batch_results:
+                cache_manager.set(cache_key, all_batch_results)
 
     # Calculate stats
     toxic_results = [r for r in all_results if r.get("is_toxic")]
@@ -607,12 +627,15 @@ Quy tắc:
 - Chỉ đánh dấu toxic nếu có ngôn ngữ xúc phạm, đe dọa, hoặc kích động thù hận
 - Trả lời CHỈ JSON array, không thêm gì khác"""
 
+    # Scale tokens based on batch size (~80 tokens per comment result)
+    max_tokens = min(4000, max(800, len(comments) * 100))
+
     response = client.models.generate_content(
         model=MODEL_NAME,
         contents=prompt,
         config=types.GenerateContentConfig(
-            temperature=0.2,
-            max_output_tokens=1500,
+            temperature=0.1,  # Lower = more consistent JSON
+            max_output_tokens=max_tokens,
         ),
     )
 
@@ -627,7 +650,16 @@ Quy tắc:
             raw = raw[4:]
         raw = raw.strip()
 
-    parsed = json.loads(raw)
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        # Try to salvage partial JSON
+        import re as _re
+        match = _re.search(r'\[.*\]', raw, _re.DOTALL)
+        if match:
+            parsed = json.loads(match.group())
+        else:
+            raise
 
     results = []
     for item in parsed:
