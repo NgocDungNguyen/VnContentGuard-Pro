@@ -208,7 +208,7 @@ class ToxicityAnalyzerV3:
             url = f"https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key={self.perspective_api_key}"
             payload = {
                 "comment": {"text": text[:3000]},
-                "languages": ["vi", "en"],
+                "languages": ["en"],  # Vietnamese not supported by any attribute — use English detection
                 "requestedAttributes": {
                     "TOXICITY": {},
                     "SEVERE_TOXICITY": {},

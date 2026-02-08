@@ -429,17 +429,16 @@ def _analyze_comments_v31(
 
     # --- Handle obvious toxic (regex-detected, no API needed) ---
     for comment in filtered["obvious_toxic"]:
-        # Still run full regex analysis to get the category
-        tox_result = toxicity_v3_engine.analyze(comment)
+        # Use regex only — do NOT call .analyze() which triggers Perspective+Gemini
         all_results.append({
             "comment": comment[:200],
             "is_toxic": True,
-            "severity": tox_result.get("severity", "High"),
-            "score": tox_result.get("overall_score", 0.8),
+            "severity": "High",
+            "score": 0.8,
             "sentiment": "negative",
             "method": "regex",
             "reason": "Khớp mẫu ngôn ngữ độc hại đã biết",
-            "categories": tox_result.get("categories", {}),
+            "categories": {},
         })
 
     # --- Handle obvious clean (no API needed) ---
@@ -473,17 +472,24 @@ def _analyze_comments_v31(
     still_ambiguous = []
 
     for comment in ambiguous:
-        tox_result = toxicity_v3_engine.analyze(comment)
-        if tox_result.get("is_toxic"):
+        # Use REGEX ONLY here (not full analyze() which triggers Perspective+Gemini per comment)
+        regex_result = None
+        try:
+            if hasattr(toxicity_v3_engine, 'regex_analyzer') and toxicity_v3_engine.regex_analyzer:
+                regex_result = toxicity_v3_engine._analyze_regex(comment)
+        except Exception:
+            pass
+
+        if regex_result and regex_result.get("is_toxic"):
             all_results.append({
                 "comment": comment[:200],
                 "is_toxic": True,
-                "severity": tox_result.get("severity", "Medium"),
-                "score": tox_result.get("overall_score", 0.6),
+                "severity": "High",
+                "score": 0.8,
                 "sentiment": "negative",
                 "method": "regex",
                 "reason": "Phát hiện bởi regex pattern",
-                "categories": tox_result.get("categories", {}),
+                "categories": {},
             })
             api_calls_saved += 1
         else:
@@ -538,24 +544,54 @@ def _batch_gemini_analyze(
     if not comments:
         return []
 
-    try:
+    # Circuit breaker: check how many keys are left
+    available = len(batch_key_rotator.api_keys) - len(batch_key_rotator.exhausted_keys)
+    if available <= 0:
+        print("⚠️ [v3.1] All API keys exhausted — using regex fallback for batch")
+        return _fallback_results(comments)
+
+    max_batch_attempts = min(3, available)  # Try up to 3 different keys
+    for attempt in range(max_batch_attempts):
         api_key = batch_key_rotator.get_current_key()
         if not api_key:
             print("⚠️ [v3.1] No API key available for batch analysis")
             return _fallback_results(comments)
 
-        client = genai.Client(api_key=api_key)
+        try:
+            return _try_batch_gemini(comments, article_summary, api_key)
+        except Exception as e:
+            error_str = str(e).lower()
+            if "429" in error_str or "quota" in error_str:
+                print(f"⚠️ [v3.1] Batch attempt {attempt+1}/{max_batch_attempts} got 429, rotating key...")
+                batch_key_rotator.mark_key_exhausted()
+                continue
+            else:
+                print(f"⚠️ [v3.1] Batch analysis failed: {e}")
+                return _fallback_results(comments)
 
-        # Build numbered comment list for clear parsing
-        comments_text = "\n".join(
-            f"{i+1}. \"{c[:300]}\"" for i, c in enumerate(comments)
-        )
+    print("⚠️ [v3.1] All batch attempts exhausted — using regex fallback")
+    return _fallback_results(comments)
 
-        context_line = ""
-        if article_summary:
-            context_line = f"Bối cảnh bài báo: {article_summary[:500]}\n\n"
 
-        prompt = f"""{context_line}Phân tích {len(comments)} bình luận sau:
+def _try_batch_gemini(
+    comments: List[str], article_summary: str, api_key: str
+) -> List[dict]:
+    """Execute a single batch Gemini call. Raises on 429 for retry."""
+    from google import genai
+    from google.genai import types
+
+    client = genai.Client(api_key=api_key)
+
+    # Build numbered comment list for clear parsing
+    comments_text = "\n".join(
+        f'{i+1}. "{c[:300]}"' for i, c in enumerate(comments)
+    )
+
+    context_line = ""
+    if article_summary:
+        context_line = f"Bối cảnh bài báo: {article_summary[:500]}\n\n"
+
+    prompt = f"""{context_line}Phân tích {len(comments)} bình luận sau:
 {comments_text}
 
 Với MỖI bình luận, trả lời JSON array:
@@ -571,86 +607,89 @@ Quy tắc:
 - Chỉ đánh dấu toxic nếu có ngôn ngữ xúc phạm, đe dọa, hoặc kích động thù hận
 - Trả lời CHỈ JSON array, không thêm gì khác"""
 
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                temperature=0.2,
-                max_output_tokens=1500,
-            ),
-        )
+    response = client.models.generate_content(
+        model=MODEL_NAME,
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            temperature=0.2,
+            max_output_tokens=1500,
+        ),
+    )
 
-        batch_key_rotator.increment_request_count()
+    batch_key_rotator.increment_request_count()
 
-        # Parse response
-        raw = response.text.strip()
-        # Strip markdown fences if present
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-            raw = raw.strip()
+    # Parse response
+    raw = response.text.strip()
+    # Strip markdown fences if present
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
 
-        parsed = json.loads(raw)
+    parsed = json.loads(raw)
 
-        results = []
-        for item in parsed:
-            idx = item.get("index", 0) - 1
-            comment_text = comments[idx] if 0 <= idx < len(comments) else ""
+    results = []
+    for item in parsed:
+        idx = item.get("index", 0) - 1
+        comment_text = comments[idx] if 0 <= idx < len(comments) else ""
+        results.append({
+            "comment": comment_text[:200],
+            "is_toxic": item.get("is_toxic", False),
+            "severity": item.get("severity", "none").capitalize(),
+            "score": 0.8 if item.get("is_toxic") else 0.1,
+            "sentiment": item.get("sentiment", "neutral"),
+            "method": "gemini_context",
+            "reason": item.get("reason", ""),
+            "categories": {},
+        })
+
+    # If we got fewer results than comments, fill in the rest
+    processed_indices = {item.get("index", 0) - 1 for item in parsed}
+    for i, c in enumerate(comments):
+        if i not in processed_indices:
             results.append({
-                "comment": comment_text[:200],
-                "is_toxic": item.get("is_toxic", False),
-                "severity": item.get("severity", "none").capitalize(),
-                "score": 0.8 if item.get("is_toxic") else 0.1,
-                "sentiment": item.get("sentiment", "neutral"),
+                "comment": c[:200],
+                "is_toxic": False,
+                "severity": "None",
+                "score": 0.0,
+                "sentiment": "neutral",
                 "method": "gemini_context",
-                "reason": item.get("reason", ""),
+                "reason": "Không phát hiện vấn đề",
                 "categories": {},
             })
 
-        # If we got fewer results than comments, fill in the rest
-        processed_indices = {item.get("index", 0) - 1 for item in parsed}
-        for i, c in enumerate(comments):
-            if i not in processed_indices:
-                results.append({
-                    "comment": c[:200],
-                    "is_toxic": False,
-                    "severity": "None",
-                    "score": 0.0,
-                    "sentiment": "neutral",
-                    "method": "gemini_context",
-                    "reason": "Không phát hiện vấn đề",
-                    "categories": {},
-                })
-
-        print(f"✅ [v3.1] Batch analyzed {len(comments)} comments (1 API call)")
-        return results
-
-    except json.JSONDecodeError as e:
-        print(f"⚠️ [v3.1] Batch JSON parse failed: {e}")
-        return _fallback_results(comments)
-    except Exception as e:
-        error_str = str(e).lower()
-        print(f"⚠️ [v3.1] Batch analysis failed: {e}")
-        if "429" in error_str or "quota" in error_str:
-            batch_key_rotator.mark_key_exhausted()
-        return _fallback_results(comments)
+    print(f"✅ [v3.1] Batch analyzed {len(comments)} comments (1 API call)")
+    return results
 
 
 def _fallback_results(comments: List[str]) -> List[dict]:
-    """Fallback: run regex-only analysis on comments when Gemini unavailable."""
+    """Fallback: REGEX ONLY (no Perspective/Gemini API calls) when AI is unavailable."""
     results = []
     for c in comments:
-        tox = toxicity_v3_engine.analyze(c)
+        # Use v2 regex engine DIRECTLY — do NOT call toxicity_v3_engine.analyze()
+        # because that triggers Perspective API + Gemini calls per comment = API storm
+        is_toxic = False
+        score = 0.0
+        severity = "None"
+        try:
+            if hasattr(toxicity_v3_engine, 'regex_analyzer') and toxicity_v3_engine.regex_analyzer:
+                regex_result = toxicity_v3_engine._analyze_regex(c)
+                if regex_result and regex_result.get('is_toxic'):
+                    is_toxic = True
+                    score = 0.8
+                    severity = "High"
+        except Exception:
+            pass
         results.append({
             "comment": c[:200],
-            "is_toxic": tox.get("is_toxic", False),
-            "severity": tox.get("severity", "None"),
-            "score": tox.get("overall_score", 0.0),
+            "is_toxic": is_toxic,
+            "severity": severity,
+            "score": score,
             "sentiment": "neutral",
             "method": "regex_fallback",
             "reason": "AI không khả dụng, dùng regex",
-            "categories": tox.get("categories", {}),
+            "categories": {},
         })
     return results
 
