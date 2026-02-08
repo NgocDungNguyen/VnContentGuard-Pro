@@ -10,7 +10,7 @@ from google import genai
 # Load API Keys
 load_dotenv()
 
-# Multi-API-Key Pool (20 projects) - Load from environment variables ONLY
+# Multi-API-Key Pool (30 projects) - Load from environment variables ONLY
 API_KEY_POOL = [
     os.getenv("GEMINI_API_KEY"),
     os.getenv("GEMINI_API_KEY_2"),
@@ -32,6 +32,16 @@ API_KEY_POOL = [
     os.getenv("GEMINI_API_KEY_18"),
     os.getenv("GEMINI_API_KEY_19"),
     os.getenv("GEMINI_API_KEY_20"),
+    os.getenv("GEMINI_API_KEY_21"),
+    os.getenv("GEMINI_API_KEY_22"),
+    os.getenv("GEMINI_API_KEY_23"),
+    os.getenv("GEMINI_API_KEY_24"),
+    os.getenv("GEMINI_API_KEY_25"),
+    os.getenv("GEMINI_API_KEY_26"),
+    os.getenv("GEMINI_API_KEY_27"),
+    os.getenv("GEMINI_API_KEY_28"),
+    os.getenv("GEMINI_API_KEY_29"),
+    os.getenv("GEMINI_API_KEY_30"),
 ]
 
 # Filter out None values
@@ -143,9 +153,9 @@ class GeminiAgent:
     - New google-genai package
     """
 
-    def __init__(self):
-        # Initialize key rotator
-        self.key_rotator = APIKeyRotator(API_KEY_POOL)
+    def __init__(self, key_rotator: "APIKeyRotator | None" = None):
+        # Use shared key rotator if provided, otherwise create own
+        self.key_rotator = key_rotator or APIKeyRotator(API_KEY_POOL)
         self.client: Optional[genai.Client] = None
         self.model_name = MODEL_NAME
 

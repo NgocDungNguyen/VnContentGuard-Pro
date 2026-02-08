@@ -37,23 +37,31 @@ app.add_middleware(
 
 print("⏳ Booting up AI Engine...")
 try:
+    # SINGLE shared key rotator for ALL Gemini calls (prevents burning keys)
+    shared_key_rotator = APIKeyRotator(API_KEY_POOL)
+
+    # v2 Engines
     toxicity_engine = ToxicityAnalyzer()
-    gemini_agent = GeminiAgent()
+    gemini_agent = GeminiAgent(key_rotator=shared_key_rotator)
     sentiment_engine = SentimentAnalyzer()
 
     # v3 Enhanced Engines (use fallback mode for faster startup)
     sentiment_v3_engine = SentimentAnalyzerV3(use_phobert=False)
     toxicity_v3_engine = ToxicityAnalyzerV3(use_detoxify=False)
-    fact_checker_v3_engine = FactCheckerV3()
-    risk_scorer_v3_engine = RiskScorerV3()
+    fact_checker_v3_engine = FactCheckerV3(key_rotator=shared_key_rotator)
+    risk_scorer_v3_engine = RiskScorerV3(
+        sentiment_analyzer=sentiment_v3_engine,
+        toxicity_analyzer=toxicity_v3_engine,
+        fact_checker=fact_checker_v3_engine,
+    )
 
     # v3.1 New Components
     cache_manager = CacheManager(ttl_seconds=86400)  # 24-hour cache
     comment_filter = CommentFilter()
-    article_summarizer = ArticleSummarizer(cache_manager)
+    article_summarizer = ArticleSummarizer(cache_manager, key_rotator=shared_key_rotator)
 
-    # Shared key rotator for batch comment analysis
-    batch_key_rotator = APIKeyRotator(API_KEY_POOL)
+    # Reuse same shared key rotator for batch comment analysis
+    batch_key_rotator = shared_key_rotator
 
     print("✅ AI Server Ready! (v3.1 with Summary + Batch Analysis)")
 except Exception as e:

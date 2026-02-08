@@ -36,7 +36,7 @@ class FactCheckerV3:
     Credibility Score: 0-100 (0=fake, 100=verified true)
     """
 
-    def __init__(self):
+    def __init__(self, key_rotator=None):
         print("⏳ Initializing Fact-Checking System v3...")
 
         # API Keys
@@ -62,20 +62,24 @@ class FactCheckerV3:
             print(f"⚠️ Source analyzer unavailable: {e}")
             self.source_analyzer = None
 
-        # Initialize Gemini for AI verification
+        # Initialize Gemini for AI verification (use shared rotator if provided)
         try:
             from google import genai
 
             from .gemini_llm import API_KEY_POOL, MODEL_NAME, APIKeyRotator
 
-            self.key_rotator = APIKeyRotator(API_KEY_POOL)
+            self.key_rotator = key_rotator if key_rotator else APIKeyRotator(API_KEY_POOL)
             api_key = self.key_rotator.get_current_key()
-            self.gemini_client = genai.Client(api_key=api_key)
+            self.gemini_client = genai.Client(api_key=api_key) if api_key else None
             self.model_name = MODEL_NAME
-            print("✅ Gemini AI verification ready")
+            if self.gemini_client:
+                print("✅ Gemini AI verification ready")
+            else:
+                print("⚠️ Gemini AI: no available API key")
         except Exception as e:
             print(f"⚠️ Gemini unavailable: {e}")
             self.gemini_client = None
+            self.key_rotator = None
 
         # Log API availability
         if self.google_factcheck_key:
@@ -185,15 +189,17 @@ class FactCheckerV3:
         return None
 
     def _verify_with_gemini(self, text: str, url: Optional[str]) -> Optional[Dict]:
-        """Verify using Gemini AI"""
+        """Verify using Gemini AI with key rotation on 429"""
         if not self.gemini_client:
             return None
 
-        try:
-            # Create verification prompt
-            prompt = f"""Analyze this claim for factual accuracy:
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                # Create verification prompt
+                prompt = f"""Analyze this claim for factual accuracy:
 
-Claim: "{text}"
+Claim: "{text[:2000]}"
 {f'Source URL: {url}' if url else ''}
 
 Provide a brief assessment:
@@ -203,33 +209,46 @@ Provide a brief assessment:
 
 Be concise and objective."""
 
-            response = self.gemini_client.models.generate_content(
-                model=self.model_name, contents=prompt
-            )
+                response = self.gemini_client.models.generate_content(
+                    model=self.model_name, contents=prompt
+                )
 
-            analysis = response.text
+                if self.key_rotator:
+                    self.key_rotator.increment_request_count()
 
-            # Simple assessment extraction
-            assessment = "unclear"
-            if any(
-                word in analysis.lower()
-                for word in ["likely true", "appears true", "verified"]
-            ):
-                assessment = "likely_true"
-            elif any(
-                word in analysis.lower()
-                for word in ["likely false", "appears false", "misleading", "fake"]
-            ):
-                assessment = "likely_false"
+                analysis = response.text
 
-            return {
-                "source": "Gemini AI",
-                "assessment": assessment,
-                "analysis": analysis[:500],  # First 500 chars
-            }
-        except Exception as e:
-            print(f"⚠️ Gemini verification failed: {e}")
-            return None
+                # Simple assessment extraction
+                assessment = "unclear"
+                if any(
+                    word in analysis.lower()
+                    for word in ["likely true", "appears true", "verified"]
+                ):
+                    assessment = "likely_true"
+                elif any(
+                    word in analysis.lower()
+                    for word in ["likely false", "appears false", "misleading", "fake"]
+                ):
+                    assessment = "likely_false"
+
+                return {
+                    "source": "Gemini AI",
+                    "assessment": assessment,
+                    "analysis": analysis[:500],
+                }
+            except Exception as e:
+                error_str = str(e).lower()
+                print(f"⚠️ Gemini verification failed: {e}")
+                if ("429" in error_str or "quota" in error_str or "exhausted" in error_str) and self.key_rotator:
+                    if self.key_rotator.mark_key_exhausted():
+                        # Re-init client with new key
+                        from google import genai
+                        api_key = self.key_rotator.get_current_key()
+                        if api_key:
+                            self.gemini_client = genai.Client(api_key=api_key)
+                            continue
+                return None
+        return None
 
     def _adjust_score_from_factchecks(
         self, current_score: int, claims: List[Dict]

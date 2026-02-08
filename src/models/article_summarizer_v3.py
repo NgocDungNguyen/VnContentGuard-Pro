@@ -30,15 +30,16 @@ class ArticleSummarizer:
         # result = {'summary': '...', 'method': 'gemini'|'cached'|'fallback', 'cached': bool}
     """
 
-    def __init__(self, cache: CacheManager):
+    def __init__(self, cache: CacheManager, key_rotator: "APIKeyRotator | None" = None):
         self.cache = cache
         self.client: Optional[genai.Client] = None
         self.model_name = MODEL_NAME
 
         try:
-            self.key_rotator = APIKeyRotator(API_KEY_POOL)
+            # Use shared key rotator if provided, otherwise create own (not recommended)
+            self.key_rotator = key_rotator or APIKeyRotator(API_KEY_POOL)
             self._init_client()
-            print("✅ Article Summarizer initialized")
+            print("✅ Article Summarizer initialized" + (" (shared rotator)" if key_rotator else ""))
         except Exception as e:
             print(f"⚠️ Article Summarizer init failed (will use fallback): {e}")
             self.key_rotator = None
@@ -80,49 +81,52 @@ class ArticleSummarizer:
                 "cached": True,
             }
 
-        # 2. Try Gemini
+        # 2. Try Gemini (with retry on 429)
+        max_attempts = 3
         if self.client:
-            try:
-                # Truncate to save tokens (first 2000 chars is enough for a summary)
-                truncated = article_text[:2000]
+            for attempt in range(max_attempts):
+                try:
+                    # Truncate to save tokens (first 2000 chars is enough for a summary)
+                    truncated = article_text[:2000]
 
-                prompt = (
-                    "Tóm tắt bài báo tiếng Việt này trong 2-3 câu ngắn gọn.\n"
-                    "Tập trung vào: chủ đề chính, sự kiện quan trọng, ý nghĩa.\n"
-                    "Chỉ trả về phần tóm tắt, không thêm gì khác.\n\n"
-                    f"Bài báo:\n{truncated}\n\n"
-                    "Tóm tắt (2-3 câu):"
-                )
+                    prompt = (
+                        "Tóm tắt bài báo tiếng Việt này trong 2-3 câu ngắn gọn.\n"
+                        "Tập trung vào: chủ đề chính, sự kiện quan trọng, ý nghĩa.\n"
+                        "Chỉ trả về phần tóm tắt, không thêm gì khác.\n\n"
+                        f"Bài báo:\n{truncated}\n\n"
+                        "Tóm tắt (2-3 câu):"
+                    )
 
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        temperature=0.3,
-                        max_output_tokens=200,
-                    ),
-                )
+                    response = self.client.models.generate_content(
+                        model=self.model_name,
+                        contents=prompt,
+                        config=types.GenerateContentConfig(
+                            temperature=0.3,
+                            max_output_tokens=200,
+                        ),
+                    )
 
-                summary = response.text.strip()
-                if summary:
-                    self.cache.set(cache_key, summary)
-                    print(f"✅ Generated AI summary for {url[:60]}...")
-                    return {
-                        "summary": summary,
-                        "method": "gemini",
-                        "cached": False,
-                    }
+                    summary = response.text.strip()
+                    if summary:
+                        self.cache.set(cache_key, summary)
+                        print(f"✅ Generated AI summary for {url[:60]}...")
+                        return {
+                            "summary": summary,
+                            "method": "gemini",
+                            "cached": False,
+                        }
 
-            except Exception as e:
-                error_str = str(e).lower()
-                print(f"⚠️ Summary generation failed: {e}")
+                except Exception as e:
+                    error_str = str(e).lower()
+                    is_quota = "429" in error_str or "quota" in error_str or "exhausted" in error_str
+                    print(f"⚠️ Summary attempt {attempt+1}/{max_attempts} failed: {e}")
 
-                # Rotate key on quota errors
-                if "429" in error_str or "quota" in error_str or "exhausted" in error_str:
-                    if self.key_rotator:
+                    if is_quota and self.key_rotator and attempt < max_attempts - 1:
                         self.key_rotator.mark_key_exhausted()
                         self._init_client()
-                        # Don't retry — fall through to fallback
+                        print(f"🔄 Rotated key, retrying summary...")
+                        continue
+                    break  # Non-quota error or last attempt
 
         # 3. Fallback: extract first 2 sentences
         return self._fallback_summary(article_text)

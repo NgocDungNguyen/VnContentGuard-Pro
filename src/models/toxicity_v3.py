@@ -214,8 +214,6 @@ class ToxicityAnalyzerV3:
                     "SEVERE_TOXICITY": {},
                     "INSULT": {},
                     "THREAT": {},
-                    "IDENTITY_ATTACK": {},
-                    "PROFANITY": {},
                 },
             }
 

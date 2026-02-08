@@ -38,7 +38,7 @@ class RiskScorerV3:
     All scores normalized to 0-100 scale
     """
 
-    def __init__(self):
+    def __init__(self, sentiment_analyzer=None, toxicity_analyzer=None, fact_checker=None):
         print("⏳ Initializing Risk Scorer v3...")
 
         # Feature flags
@@ -47,34 +47,34 @@ class RiskScorerV3:
             os.getenv("USE_FACT_CHECKING", "true").lower() == "true"
         )
 
-        # Import v3 modules
-        self.sentiment_analyzer = None
-        self.toxicity_analyzer = None
-        self.fact_checker = None
+        # Use shared engines if provided, otherwise create new ones
+        self.sentiment_analyzer = sentiment_analyzer
+        self.toxicity_analyzer = toxicity_analyzer
+        self.fact_checker = fact_checker
 
-        try:
-            from .sentiment_v3 import SentimentAnalyzerV3
+        if not self.sentiment_analyzer:
+            try:
+                from .sentiment_v3 import SentimentAnalyzerV3
+                self.sentiment_analyzer = SentimentAnalyzerV3(use_phobert=False)
+                print("✅ Sentiment v3 loaded")
+            except Exception as e:
+                print(f"⚠️ Sentiment v3 unavailable: {e}")
 
-            self.sentiment_analyzer = SentimentAnalyzerV3(use_phobert=False)
-            print("✅ Sentiment v3 loaded")
-        except Exception as e:
-            print(f"⚠️ Sentiment v3 unavailable: {e}")
+        if not self.toxicity_analyzer:
+            try:
+                from .toxicity_v3 import ToxicityAnalyzerV3
+                self.toxicity_analyzer = ToxicityAnalyzerV3(use_detoxify=False)
+                print("✅ Toxicity v3 loaded")
+            except Exception as e:
+                print(f"⚠️ Toxicity v3 unavailable: {e}")
 
-        try:
-            from .toxicity_v3 import ToxicityAnalyzerV3
-
-            self.toxicity_analyzer = ToxicityAnalyzerV3(use_detoxify=False)
-            print("✅ Toxicity v3 loaded")
-        except Exception as e:
-            print(f"⚠️ Toxicity v3 unavailable: {e}")
-
-        try:
-            from .fact_checker_v3 import FactCheckerV3
-
-            self.fact_checker = FactCheckerV3()
-            print("✅ Fact-Checker v3 loaded")
-        except Exception as e:
-            print(f"⚠️ Fact-Checker v3 unavailable: {e}")
+        if not self.fact_checker:
+            try:
+                from .fact_checker_v3 import FactCheckerV3
+                self.fact_checker = FactCheckerV3()
+                print("✅ Fact-Checker v3 loaded")
+            except Exception as e:
+                print(f"⚠️ Fact-Checker v3 unavailable: {e}")
 
         print("✅ Risk Scorer v3 Ready!")
 
