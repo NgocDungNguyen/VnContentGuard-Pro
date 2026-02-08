@@ -74,7 +74,11 @@ class ToxicityAnalyzer:
             ),
             # 2. TORTURE & CRUELTY
             (
-                r"\b(tra tấn|hành hạ|giam cầm|đánh đập|bạo hành|nhục hình|k cha đạp|móc mắt|rút móng|cắt gân|lột da|thiến|hoạn)\b",
+                r"\b(tra tấn|hành hạ|giam cầm|đánh đập|bạo hành|nhục hình|k cha đạp|móc mắt|rút móng|cắt gân|lột da|thiến)\b",
+                "Violence: Torture",
+            ),
+            (
+                r"(?<!hỏa )(?<!hoả )(?<!hoạn )\bhoạn\b(?! nạn)",
                 "Violence: Torture",
             ),
             (

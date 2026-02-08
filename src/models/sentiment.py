@@ -61,7 +61,6 @@ class SentimentAnalyzer:
             "lãng phí",
             "không đáng",
             "không nên",
-            "cẩn thận",
         ]
 
     def analyze(self, text):
