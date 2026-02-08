@@ -41,10 +41,17 @@
         </div>
 
         <div id="results" class="hidden">
-            <!-- v3 RISK SCORE (NEW) -->
+            <!-- v3.1 ARTICLE SUMMARY (NEW) -->
+            <div class="card summary-card" id="summaryCard" style="display: none;">
+                <h3>📰 Article Summary (AI)</h3>
+                <div id="summaryText" class="card-content summary-text"></div>
+                <div id="summaryMeta" class="summary-meta"></div>
+            </div>
+
+            <!-- v3 RISK SCORE -->
             <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
                 <h3 style="color: white;">📊 Overall Risk Score v3</h3>
-                <div id="riskScore" class="card-content" style="font-size: 32px; font-weight: bold; text-align: center; color: white;">-/10</div>
+                <div id="riskScore" class="card-content" style="font-size: 32px; font-weight: bold; text-align: center; color: white;">-/100</div>
                 <div id="riskLevel" class="card-content" style="text-align: center; color: white; font-size: 18px;">Calculating...</div>
                 <div id="riskBreakdown" class="details" style="color: rgba(255,255,255,0.9); font-size: 11px;"></div>
             </div>
@@ -72,10 +79,11 @@
                 <div id="fakeEvidence" class="details" style="font-size: 11px; margin-top: 8px;"></div>
             </div>
 
-            <!-- v3 COMMENTS ANALYSIS -->
+            <!-- v3 COMMENTS ANALYSIS (Enhanced v3.1) -->
             <div class="card">
-                <h3>💬 Comments Toxicity v3</h3>
+                <h3>💬 Comments Analysis v3.1</h3>
                 <div id="commentsStatus" class="card-content">Waiting...</div>
+                <div id="commentsApiSavings" class="api-savings-bar" style="display: none;"></div>
                 <div id="commentsDetails" class="details"></div>
             </div>
 
@@ -91,7 +99,7 @@
             </div>
 
             <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px; text-align: center;">
-                <div style="font-size: 10px; color: #666; margin-bottom: 8px;">Powered by: PhoBERT + Detoxify + Perspective + Fact Check API + Gemini</div>
+                <div style="font-size: 10px; color: #666; margin-bottom: 8px;">Powered by: Gemini AI + Regex + Perspective API + Fact Check API</div>
                 <button id="clearCache" class="btn-secondary" style="width: 100%; padding: 8px;">🗑️ Clear Cached Results</button>
             </div>
         </div>

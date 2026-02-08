@@ -202,10 +202,52 @@ class ToxicityAnalyzerV3:
         if not self.perspective_api_key:
             return None
 
-        # TODO: Implement Perspective API call
-        # This is a placeholder for future implementation
-        # For now, return None (API integration in next iteration)
-        return None
+        try:
+            import requests
+
+            url = f"https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key={self.perspective_api_key}"
+            payload = {
+                "comment": {"text": text[:3000]},
+                "languages": ["vi", "en"],
+                "requestedAttributes": {
+                    "TOXICITY": {},
+                    "SEVERE_TOXICITY": {},
+                    "INSULT": {},
+                    "THREAT": {},
+                    "IDENTITY_ATTACK": {},
+                    "PROFANITY": {},
+                },
+            }
+
+            resp = requests.post(url, json=payload, timeout=10)
+            if resp.status_code != 200:
+                # Log full error for debugging
+                try:
+                    err_body = resp.json()
+                    err_msg = err_body.get("error", {}).get("message", resp.text[:200])
+                except Exception:
+                    err_msg = resp.text[:200]
+                print(f"⚠️ Perspective API error {resp.status_code}: {err_msg}")
+                return None
+
+            data = resp.json()
+            scores = data.get("attributeScores", {})
+
+            categories = {}
+            for attr, info in scores.items():
+                score = info.get("summaryScore", {}).get("value", 0.0)
+                categories[attr.lower()] = float(score)
+
+            max_score = max(categories.values()) if categories else 0.0
+
+            return {
+                "categories": categories,
+                "max_score": max_score,
+                "method": "perspective",
+            }
+        except Exception as e:
+            print(f"⚠️ Perspective API failed: {e}")
+            return None
 
     def _calculate_severity(self, score: float) -> str:
         """Calculate severity level from score"""

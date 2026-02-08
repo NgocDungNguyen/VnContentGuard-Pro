@@ -214,6 +214,58 @@ h3 {
 }
 
 /* ============================================================================ */
+/* ARTICLE SUMMARY CARD (v3.1 NEW) */
+/* ============================================================================ */
+
+.summary-card {
+    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%) !important;
+    border-left: 4px solid #4CAF50 !important;
+}
+
+.summary-text {
+    font-size: 13px;
+    line-height: 1.7;
+    color: #333;
+    margin: 8px 0;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 4px;
+}
+
+.summary-meta {
+    font-size: 10px;
+    color: #666;
+    margin-top: 6px;
+}
+
+.summary-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #4CAF50;
+    color: white;
+    border-radius: 10px;
+    font-size: 9px;
+    font-weight: bold;
+    margin-right: 4px;
+}
+
+.summary-badge.cached {
+    background: #2196F3;
+}
+
+/* ============================================================================ */
+/* API SAVINGS BAR */
+/* ============================================================================ */
+
+.api-savings-bar {
+    margin: 6px 0;
+    padding: 6px 8px;
+    background: #e8f5e9;
+    border-radius: 4px;
+    border: 1px solid #c8e6c9;
+}
+
+/* ============================================================================ */
 /* WARNING MODAL STYLING */
 /* ============================================================================ */
 

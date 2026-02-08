@@ -132,13 +132,12 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
 
     const btn = document.getElementById('confirmYes');
     btn.disabled = true;
-    btn.textContent = '⏳ Analyzing...';
+    btn.textContent = '⏳ Analyzing... (may take 1-2 min)';
 
     try {
         // AUTO-DETECT: Try localhost first (for local testing), fallback to cloud
         const API_ENDPOINTS = [
             "http://127.0.0.1:8000/analyze/v3",     // Local server v3 (try first)
-            "http://localhost:8000/analyze/v3",      // Alternative localhost v3
             "https://vncontentguard-pro.onrender.com/analyze/v3"  // Cloud v3 (fallback)
         ];
 
@@ -149,7 +148,10 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
             try {
                 console.log(`🔄 Trying: ${endpoint}`);
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout for local
+                // Local analysis needs 2 min (14 comments × Gemini API calls + rate-limit retries)
+                const isLocal = endpoint.includes('127.0.0.1') || endpoint.includes('localhost');
+                const timeoutMs = isLocal ? 120000 : 30000;
+                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
                 
                 response = await fetch(endpoint, {
                     method: "POST",
@@ -586,7 +588,7 @@ function scrapePageContent() {
 
 function renderResults(data, urlInfo) {
     // Check if v3 or v2 response
-    const isV3 = data.version === "3.0" || data.sentiment_v3;
+    const isV3 = data.version === "3.0" || data.version === "3.1" || data.sentiment_v3;
     
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
@@ -608,9 +610,29 @@ function renderV3Results(data, urlInfo) {
     const toxicity = data.toxicity_v3 || { is_toxic: false, overall_score: 0, severity: "Low" };
     const factCheck = data.fact_check_v3 || { score: 50, verdict: "Unknown" };
     const riskScore = data.risk_score_v3 || { risk_score: 0, risk_level: "Low" };
-    const comments = data.comments_analysis || { total: 0, toxic_count: 0, toxic_comments: [] };
+    const comments = data.comments_analysis || { total: 0, toxic_count: 0, toxic_comments: [], details: [] };
+    const articleSummary = data.article_summary || null;
 
-    console.log("📊 Rendering v3 results:", { sentiment, toxicity, factCheck, riskScore });
+    console.log("📊 Rendering v3.1 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary });
+
+    // ===== 0. ARTICLE SUMMARY (NEW in v3.1) =====
+    const summaryCard = document.getElementById('summaryCard');
+    if (articleSummary && articleSummary.text) {
+        summaryCard.style.display = 'block';
+        document.getElementById('summaryText').textContent = articleSummary.text;
+
+        let methodLabel = 'Gemini AI';
+        if (articleSummary.method === 'cached') methodLabel = 'Cached';
+        else if (articleSummary.method === 'fallback') methodLabel = 'Extracted';
+
+        let metaHTML = `<span class="summary-badge">${methodLabel}</span>`;
+        if (articleSummary.cached) {
+            metaHTML += ' <span class="summary-badge cached">⚡ Cached</span>';
+        }
+        document.getElementById('summaryMeta').innerHTML = metaHTML;
+    } else {
+        summaryCard.style.display = 'none';
+    }
 
     // ===== 1. RISK SCORE (Overall) =====
     const riskValue = riskScore.risk_score || 0;
@@ -723,29 +745,59 @@ function renderV3Results(data, urlInfo) {
         document.getElementById('fakeEvidence').innerHTML = evidenceHTML;
     }
 
-    // ===== 5. COMMENTS TOXICITY v3 =====
+    // ===== 5. COMMENTS ANALYSIS v3.1 (Enhanced) =====
     const totalComments = comments.total || 0;
     const toxicCount = comments.toxic_count || 0;
     const toxicComments = comments.toxic_comments || [];
+    const commentDetails = comments.details || [];
+    const filterStats = comments.filter_stats || {};
+    const apiCallsSaved = comments.api_calls_saved || 0;
 
     document.getElementById('commentsStatus').innerHTML = 
-        `Scanned: ${totalComments} comments | Toxic Found: <strong style="color: ${toxicCount > 0 ? '#e74c3c' : '#27ae60'};">${toxicCount}</strong>`;
+        `Scanned: ${totalComments} comments | Toxic Found: <strong style="color: ${toxicCount > 0 ? '#e74c3c' : '#27ae60'};">${toxicCount}</strong>` +
+        (totalComments > 0 ? ` (${comments.toxic_percentage || 0}%)` : '');
+
+    // Show API savings bar
+    const savingsBar = document.getElementById('commentsApiSavings');
+    if (totalComments > 0 && apiCallsSaved > 0) {
+        const savingsPercent = Math.round(apiCallsSaved / totalComments * 100);
+        savingsBar.style.display = 'block';
+        savingsBar.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 6px; margin: 6px 0;">
+                <span style="font-size: 11px; color: #27ae60; font-weight: bold;">⚡ ${apiCallsSaved}/${totalComments} API calls saved (${savingsPercent}%)</span>
+            </div>
+            <div style="font-size: 10px; color: #888;">
+                Regex: ${filterStats.obvious_toxic || 0} toxic, 
+                Clean: ${filterStats.obvious_clean || 0}, 
+                Spam: ${filterStats.spam || 0}, 
+                AI batch: ${filterStats.sent_to_ai || 0}
+            </div>
+        `;
+    } else {
+        savingsBar.style.display = 'none';
+    }
     
     if (toxicCount > 0) {
         let commentsHTML = '<div style="margin-top: 8px;">';
         toxicComments.forEach((tc, idx) => {
-            if (idx < 5) {
+            if (idx < 8) {
                 const sevColor = tc.severity === 'Critical' ? '#c0392b' : tc.severity === 'High' ? '#e74c3c' : '#f39c12';
+                const method = tc.method || 'unknown';
+                const methodBadge = method === 'gemini_context' ? '🤖 AI' : method === 'regex' ? '🔍 Regex' : '📋 Filter';
                 commentsHTML += `
-                    <div style="margin: 6px 0; padding: 6px; background: #fff3cd; border-left: 3px solid ${sevColor}; border-radius: 3px;">
-                        <div style="font-size: 10px; color: ${sevColor}; font-weight: bold;">${tc.severity} - ${(tc.score * 100).toFixed(0)}%</div>
-                        <div style="font-size: 11px; margin-top: 2px;">"${tc.comment.substring(0, 100)}..."</div>
+                    <div style="margin: 6px 0; padding: 8px; background: #fff3cd; border-left: 3px solid ${sevColor}; border-radius: 3px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 10px; color: ${sevColor}; font-weight: bold;">${tc.severity} - ${(tc.score * 100).toFixed(0)}%</span>
+                            <span style="font-size: 9px; color: #999; background: #f0f0f0; padding: 1px 5px; border-radius: 8px;">${methodBadge}</span>
+                        </div>
+                        <div style="font-size: 11px; margin-top: 3px;">"${(tc.comment || '').substring(0, 120)}${(tc.comment || '').length > 120 ? '...' : ''}"</div>
+                        ${tc.reason ? `<div style="font-size: 10px; color: #666; font-style: italic; margin-top: 3px;">💡 ${tc.reason}</div>` : ''}
                     </div>
                 `;
             }
         });
-        if (toxicCount > 5) {
-            commentsHTML += `<div style="text-align: center; font-size: 10px; color: #999; margin-top: 4px;">... and ${toxicCount - 5} more</div>`;
+        if (toxicCount > 8) {
+            commentsHTML += `<div style="text-align: center; font-size: 10px; color: #999; margin-top: 4px;">... and ${toxicCount - 8} more</div>`;
         }
         commentsHTML += '</div>';
         document.getElementById('commentsDetails').innerHTML = commentsHTML;

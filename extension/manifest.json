@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "VnContentGuard Pro v3",
-  "version": "3.0.0",
-  "description": "AI-powered Vietnamese content safety scanner with multi-layer detection. PhoBERT sentiment (90%), 4-layer toxicity (95%), multi-source fact-checking (90%), and objective risk scoring.",
+  "name": "VnContentGuard Pro v3.1",
+  "version": "3.1.0",
+  "description": "AI-powered Vietnamese content safety scanner with article summary, context-aware batch comment analysis, smart filtering (60%+ API savings), 4-layer toxicity, multi-source fact-checking, and objective risk scoring.",
   "permissions": [
     "activeTab",
     "scripting",

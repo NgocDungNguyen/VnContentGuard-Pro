@@ -1,0 +1,159 @@
+"""
+VnContentGuard Pro v3 - Article Summarizer
+============================================
+Generates concise 2-3 sentence summaries of Vietnamese news articles
+using Gemini AI. Results are cached per URL to avoid redundant API calls.
+
+Features:
+- Gemini 2.5 Flash Lite for fast, cheap summaries
+- Automatic caching (24h TTL per URL)
+- Fallback to first-2-sentences extraction if API fails
+- Input truncation to 2000 chars to save tokens
+"""
+
+from typing import Any, Dict, Optional
+
+from google import genai
+from google.genai import types
+
+from src.models.gemini_llm import API_KEY_POOL, MODEL_NAME, APIKeyRotator
+from src.utils.cache_manager import CacheManager
+
+
+class ArticleSummarizer:
+    """
+    AI-powered article summarizer with caching.
+
+    Usage:
+        summarizer = ArticleSummarizer(cache)
+        result = summarizer.summarize(article_text, url)
+        # result = {'summary': '...', 'method': 'gemini'|'cached'|'fallback', 'cached': bool}
+    """
+
+    def __init__(self, cache: CacheManager):
+        self.cache = cache
+        self.client: Optional[genai.Client] = None
+        self.model_name = MODEL_NAME
+
+        try:
+            self.key_rotator = APIKeyRotator(API_KEY_POOL)
+            self._init_client()
+            print("✅ Article Summarizer initialized")
+        except Exception as e:
+            print(f"⚠️ Article Summarizer init failed (will use fallback): {e}")
+            self.key_rotator = None
+
+    def _init_client(self):
+        """Initialize Gemini client with current API key."""
+        if not self.key_rotator:
+            return
+        api_key = self.key_rotator.get_current_key()
+        if api_key:
+            self.client = genai.Client(api_key=api_key)
+
+    def summarize(self, article_text: str, url: str) -> Dict[str, Any]:
+        """
+        Generate or retrieve a cached article summary.
+
+        Args:
+            article_text: Full article text
+            url: Article URL (used as cache key)
+
+        Returns:
+            Dict with 'summary', 'method', 'cached' keys
+        """
+        if not article_text or len(article_text.strip()) < 30:
+            return {
+                "summary": "Nội dung quá ngắn để tóm tắt.",
+                "method": "fallback",
+                "cached": False,
+            }
+
+        # 1. Check cache
+        cache_key = f"summary:{url}"
+        cached = self.cache.get(cache_key)
+        if cached:
+            print(f"✅ Summary cache hit for {url[:60]}...")
+            return {
+                "summary": cached,
+                "method": "cached",
+                "cached": True,
+            }
+
+        # 2. Try Gemini
+        if self.client:
+            try:
+                # Truncate to save tokens (first 2000 chars is enough for a summary)
+                truncated = article_text[:2000]
+
+                prompt = (
+                    "Tóm tắt bài báo tiếng Việt này trong 2-3 câu ngắn gọn.\n"
+                    "Tập trung vào: chủ đề chính, sự kiện quan trọng, ý nghĩa.\n"
+                    "Chỉ trả về phần tóm tắt, không thêm gì khác.\n\n"
+                    f"Bài báo:\n{truncated}\n\n"
+                    "Tóm tắt (2-3 câu):"
+                )
+
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.3,
+                        max_output_tokens=200,
+                    ),
+                )
+
+                summary = response.text.strip()
+                if summary:
+                    self.cache.set(cache_key, summary)
+                    print(f"✅ Generated AI summary for {url[:60]}...")
+                    return {
+                        "summary": summary,
+                        "method": "gemini",
+                        "cached": False,
+                    }
+
+            except Exception as e:
+                error_str = str(e).lower()
+                print(f"⚠️ Summary generation failed: {e}")
+
+                # Rotate key on quota errors
+                if "429" in error_str or "quota" in error_str or "exhausted" in error_str:
+                    if self.key_rotator:
+                        self.key_rotator.mark_key_exhausted()
+                        self._init_client()
+                        # Don't retry — fall through to fallback
+
+        # 3. Fallback: extract first 2 sentences
+        return self._fallback_summary(article_text)
+
+    def _fallback_summary(self, article_text: str) -> Dict[str, Any]:
+        """
+        Extract first 2 sentences as a basic summary.
+        Used when Gemini API is unavailable.
+        """
+        # Try splitting by Vietnamese sentence endings
+        text = article_text.strip()
+        sentences = []
+        for sep in [".", "。", "!", "?"]:
+            if sep in text:
+                parts = text.split(sep)
+                for p in parts:
+                    cleaned = p.strip()
+                    if len(cleaned) > 15:
+                        sentences.append(cleaned + sep)
+                break
+
+        if not sentences:
+            # No sentence boundaries found, just take first 200 chars
+            summary = text[:200] + ("..." if len(text) > 200 else "")
+        else:
+            summary = " ".join(sentences[:2])
+            if len(summary) > 300:
+                summary = summary[:300] + "..."
+
+        return {
+            "summary": summary,
+            "method": "fallback",
+            "cached": False,
+        }
