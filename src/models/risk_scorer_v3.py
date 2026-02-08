@@ -55,7 +55,7 @@ class RiskScorerV3:
         try:
             from .sentiment_v3 import SentimentAnalyzerV3
 
-            self.sentiment_analyzer = SentimentAnalyzerV3()
+            self.sentiment_analyzer = SentimentAnalyzerV3(use_phobert=False)
             print("✅ Sentiment v3 loaded")
         except Exception as e:
             print(f"⚠️ Sentiment v3 unavailable: {e}")
@@ -63,7 +63,7 @@ class RiskScorerV3:
         try:
             from .toxicity_v3 import ToxicityAnalyzerV3
 
-            self.toxicity_analyzer = ToxicityAnalyzerV3()
+            self.toxicity_analyzer = ToxicityAnalyzerV3(use_detoxify=False)
             print("✅ Toxicity v3 loaded")
         except Exception as e:
             print(f"⚠️ Toxicity v3 unavailable: {e}")

@@ -9,17 +9,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 if platform.system() == "Windows":
-    asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from src.models.fact_checker_v3 import check_facts_v3
+from src.models.fact_checker_v3 import FactCheckerV3
 from src.models.gemini_llm import GeminiAgent
-from src.models.risk_scorer_v3 import calculate_risk_score_v3
+from src.models.risk_scorer_v3 import RiskScorerV3
 from src.models.sentiment import SentimentAnalyzer
 
 # v3 Enhanced Components
-from src.models.sentiment_v3 import analyze_sentiment_v3
+from src.models.sentiment_v3 import SentimentAnalyzerV3
 from src.models.toxicity import ToxicityAnalyzer
-from src.models.toxicity_v3 import detect_toxicity_v3
+from src.models.toxicity_v3 import ToxicityAnalyzerV3
 
 app = FastAPI(title="VnContentGuard Pro API", version="3.0")
 
@@ -37,6 +37,13 @@ try:
     toxicity_engine = ToxicityAnalyzer()
     gemini_agent = GeminiAgent()
     sentiment_engine = SentimentAnalyzer()
+
+    # v3 Enhanced Engines (use fallback mode for faster startup)
+    sentiment_v3_engine = SentimentAnalyzerV3(use_phobert=False)
+    toxicity_v3_engine = ToxicityAnalyzerV3(use_detoxify=False)
+    fact_checker_v3_engine = FactCheckerV3()
+    risk_scorer_v3_engine = RiskScorerV3()
+
     print("✅ AI Server Ready!")
 except Exception as e:
     print(f"❌ Error during initialization: {e}")
@@ -238,9 +245,9 @@ def analyze_content_v3(req: ScanRequest):
 
         if len(req.article_text) > 5:
             try:
-                sentiment_v3 = analyze_sentiment_v3(req.article_text[:512])
+                sentiment_v3 = sentiment_v3_engine.analyze(req.article_text[:512])
                 print(
-                    f"✅ [v3] Sentiment: {sentiment_v3['label']} (confidence: {sentiment_v3['confidence']:.2f})"
+                    f"✅ [v3] Sentiment: {sentiment_v3['overall']} (confidence: {sentiment_v3['confidence']:.2f})"
                 )
             except Exception as e:
                 print(f"⚠️  [v3] Sentiment analysis failed: {e}")
@@ -266,7 +273,7 @@ def analyze_content_v3(req: ScanRequest):
 
         if len(req.article_text) > 5:
             try:
-                toxicity_v3 = detect_toxicity_v3(req.article_text[:1000])
+                toxicity_v3 = toxicity_v3_engine.analyze(req.article_text[:1000])
                 print(
                     f"✅ [v3] Toxicity: {toxicity_v3['severity']} (score: {toxicity_v3['overall_score']:.2f})"
                 )
@@ -275,18 +282,18 @@ def analyze_content_v3(req: ScanRequest):
 
         # ========== 3. FACT-CHECKING v3 (Multi-source) ==========
         fact_check_v3 = {
-            "credibility_score": 50,
+            "score": 50,
             "verdict": "Unverifiable",
-            "confidence": 0.0,
+            "confidence": "Low",
             "evidence": [],
-            "sources_checked": 0,
+            "verification_methods": [],
         }
 
         if len(req.article_text) > 20:
             try:
-                fact_check_v3 = check_facts_v3(req.article_text, req.url)
+                fact_check_v3 = fact_checker_v3_engine.check(req.article_text, req.url)
                 print(
-                    f"✅ [v3] Fact Check: {fact_check_v3['verdict']} (credibility: {fact_check_v3['credibility_score']})"
+                    f"✅ [v3] Fact Check: {fact_check_v3['verdict']} (credibility: {fact_check_v3['score']})"
                 )
             except Exception as e:
                 print(f"⚠️  [v3] Fact-checking failed: {e}")
@@ -308,9 +315,9 @@ def analyze_content_v3(req: ScanRequest):
 
         if len(req.article_text) > 20:
             try:
-                risk_score_v3 = calculate_risk_score_v3(req.article_text, req.url)
+                risk_score_v3 = risk_scorer_v3_engine.score(req.article_text, req.url)
                 print(
-                    f"✅ [v3] Risk Score: {risk_score_v3['risk_score']:.1f}/10 ({risk_score_v3['risk_level']})"
+                    f"✅ [v3] Risk Score: {risk_score_v3['risk_score']:.1f}/100 ({risk_score_v3['risk_level']})"
                 )
             except Exception as e:
                 print(f"⚠️  [v3] Risk scoring failed: {e}")
@@ -323,7 +330,7 @@ def analyze_content_v3(req: ScanRequest):
             print(f"📋 [v3] Analyzing {len(req.comments)} comments for toxicity...")
             for comment in req.comments[:50]:  # Limit to 50 comments
                 try:
-                    result = detect_toxicity_v3(comment)
+                    result = toxicity_v3_engine.analyze(comment)
                     if result["is_toxic"]:
                         toxic_count_v3 += 1
                         toxic_comments_v3.append(
@@ -356,7 +363,7 @@ def analyze_content_v3(req: ScanRequest):
         }
 
         print(
-            f"✅ [v3] Analysis complete. Risk: {risk_score_v3['risk_score']:.1f}/10, Toxics: {toxic_count_v3}"
+            f"✅ [v3] Analysis complete. Risk: {risk_score_v3['risk_score']:.1f}/100, Toxics: {toxic_count_v3}"
         )
         return response
 
@@ -380,7 +387,27 @@ async def global_exception_handler(request, exc):
 # Main
 # ============================================================================
 
+
+def kill_port(port: int):
+    """Kill any process occupying the given port (except ourselves)."""
+    import os
+    import subprocess
+
+    my_pid = str(os.getpid())
+    try:
+        result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
+        for line in result.stdout.strip().split("\n"):
+            if f":{port}" in line and "LISTENING" in line:
+                pid = line.strip().split()[-1]
+                if pid != my_pid:
+                    subprocess.run(["taskkill", "/F", "/PID", pid], capture_output=True)
+                    print(f"🔄 Killed old process on port {port} (PID: {pid})")
+    except Exception:
+        pass
+
+
 if __name__ == "__main__":
+    kill_port(8000)
     print("🚀 Starting VnContentGuard Pro Server on http://127.0.0.1:8000")
     print("📊 API Docs available at http://127.0.0.1:8000/docs")
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")

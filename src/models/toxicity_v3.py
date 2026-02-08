@@ -36,7 +36,7 @@ class ToxicityAnalyzerV3:
     Severity Levels: Low (0.3-0.5), Medium (0.5-0.7), High (0.7-0.9), Critical (0.9-1.0)
     """
 
-    def __init__(self):
+    def __init__(self, use_detoxify: bool = False):
         print("⏳ Initializing Advanced Toxicity Detection v3...")
 
         # Layer 1: v2 Regex patterns (fallback)
@@ -47,14 +47,17 @@ class ToxicityAnalyzerV3:
             print(f"⚠️ Warning: Regex analyzer failed: {e}")
             self.regex_analyzer = None
 
-        # Layer 2: Detoxify model
-        try:
-            # Use 'multilingual' model for better Vietnamese support
-            self.detoxify_model = Detoxify("multilingual")
-            print("✅ Layer 2: Detoxify multilingual model loaded")
-        except Exception as e:
-            print(f"⚠️ Warning: Detoxify model failed to load: {e}")
-            self.detoxify_model = None
+        # Layer 2: Detoxify model (disabled by default for faster startup)
+        self.detoxify_model = None
+        if use_detoxify:
+            try:
+                # Use 'multilingual' model for better Vietnamese support
+                self.detoxify_model = Detoxify("multilingual")
+                print("✅ Layer 2: Detoxify multilingual model loaded")
+            except Exception as e:
+                print(f"⚠️ Warning: Detoxify model failed to load: {e}")
+        else:
+            print("⚠️ Layer 2: Detoxify model disabled (use_detoxify=False)")
 
         # Layer 3: Perspective API (optional)
         self.perspective_api_key = os.getenv("GOOGLE_PERSPECTIVE_API_KEY")

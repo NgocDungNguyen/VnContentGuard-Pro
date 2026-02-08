@@ -604,9 +604,9 @@ function renderResults(data, urlInfo) {
 }
 
 function renderV3Results(data, urlInfo) {
-    const sentiment = data.sentiment_v3 || { label: "Neutral", confidence: 0, intensity: "Weak" };
+    const sentiment = data.sentiment_v3 || { overall: "Neutral", confidence: 0, intensity: "Weak" };
     const toxicity = data.toxicity_v3 || { is_toxic: false, overall_score: 0, severity: "Low" };
-    const factCheck = data.fact_check_v3 || { credibility_score: 50, verdict: "Unknown" };
+    const factCheck = data.fact_check_v3 || { score: 50, verdict: "Unknown" };
     const riskScore = data.risk_score_v3 || { risk_score: 0, risk_level: "Low" };
     const comments = data.comments_analysis || { total: 0, toxic_count: 0, toxic_comments: [] };
 
@@ -622,25 +622,25 @@ function renderV3Results(data, urlInfo) {
     else if (riskLevel === 'High') riskColor = '#e74c3c';  // Red
     else if (riskLevel === 'Critical') riskColor = '#c0392b';  // Dark Red
 
-    document.getElementById('riskScore').innerHTML = `<span style="color: ${riskColor}">${riskValue.toFixed(1)}/10</span>`;
+    document.getElementById('riskScore').innerHTML = `<span style="color: ${riskColor}">${riskValue.toFixed(1)}/100</span>`;
     document.getElementById('riskLevel').innerHTML = `<strong style="color: white;">${riskLevel} Risk</strong>`;
     
     // Risk Breakdown
-    if (riskScore.risk_breakdown) {
-        const breakdown = riskScore.risk_breakdown;
+    if (riskScore.breakdown) {
+        const breakdown = riskScore.breakdown;
         let breakdownHTML = '<div style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">';
         breakdownHTML += '<strong>Risk Breakdown:</strong><br/>';
-        breakdownHTML += `Credibility: ${(breakdown.credibility || 0).toFixed(1)} | `;
-        breakdownHTML += `Toxicity: ${(breakdown.toxicity || 0).toFixed(1)} | `;
-        breakdownHTML += `Sentiment: ${(breakdown.sentiment || 0).toFixed(1)}<br/>`;
-        breakdownHTML += `Source: ${(breakdown.source_quality || 0).toFixed(1)} | `;
-        breakdownHTML += `Manipulation: ${(breakdown.manipulation || 0).toFixed(1)}`;
+        breakdownHTML += `Fake News: ${(breakdown.fake_news_component || 0).toFixed(1)} | `;
+        breakdownHTML += `Toxicity: ${(breakdown.toxicity_component || 0).toFixed(1)} | `;
+        breakdownHTML += `Sentiment: ${(breakdown.sentiment_component || 0).toFixed(1)}<br/>`;
+        breakdownHTML += `Source: ${(breakdown.source_component || 0).toFixed(1)} | `;
+        breakdownHTML += `Manipulation: ${(breakdown.manipulation_component || 0).toFixed(1)}`;
         breakdownHTML += '</div>';
         document.getElementById('riskBreakdown').innerHTML = breakdownHTML;
     }
 
     // ===== 2. SENTIMENT v3 (PhoBERT) =====
-    const sentLabel = sentiment.label || "Neutral";
+    const sentLabel = sentiment.overall || "Neutral";
     const sentConf = sentiment.confidence || 0;
     const sentIntensity = sentiment.intensity || "Weak";
     const sentMethod = sentiment.method || "unknown";
@@ -695,10 +695,10 @@ function renderV3Results(data, urlInfo) {
     document.getElementById('toxicDetails').innerHTML = toxDetailsHTML;
 
     // ===== 4. FACT CHECK v3 (Multi-Source) =====
-    const credScore = factCheck.credibility_score || 50;
+    const credScore = factCheck.score || 50;
     const verdict = factCheck.verdict || "Unknown";
     const evidence = factCheck.evidence || [];
-    const sourcesChecked = factCheck.sources_checked || 0;
+    const verificationMethods = factCheck.verification_methods || [];
 
     let credColor = '#27ae60';  // Green for high credibility
     if (credScore < 70) credColor = '#f39c12';  // Orange
@@ -708,7 +708,7 @@ function renderV3Results(data, urlInfo) {
         `<strong style="color: ${credColor};">${verdict}</strong><br/>Credibility: ${credScore}/100`;
     
     document.getElementById('fakeSummary').textContent = 
-        `Checked ${sourcesChecked} source(s). ${evidence.length} piece(s) of evidence found.`;
+        `Checked ${verificationMethods.length} source(s). ${evidence.length} piece(s) of evidence found.`;
     
     // Show evidence
     if (evidence.length > 0) {
@@ -782,7 +782,7 @@ function renderV3Results(data, urlInfo) {
     console.log("✅ v3 results rendered");
 
     // ===== SHOW WARNING MODAL if high risk (after delay) =====
-    if (riskValue >= 5.0) {  // Medium-High or higher
+    if (riskValue >= 50) {  // Medium-High or higher (0-100 scale)
         setTimeout(() => {
             showWarningModalV3(riskScore, sentiment, toxicity, factCheck);
         }, 12000);
@@ -878,10 +878,10 @@ function showWarningModalV3(riskScore, sentiment, toxicity, factCheck) {
     const riskValue = riskScore.risk_score || 0;
     const riskLevel = riskScore.risk_level || "Low";
 
-    if (riskValue >= 5.0) {
+    if (riskValue >= 50) {
         warningHTML += `
             <h4>⚠️ ${riskLevel} Risk Content Detected</h4>
-            <p><strong>Risk Score:</strong> ${riskValue.toFixed(1)}/10</p>
+            <p><strong>Risk Score:</strong> ${riskValue.toFixed(1)}/100</p>
             <p><strong>Level:</strong> ${riskLevel}</p>
         `;
 
@@ -902,10 +902,10 @@ function showWarningModalV3(riskScore, sentiment, toxicity, factCheck) {
         `;
     }
 
-    if (factCheck.credibility_score < 40) {
+    if (factCheck.score < 40) {
         warningHTML += `
             <h4>📰 Low Credibility Warning</h4>
-            <p><strong>Credibility:</strong> ${factCheck.credibility_score}/100</p>
+            <p><strong>Credibility:</strong> ${factCheck.score}/100</p>
             <p><strong>Verdict:</strong> ${factCheck.verdict}</p>
         `;
     }
