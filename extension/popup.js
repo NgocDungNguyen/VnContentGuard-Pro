@@ -137,9 +137,9 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
     try {
         // AUTO-DETECT: Try localhost first (for local testing), fallback to cloud
         const API_ENDPOINTS = [
-            "http://127.0.0.1:8000/analyze/full_scan",     // Local server (try first)
-            "http://localhost:8000/analyze/full_scan",      // Alternative localhost
-            "https://vncontentguard-pro.onrender.com/analyze/full_scan"  // Cloud (fallback)
+            "http://127.0.0.1:8000/analyze/v3",     // Local server v3 (try first)
+            "http://localhost:8000/analyze/v3",      // Alternative localhost v3
+            "https://vncontentguard-pro.onrender.com/analyze/v3"  // Cloud v3 (fallback)
         ];
 
         let response = null;
@@ -581,43 +581,234 @@ function scrapePageContent() {
 }
 
 // ============================================================================
-// RESULT RENDERING WITH WARNING MODAL
+// RESULT RENDERING WITH WARNING MODAL - v3 Enhanced
 // ============================================================================
 
 function renderResults(data, urlInfo) {
-    const fake = data.fake_check || {};
-    const sentiment = data.sentiment || { label: "Neutral", score: 0 };
-    const toxicity = data.toxicity || { total: 0, toxic_count: 0, results: [] };
-
+    // Check if v3 or v2 response
+    const isV3 = data.version === "3.0" || data.sentiment_v3;
+    
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
     document.getElementById('errorBox').classList.add('hidden');
     document.getElementById('warningModal').classList.add('hidden');
     
-    // Clear all content areas to prevent overlap
-    document.getElementById('sentimentStatus').innerHTML = '';
-    document.getElementById('fakeStatus').innerHTML = '';
-    document.getElementById('fakeSummary').textContent = '';
-    document.getElementById('toxicStatus').textContent = '';
-    document.getElementById('toxicDetails').innerHTML = '';
-    document.getElementById('toxicFindings').innerHTML = '';
-
-    // ===== CHECK IF CONTENT IS FLAGGED AS RISKY =====
-    const riskScore = parseInt(fake.risk_score) || 0;
-    const sentimentLabel = sentiment.label || "Neutral";
-    const isFakeNews = riskScore >= 6; // Risk score 6+ is high risk
-    const isNegativeSentiment = sentimentLabel === "Negative" || sentimentLabel === "Very Negative";
-    const hasToxicity = toxicity.toxic_count > 0;
-    const isRisky = isFakeNews || isNegativeSentiment || hasToxicity;
-
-    // ===== ALWAYS SHOW RESULTS FIRST (don't return) =====
+    // Show results container
     document.getElementById('results').classList.remove('hidden');
+
+    if (isV3) {
+        renderV3Results(data, urlInfo);
+    } else {
+        renderV2Results(data, urlInfo);
+    }
+}
+
+function renderV3Results(data, urlInfo) {
+    const sentiment = data.sentiment_v3 || { label: "Neutral", confidence: 0, intensity: "Weak" };
+    const toxicity = data.toxicity_v3 || { is_toxic: false, overall_score: 0, severity: "Low" };
+    const factCheck = data.fact_check_v3 || { credibility_score: 50, verdict: "Unknown" };
+    const riskScore = data.risk_score_v3 || { risk_score: 0, risk_level: "Low" };
+    const comments = data.comments_analysis || { total: 0, toxic_count: 0, toxic_comments: [] };
+
+    console.log("📊 Rendering v3 results:", { sentiment, toxicity, factCheck, riskScore });
+
+    // ===== 1. RISK SCORE (Overall) =====
+    const riskValue = riskScore.risk_score || 0;
+    const riskLevel = riskScore.risk_level || "Low";
+    
+    // Color based on risk level
+    let riskColor = '#27ae60';  // Green for Low
+    if (riskLevel === 'Medium') riskColor = '#f39c12';  // Orange
+    else if (riskLevel === 'High') riskColor = '#e74c3c';  // Red
+    else if (riskLevel === 'Critical') riskColor = '#c0392b';  // Dark Red
+
+    document.getElementById('riskScore').innerHTML = `<span style="color: ${riskColor}">${riskValue.toFixed(1)}/10</span>`;
+    document.getElementById('riskLevel').innerHTML = `<strong style="color: white;">${riskLevel} Risk</strong>`;
+    
+    // Risk Breakdown
+    if (riskScore.risk_breakdown) {
+        const breakdown = riskScore.risk_breakdown;
+        let breakdownHTML = '<div style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">';
+        breakdownHTML += '<strong>Risk Breakdown:</strong><br/>';
+        breakdownHTML += `Credibility: ${(breakdown.credibility || 0).toFixed(1)} | `;
+        breakdownHTML += `Toxicity: ${(breakdown.toxicity || 0).toFixed(1)} | `;
+        breakdownHTML += `Sentiment: ${(breakdown.sentiment || 0).toFixed(1)}<br/>`;
+        breakdownHTML += `Source: ${(breakdown.source_quality || 0).toFixed(1)} | `;
+        breakdownHTML += `Manipulation: ${(breakdown.manipulation || 0).toFixed(1)}`;
+        breakdownHTML += '</div>';
+        document.getElementById('riskBreakdown').innerHTML = breakdownHTML;
+    }
+
+    // ===== 2. SENTIMENT v3 (PhoBERT) =====
+    const sentLabel = sentiment.label || "Neutral";
+    const sentConf = sentiment.confidence || 0;
+    const sentIntensity = sentiment.intensity || "Weak";
+    const sentMethod = sentiment.method || "unknown";
+
+    let sentColor = '#3498db';  // Blue for Neutral
+    if (sentLabel === 'Positive') sentColor = '#27ae60';  // Green
+    else if (sentLabel === 'Negative') sentColor = '#e74c3c';  // Red
+
+    document.getElementById('sentimentStatus').innerHTML = 
+        `<strong style="color: ${sentColor};">${sentLabel}</strong> (${(sentConf * 100).toFixed(0)}% confidence)`;
+    
+    document.getElementById('sentimentDetails').innerHTML = `
+        <div style="font-size: 11px; color: #666;">
+            <strong>Intensity:</strong> ${sentIntensity}<br/>
+            <strong>Method:</strong> ${sentMethod === 'phobert' ? 'PhoBERT (AI)' : 'Keyword fallback'}<br/>
+            <div style="margin-top: 4px; background: #f0f0f0; border-radius: 3px; overflow: hidden;">
+                <div style="width: ${sentConf * 100}%; background: ${sentColor}; height: 8px;"></div>
+            </div>
+        </div>
+    `;
+
+    // ===== 3. TOXICITY v3 (4-Layer) =====
+    const isToxic = toxicity.is_toxic || false;
+    const toxScore = toxicity.overall_score || 0;
+    const toxSeverity = toxicity.severity || "Low";
+    const toxCategories = toxicity.categories || {};
+    const toxLayers = toxicity.detection_layers || [];
+
+    let toxColor = '#27ae60';  // Green for Low
+    if (toxSeverity === 'Medium') toxColor = '#f39c12';
+    else if (toxSeverity === 'High') toxColor = '#e74c3c';
+    else if (toxSeverity === 'Critical') toxColor = '#c0392b';
+
+    document.getElementById('toxicStatus').innerHTML = 
+        `<strong style="color: ${toxColor};">${isToxic ? '⚠️ TOXIC' : '✅ CLEAN'}</strong> - Severity: ${toxSeverity} (${(toxScore * 100).toFixed(0)}%)`;
+    
+    let toxDetailsHTML = `
+        <div style="font-size: 11px; color: #666; margin-top: 8px;">
+            <strong>Detection Layers:</strong> ${toxLayers.join(', ') || 'none'}<br/>
+            <strong>Score:</strong> ${(toxScore * 100).toFixed(0)}%<br/>
+    `;
+    
+    if (Object.keys(toxCategories).length > 0) {
+        toxDetailsHTML += '<strong>Categories:</strong><br/>';
+        for (const [cat, score] of Object.entries(toxCategories)) {
+            if (score > 0.3) {
+                toxDetailsHTML += `- ${cat}: ${(score * 100).toFixed(0)}%<br/>`;
+            }
+        }
+    }
+    toxDetailsHTML += '</div>';
+    document.getElementById('toxicDetails').innerHTML = toxDetailsHTML;
+
+    // ===== 4. FACT CHECK v3 (Multi-Source) =====
+    const credScore = factCheck.credibility_score || 50;
+    const verdict = factCheck.verdict || "Unknown";
+    const evidence = factCheck.evidence || [];
+    const sourcesChecked = factCheck.sources_checked || 0;
+
+    let credColor = '#27ae60';  // Green for high credibility
+    if (credScore < 70) credColor = '#f39c12';  // Orange
+    if (credScore < 40) credColor = '#e74c3c';  // Red
+
+    document.getElementById('fakeStatus').innerHTML = 
+        `<strong style="color: ${credColor};">${verdict}</strong><br/>Credibility: ${credScore}/100`;
+    
+    document.getElementById('fakeSummary').textContent = 
+        `Checked ${sourcesChecked} source(s). ${evidence.length} piece(s) of evidence found.`;
+    
+    // Show evidence
+    if (evidence.length > 0) {
+        let evidenceHTML = '<div style="margin-top: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;"><strong>Evidence:</strong><br/>';
+        evidence.slice(0, 3).forEach(ev => {
+            evidenceHTML += `<div style="font-size: 10px; margin: 4px 0;">• ${ev.source || 'Unknown'}: ${(ev.claim || ev.description || 'No details').substring(0, 80)}...</div>`;
+        });
+        if (evidence.length > 3) {
+            evidenceHTML += `<div style="font-size: 10px; color: #999;">... and ${evidence.length - 3} more</div>`;
+        }
+        evidenceHTML += '</div>';
+        document.getElementById('fakeEvidence').innerHTML = evidenceHTML;
+    }
+
+    // ===== 5. COMMENTS TOXICITY v3 =====
+    const totalComments = comments.total || 0;
+    const toxicCount = comments.toxic_count || 0;
+    const toxicComments = comments.toxic_comments || [];
+
+    document.getElementById('commentsStatus').innerHTML = 
+        `Scanned: ${totalComments} comments | Toxic Found: <strong style="color: ${toxicCount > 0 ? '#e74c3c' : '#27ae60'};">${toxicCount}</strong>`;
+    
+    if (toxicCount > 0) {
+        let commentsHTML = '<div style="margin-top: 8px;">';
+        toxicComments.forEach((tc, idx) => {
+            if (idx < 5) {
+                const sevColor = tc.severity === 'Critical' ? '#c0392b' : tc.severity === 'High' ? '#e74c3c' : '#f39c12';
+                commentsHTML += `
+                    <div style="margin: 6px 0; padding: 6px; background: #fff3cd; border-left: 3px solid ${sevColor}; border-radius: 3px;">
+                        <div style="font-size: 10px; color: ${sevColor}; font-weight: bold;">${tc.severity} - ${(tc.score * 100).toFixed(0)}%</div>
+                        <div style="font-size: 11px; margin-top: 2px;">"${tc.comment.substring(0, 100)}..."</div>
+                    </div>
+                `;
+            }
+        });
+        if (toxicCount > 5) {
+            commentsHTML += `<div style="text-align: center; font-size: 10px; color: #999; margin-top: 4px;">... and ${toxicCount - 5} more</div>`;
+        }
+        commentsHTML += '</div>';
+        document.getElementById('commentsDetails').innerHTML = commentsHTML;
+    } else {
+        document.getElementById('commentsDetails').innerHTML = '<div style="text-align: center; color: #27ae60; font-weight: bold; margin-top: 8px;">✅ No toxic comments detected!</div>';
+    }
+
+    // ===== 6. WARNINGS (if any) =====
+    if (riskScore.warnings && riskScore.warnings.length > 0) {
+        document.getElementById('warningsCard').style.display = 'block';
+        let warningsHTML = '<ul style="margin: 0; padding-left: 20px; font-size: 12px;">';
+        riskScore.warnings.forEach(w => {
+            warningsHTML += `<li>${w}</li>`;
+        });
+        warningsHTML += '</ul>';
+        document.getElementById('warningsList').innerHTML = warningsHTML;
+    } else {
+        document.getElementById('warningsCard').style.display = 'none';
+    }
+
+    // ===== 7. RECOMMENDATIONS (if any) =====
+    if (riskScore.recommendations && riskScore.recommendations.length > 0) {
+        document.getElementById('recommendationsCard').style.display = 'block';
+        let recsHTML = '<ul style="margin: 0; padding-left: 20px; font-size: 12px;">';
+        riskScore.recommendations.forEach(r => {
+            recsHTML += `<li>${r}</li>`;
+        });
+        recsHTML += '</ul>';
+        document.getElementById('recommendationsList').innerHTML = recsHTML;
+    } else {
+        document.getElementById('recommendationsCard').style.display = 'none';
+    }
+
+    console.log("✅ v3 results rendered");
+
+    // ===== SHOW WARNING MODAL if high risk (after delay) =====
+    if (riskValue >= 5.0) {  // Medium-High or higher
+        setTimeout(() => {
+            showWarningModalV3(riskScore, sentiment, toxicity, factCheck);
+        }, 12000);
+    }
+}
+
+function renderV2Results(data, urlInfo) {
+    const fake = data.fake_check || {};
+    const sentiment = data.sentiment || { label: "Neutral", score: 0 };
+    const toxicity = data.toxicity || { total: 0, toxic_count: 0, results: [] };
+
+    // Clear v3-specific elements
+    document.getElementById('riskScore').textContent = 'v2 Mode';
+    document.getElementById('riskLevel').textContent = 'Using v2 endpoint';
+    document.getElementById('riskBreakdown').innerHTML = '';
+    document.getElementById('sentimentDetails').innerHTML = '';
+    document.getElementById('fakeEvidence').innerHTML = '';
+    document.getElementById('warningsCard').style.display = 'none';
+    document.getElementById('recommendationsCard').style.display = 'none';
 
     // Sentiment
     document.getElementById('sentimentStatus').innerHTML = 
         `<strong>${sentiment.label}</strong> (${(sentiment.score * 100).toFixed(0)}% confident)`;
 
     // Fact check
+    const riskScore = parseInt(fake.risk_score) || 0;
     let riskClass = riskScore <= 3 ? 'risk-low' : 'risk-high';
     let verdict = fake.verdict || "Unknown";
     
@@ -634,15 +825,12 @@ function renderResults(data, urlInfo) {
         `Scanned: ${toxicity.total} comments | Threats Found: ${toxicity.toxic_count}`;
 
     const toxicDetails = document.getElementById('toxicDetails');
-    const toxicFindings = document.getElementById('toxicFindings');
+    document.getElementById('toxicFindings').innerHTML = '';
 
     if (toxicity.toxic_count === 0) {
         toxicDetails.innerHTML = '<div style="text-align: center; color: #27ae60; font-weight: bold;">✅ No threats detected!</div>';
     } else {
-        // Build findings list
-        let findingsHTML = '<strong style="color: #c0392b; display: block; margin-bottom: 6px;">🚨 Detected Toxicity:</strong>';
         let detailsHTML = '';
-        
         toxicity.results.forEach((item, idx) => {
             if ((item["Is Toxic"] || item["is_toxic"]) && idx < 20) {
                 const category = item.Category || item.category || "Unknown";
@@ -650,20 +838,9 @@ function renderResults(data, urlInfo) {
                 const confidence = (item.Confidence || item.confidence || 0);
                 const confPercent = (confidence * 100).toFixed(0);
 
-                // Add to findings (main display)
-                findingsHTML += `
-                    <div class="finding-item">
-                        <div class="finding-category">🚨 ${category}</div>
-                        <div class="finding-text">"${comment.substring(0, 80)}${comment.length > 80 ? '...' : ''}"</div>
-                        <div class="finding-confidence">Confidence: ${confPercent}%</div>
-                    </div>
-                `;
-
-                // Add to details as well
                 let badgeColor = '#e74c3c';
-                if (category.includes("Hate") || category.includes("Regional") || category.includes("Discrimination")) badgeColor = '#f39c12';
+                if (category.includes("Hate")) badgeColor = '#f39c12';
                 else if (category.includes("Sexual")) badgeColor = '#9b59b6';
-                else if (category.includes("Scam") || category.includes("Advertising")) badgeColor = '#27ae60';
 
                 detailsHTML += `
                     <div class="toxic-item">
@@ -675,27 +852,96 @@ function renderResults(data, urlInfo) {
             }
         });
 
-        if (toxicity.toxic_count > 20) {
-            findingsHTML += `<div style="text-align: center; font-size: 11px; color: #999; margin-top: 8px;">... and ${toxicity.toxic_count - 20} more</div>`;
-        }
-
-        toxicFindings.innerHTML = findingsHTML;
         toxicDetails.innerHTML = detailsHTML;
     }
 
-    console.log("✅ Rendered");
+    document.getElementById('commentsStatus').innerHTML = 'v2 mode (see Toxicity Detection above)';
+    document.getElementById('commentsDetails').innerHTML = '';
 
-    // ===== SHOW WARNING MODAL AFTER RESULTS ARE RENDERED (10-15 second delay) =====
+    console.log("✅ v2 results rendered (legacy mode)");
+
+    // ===== SHOW WARNING MODAL for v2 if risky =====
+    const isRisky = riskScore >= 6 || sentiment.label === "Negative" || toxicity.toxic_count > 0;
     if (isRisky) {
         setTimeout(() => {
             showWarningModal(fake, sentiment, toxicity);
-        }, 12000); // 12 second delay for user to read results
+        }, 12000);
     }
 }
 
-// ============================================================================
-// WARNING MODAL HANDLER
-// ============================================================================
+function showWarningModalV3(riskScore, sentiment, toxicity, factCheck) {
+    const warningModal = document.getElementById('warningModal');
+    const warningContent = document.getElementById('warningContent');
+
+    let warningHTML = '';
+
+    const riskValue = riskScore.risk_score || 0;
+    const riskLevel = riskScore.risk_level || "Low";
+
+    if (riskValue >= 5.0) {
+        warningHTML += `
+            <h4>⚠️ ${riskLevel} Risk Content Detected</h4>
+            <p><strong>Risk Score:</strong> ${riskValue.toFixed(1)}/10</p>
+            <p><strong>Level:</strong> ${riskLevel}</p>
+        `;
+
+        if (riskScore.warnings && riskScore.warnings.length > 0) {
+            warningHTML += '<p><strong>Warnings:</strong></p><ul>';
+            riskScore.warnings.slice(0, 3).forEach(w => {
+                warningHTML += `<li>${w}</li>`;
+            });
+            warningHTML += '</ul>';
+        }
+    }
+
+    if (toxicity.is_toxic) {
+        warningHTML += `
+            <h4>🛡️ Toxic Content Detected</h4>
+            <p><strong>Severity:</strong> ${toxicity.severity}</p>
+            <p><strong>Score:</strong> ${(toxicity.overall_score * 100).toFixed(0)}%</p>
+        `;
+    }
+
+    if (factCheck.credibility_score < 40) {
+        warningHTML += `
+            <h4>📰 Low Credibility Warning</h4>
+            <p><strong>Credibility:</strong> ${factCheck.credibility_score}/100</p>
+            <p><strong>Verdict:</strong> ${factCheck.verdict}</p>
+        `;
+    }
+
+    warningContent.innerHTML = warningHTML;
+    warningModal.classList.remove('hidden');
+
+    // Button handlers
+    const continueBtn = document.getElementById('warningContinue');
+    const leaveBtn = document.getElementById('warningLeave');
+
+    const newContinueBtn = continueBtn.cloneNode(true);
+    const newLeaveBtn = leaveBtn.cloneNode(true);
+    continueBtn.parentNode.replaceChild(newContinueBtn, continueBtn);
+    leaveBtn.parentNode.replaceChild(newLeaveBtn, leaveBtn);
+
+    newContinueBtn.addEventListener('click', () => {
+        warningModal.classList.add('hidden');
+    });
+
+    newLeaveBtn.addEventListener('click', async () => {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (tab) {
+            try {
+                const url = new URL(tab.url);
+                const homepage = `${url.protocol}//${url.hostname}`;
+                chrome.tabs.update(tab.id, { url: homepage });
+            } catch (err) {
+                console.error("Error:", err);
+            }
+        }
+        warningModal.classList.add('hidden');
+    });
+}
+
+// Keep original v2 warning modal for backward compatibility
 
 function showWarningModal(fake, sentiment, toxicity) {
     const warningModal = document.getElementById('warningModal');

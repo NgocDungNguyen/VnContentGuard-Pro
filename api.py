@@ -11,11 +11,17 @@ from pydantic import BaseModel
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
+from src.models.fact_checker_v3 import check_facts_v3
 from src.models.gemini_llm import GeminiAgent
+from src.models.risk_scorer_v3 import calculate_risk_score_v3
 from src.models.sentiment import SentimentAnalyzer
-from src.models.toxicity import ToxicityAnalyzer
 
-app = FastAPI(title="VnContentGuard Pro API", version="2.1")
+# v3 Enhanced Components
+from src.models.sentiment_v3 import analyze_sentiment_v3
+from src.models.toxicity import ToxicityAnalyzer
+from src.models.toxicity_v3 import detect_toxicity_v3
+
+app = FastAPI(title="VnContentGuard Pro API", version="3.0")
 
 # Enable CORS for Chrome Extension
 app.add_middleware(
@@ -199,6 +205,164 @@ def analyze_content(req: ScanRequest):
         raise HTTPException(
             status_code=500, detail=f"Server error during analysis: {str(e)}"
         )
+
+
+# ============================================================================
+# v3 Enhanced Analysis Endpoint
+# ============================================================================
+
+
+@app.post("/analyze/v3", response_model=dict)
+def analyze_content_v3(req: ScanRequest):
+    """
+    v3 Enhanced full content scan endpoint with multi-layer AI detection.
+
+    Uses PhoBERT sentiment, 4-layer toxicity, multi-source fact-checking,
+    and objective risk scoring.
+
+    Args:
+        req: ScanRequest with url, article_text, and comments
+
+    Returns:
+        dict: Enhanced analysis with sentiment_v3, toxicity_v3, fact_check_v3, risk_score_v3
+    """
+    print(f"📥 [v3] Received Scan Request for: {req.url}")
+    try:
+        # ========== 1. SENTIMENT ANALYSIS v3 (PhoBERT) ==========
+        sentiment_v3 = {
+            "label": "Neutral",
+            "confidence": 0.0,
+            "intensity": "Weak",
+            "method": "none",
+        }
+
+        if len(req.article_text) > 5:
+            try:
+                sentiment_v3 = analyze_sentiment_v3(req.article_text[:512])
+                print(
+                    f"✅ [v3] Sentiment: {sentiment_v3['label']} (confidence: {sentiment_v3['confidence']:.2f})"
+                )
+            except Exception as e:
+                print(f"⚠️  [v3] Sentiment analysis failed: {e}")
+                sentiment_v3 = {
+                    "label": "Neutral",
+                    "confidence": 0.0,
+                    "intensity": "Weak",
+                    "method": "error",
+                }
+        else:
+            print(
+                f"⚠️  [v3] Article too short for sentiment ({len(req.article_text)} chars)"
+            )
+
+        # ========== 2. TOXICITY DETECTION v3 (4-layer) ==========
+        toxicity_v3 = {
+            "is_toxic": False,
+            "overall_score": 0.0,
+            "severity": "Low",
+            "categories": {},
+            "detection_layers": [],
+        }
+
+        if len(req.article_text) > 5:
+            try:
+                toxicity_v3 = detect_toxicity_v3(req.article_text[:1000])
+                print(
+                    f"✅ [v3] Toxicity: {toxicity_v3['severity']} (score: {toxicity_v3['overall_score']:.2f})"
+                )
+            except Exception as e:
+                print(f"⚠️  [v3] Toxicity detection failed: {e}")
+
+        # ========== 3. FACT-CHECKING v3 (Multi-source) ==========
+        fact_check_v3 = {
+            "credibility_score": 50,
+            "verdict": "Unverifiable",
+            "confidence": 0.0,
+            "evidence": [],
+            "sources_checked": 0,
+        }
+
+        if len(req.article_text) > 20:
+            try:
+                fact_check_v3 = check_facts_v3(req.article_text, req.url)
+                print(
+                    f"✅ [v3] Fact Check: {fact_check_v3['verdict']} (credibility: {fact_check_v3['credibility_score']})"
+                )
+            except Exception as e:
+                print(f"⚠️  [v3] Fact-checking failed: {e}")
+                error_msg = str(e).lower()
+                if "429" in str(e) or "quota" in error_msg:
+                    fact_check_v3["verdict"] = "Quota Exceeded"
+                else:
+                    fact_check_v3["verdict"] = "Service Unavailable"
+
+        # ========== 4. RISK SCORING v3 (Comprehensive) ==========
+        risk_score_v3 = {
+            "risk_score": 0.0,
+            "risk_level": "Low",
+            "confidence": 0.0,
+            "risk_breakdown": {},
+            "warnings": [],
+            "recommendations": [],
+        }
+
+        if len(req.article_text) > 20:
+            try:
+                risk_score_v3 = calculate_risk_score_v3(req.article_text, req.url)
+                print(
+                    f"✅ [v3] Risk Score: {risk_score_v3['risk_score']:.1f}/10 ({risk_score_v3['risk_level']})"
+                )
+            except Exception as e:
+                print(f"⚠️  [v3] Risk scoring failed: {e}")
+
+        # ========== 5. COMMENTS TOXICITY (v3) ==========
+        toxic_comments_v3 = []
+        toxic_count_v3 = 0
+
+        if req.comments:
+            print(f"📋 [v3] Analyzing {len(req.comments)} comments for toxicity...")
+            for comment in req.comments[:50]:  # Limit to 50 comments
+                try:
+                    result = detect_toxicity_v3(comment)
+                    if result["is_toxic"]:
+                        toxic_count_v3 += 1
+                        toxic_comments_v3.append(
+                            {
+                                "comment": comment[:200],
+                                "severity": result["severity"],
+                                "score": result["overall_score"],
+                                "categories": result["categories"],
+                            }
+                        )
+                except Exception as e:
+                    print(f"⚠️  [v3] Comment toxicity check failed: {e}")
+            print(f"✅ [v3] Comments: {toxic_count_v3}/{len(req.comments)} toxic")
+
+        # ========== 6. COMPILE v3 RESPONSE ==========
+        response = {
+            "version": "3.0",
+            "sentiment_v3": sentiment_v3,
+            "toxicity_v3": toxicity_v3,
+            "fact_check_v3": fact_check_v3,
+            "risk_score_v3": risk_score_v3,
+            "comments_analysis": {
+                "total": len(req.comments),
+                "toxic_count": toxic_count_v3,
+                "toxic_comments": toxic_comments_v3[
+                    :10
+                ],  # Return top 10 toxic comments
+            },
+            "url": req.url,
+        }
+
+        print(
+            f"✅ [v3] Analysis complete. Risk: {risk_score_v3['risk_score']:.1f}/10, Toxics: {toxic_count_v3}"
+        )
+        return response
+
+    except Exception as e:
+        print(f"❌ [v3] Critical Error: {e}")
+        raise HTTPException(status_code=500, detail=f"v3 analysis error: {str(e)}")
 
 
 # ============================================================================
