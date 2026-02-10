@@ -52,15 +52,12 @@ class SentimentAnalyzer:
             "lừa đảo",
             "gian lận",
             "khủng khiếp",
-            "không hài lòng",
             "thất bại",
             "tệ hại",
             "không tốt",
             "rác",
             "phí tiền",
-            "lãng phí",
             "không đáng",
-            "không nên",
         ]
 
     def analyze(self, text):
