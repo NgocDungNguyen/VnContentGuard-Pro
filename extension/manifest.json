@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "VnContentGuard Pro v3.1",
   "version": "3.1.0",
-  "description": "Công cụ quét an toàn nội dung tiếng Việt bằng AI — tóm tắt bài viết, phân tích bình luận theo ngữ cảnh, lọc thông minh (tiết kiệm 60%+ API), phát hiện độc hại 4 lớp, kiểm tra thực tế đa nguồn, và chấm điểm rủi ro khách quan.",
+  "description": "Quét an toàn nội dung tiếng Việt bằng AI — phân tích bình luận, phát hiện độc hại, kiểm tra thực tế, chấm điểm rủi ro.",
   "permissions": [
     "activeTab",
     "scripting",
