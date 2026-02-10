@@ -617,9 +617,10 @@ function renderV3Results(data, urlInfo) {
 
     // ===== 0. ARTICLE SUMMARY (NEW in v3.1) =====
     const summaryCard = document.getElementById('summaryCard');
-    if (articleSummary && articleSummary.text) {
+    const summaryContent = articleSummary?.summary || articleSummary?.text || '';
+    if (summaryContent) {
         summaryCard.style.display = 'block';
-        document.getElementById('summaryText').textContent = articleSummary.text;
+        document.getElementById('summaryText').textContent = summaryContent;
 
         let methodLabel = 'Gemini AI';
         if (articleSummary.method === 'cached') methodLabel = 'Đã lưu';
@@ -719,7 +720,7 @@ function renderV3Results(data, urlInfo) {
     
     let toxDetailsHTML = `
         <div style="font-size: 11px; color: #666; margin-top: 8px;">
-            <strong>Lớp phát hiện:</strong> ${toxLayers.join(', ') || 'không'}<br/>
+            <strong>Lớp phát hiện:</strong> ${(toxLayers || []).map(l => ({'regex':'Regex','gemini':'Gemini AI','perspective':'Perspective API','detoxify':'Detoxify'}[l] || l)).join(', ') || 'không'}<br/>
             <strong>Điểm:</strong> ${(toxScore * 100).toFixed(0)}%<br/>
     `;
     
@@ -807,12 +808,13 @@ function renderV3Results(data, urlInfo) {
         toxicComments.forEach((tc, idx) => {
             if (idx < 8) {
                 const sevColor = tc.severity === 'Critical' ? '#c0392b' : tc.severity === 'High' ? '#e74c3c' : '#f39c12';
+                const sevLabel = severityVi[tc.severity] || tc.severity;
                 const method = tc.method || 'unknown';
                 const methodBadge = method === 'gemini_context' ? '🤖 AI' : method === 'regex' ? '🔍 Regex' : '📋 Bộ lọc';
                 commentsHTML += `
                     <div style="margin: 6px 0; padding: 8px; background: #fff3cd; border-left: 3px solid ${sevColor}; border-radius: 3px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 10px; color: ${sevColor}; font-weight: bold;">${tc.severity} - ${(tc.score * 100).toFixed(0)}%</span>
+                            <span style="font-size: 10px; color: ${sevColor}; font-weight: bold;">${sevLabel} - ${(tc.score * 100).toFixed(0)}%</span>
                             <span style="font-size: 9px; color: #999; background: #f0f0f0; padding: 1px 5px; border-radius: 8px;">${methodBadge}</span>
                         </div>
                         <div style="font-size: 11px; margin-top: 3px;">"${(tc.comment || '').substring(0, 120)}${(tc.comment || '').length > 120 ? '...' : ''}"</div>

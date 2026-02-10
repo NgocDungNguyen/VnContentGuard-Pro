@@ -132,7 +132,7 @@ class SourceAnalyzer:
                 results["reputation_score"] += 10
             elif age_info["age_days"] < 90:  # <3 months
                 results["reputation_score"] -= 20
-                results["risk_factors"].append("Very new domain")
+                results["risk_factors"].append("Tên miền rất mới")
 
         # Check 3: SSL certificate
         ssl_valid = self._check_ssl(domain)
@@ -140,12 +140,12 @@ class SourceAnalyzer:
         if ssl_valid:
             results["reputation_score"] += 5
         else:
-            results["risk_factors"].append("No valid SSL certificate")
+            results["risk_factors"].append("Không có chứng chỉ SSL hợp lệ")
             results["reputation_score"] -= 10
 
         # Check 4: Suspicious patterns
         if self._is_suspicious_pattern(domain):
-            results["risk_factors"].append("Suspicious domain pattern")
+            results["risk_factors"].append("Tên miền có dấu hiệu đáng ngờ")
             results["reputation_score"] -= 15
 
         # Clamp score to 0-100
@@ -222,13 +222,13 @@ class SourceAnalyzer:
     def _calculate_verdict(self, score: int) -> str:
         """Calculate verdict from reputation score"""
         if score >= 80:
-            return "Trusted"
+            return "Đáng tin cậy"
         elif score >= 60:
-            return "Generally Credible"
+            return "Tương đối đáng tin"
         elif score >= 40:
-            return "Questionable"
+            return "Đáng ngờ"
         else:
-            return "Untrusted"
+            return "Không đáng tin"
 
     def _invalid_url_result(self, url: str) -> Dict:
         """Return result for invalid URL"""
@@ -237,7 +237,7 @@ class SourceAnalyzer:
             "reputation_score": 0,
             "domain_age_days": None,
             "ssl_valid": False,
-            "risk_factors": ["Invalid URL format"],
+            "risk_factors": ["URL không hợp lệ"],
             "verdict": "Invalid",
         }
 

@@ -115,8 +115,8 @@ class FactCheckerV3:
 
         results = {
             "score": 50,  # Neutral starting point
-            "verdict": "Unclear",
-            "confidence": "Low",
+            "verdict": "Chưa rõ",
+            "confidence": "Thấp",
             "evidence": [],
             "source_credibility": None,
             "cross_references": 0,
@@ -280,15 +280,15 @@ Be concise and objective."""
     def _calculate_verdict(self, score: int) -> str:
         """Calculate verdict from score"""
         if score >= 80:
-            return "Verified True"
+            return "Đã xác minh đúng"
         elif score >= 60:
-            return "Likely True"
+            return "Có thể đúng"
         elif score >= 40:
-            return "Unclear"
+            return "Chưa rõ"
         elif score >= 20:
-            return "Likely False"
+            return "Có thể sai"
         else:
-            return "False"
+            return "Sai"
 
     def _calculate_confidence(self, results: Dict) -> str:
         """Calculate confidence level"""
@@ -296,18 +296,18 @@ Be concise and objective."""
         evidence_count = len(results["evidence"])
 
         if method_count >= 3 and evidence_count >= 2:
-            return "High"
+            return "Cao"
         elif method_count >= 2 or evidence_count >= 1:
-            return "Medium"
+            return "Trung bình"
         else:
-            return "Low"
+            return "Thấp"
 
     def _empty_result(self) -> Dict:
         """Return empty result for invalid input"""
         return {
             "score": 50,
-            "verdict": "Unclear",
-            "confidence": "Low",
+            "verdict": "Chưa rõ",
+            "confidence": "Thấp",
             "evidence": [],
             "source_credibility": None,
             "cross_references": 0,

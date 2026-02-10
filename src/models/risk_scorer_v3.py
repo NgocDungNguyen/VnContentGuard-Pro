@@ -128,8 +128,8 @@ class RiskScorerV3:
 
             results["evidence"].append(
                 {
-                    "module": "Sentiment Analysis v3",
-                    "finding": f"{sentiment_label} ({sentiment_result.get('confidence', 0)*100:.0f}% confidence)",
+                    "module": "Phân tích cảm xúc v3",
+                    "finding": f"{sentiment_label} (độ tin cậy {sentiment_result.get('confidence', 0)*100:.0f}%)",
                     "risk_contribution": f"{sentiment_risk}/100",
                 }
             )
@@ -145,8 +145,8 @@ class RiskScorerV3:
 
             results["evidence"].append(
                 {
-                    "module": "Toxicity Detection v3",
-                    "finding": f"Severity: {toxicity_result['severity']} (Score: {toxicity_result['overall_score']:.2f})",
+                    "module": "Phát hiện độc hại v3",
+                    "finding": f"Mức độ: {toxicity_result['severity']} (Điểm: {toxicity_result['overall_score']:.2f})",
                     "risk_contribution": f"{toxicity_risk}/100",
                 }
             )
@@ -167,8 +167,8 @@ class RiskScorerV3:
 
             results["evidence"].append(
                 {
-                    "module": "Fact-Checking v3",
-                    "finding": f"{fact_result['verdict']} ({fact_result['confidence']} confidence)",
+                    "module": "Kiểm tra thực tế v3",
+                    "finding": f"{fact_result['verdict']} (độ tin cậy {fact_result['confidence']})",
                     "risk_contribution": f"{credibility_risk}/100",
                 }
             )
@@ -190,8 +190,8 @@ class RiskScorerV3:
 
                 results["evidence"].append(
                     {
-                        "module": "Source Analysis v3",
-                        "finding": f"{source_result['verdict']} (Score: {source_result['reputation_score']}/100)",
+                        "module": "Phân tích nguồn v3",
+                        "finding": f"{source_result['verdict']} (Điểm: {source_result['reputation_score']}/100)",
                         "risk_contribution": f"{source_risk}/100",
                     }
                 )
@@ -209,8 +209,8 @@ class RiskScorerV3:
         if manipulation_risk > 50:
             results["evidence"].append(
                 {
-                    "module": "Manipulation Detection",
-                    "finding": "Potential manipulative patterns detected",
+                    "module": "Phát hiện thao túng",
+                    "finding": "Phát hiện dấu hiệu thao túng trong nội dung",
                     "risk_contribution": f"{manipulation_risk}/100",
                 }
             )

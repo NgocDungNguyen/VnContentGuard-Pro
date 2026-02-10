@@ -252,7 +252,7 @@ def analyze_content_v3(req: ScanRequest):
     print(f"📥 [v3.1] Received Scan Request for: {req.url}")
     try:
         # ========== 0. ARTICLE SUMMARY (NEW) ==========
-        article_summary = {"text": "", "method": "none", "cached": False}
+        article_summary = {"summary": "", "method": "none", "cached": False}
         summary_text = ""
 
         if len(req.article_text) > 30:
