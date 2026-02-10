@@ -14,7 +14,6 @@ import os
 import re
 from typing import Dict, List, Optional
 
-from detoxify import Detoxify
 from dotenv import load_dotenv
 
 # Import v2 toxicity for fallback
@@ -51,6 +50,7 @@ class ToxicityAnalyzerV3:
         self.detoxify_model = None
         if use_detoxify:
             try:
+                from detoxify import Detoxify
                 # Use 'multilingual' model for better Vietnamese support
                 self.detoxify_model = Detoxify("multilingual")
                 print("✅ Layer 2: Detoxify multilingual model loaded")
