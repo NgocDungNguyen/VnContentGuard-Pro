@@ -762,7 +762,8 @@ function renderV3Results(data, urlInfo) {
     if (evidence.length > 0) {
         let evidenceHTML = '<div style="margin-top: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;"><strong>Bằng chứng:</strong><br/>';
         evidence.slice(0, 3).forEach(ev => {
-            evidenceHTML += `<div style="font-size: 10px; margin: 4px 0;">• ${ev.source || 'Unknown'}: ${(ev.claim || ev.description || 'No details').substring(0, 80)}...</div>`;
+            const detail = ev.analysis || ev.claim || ev.description || 'Không có chi tiết';
+            evidenceHTML += `<div style="font-size: 10px; margin: 4px 0;">• ${ev.source || 'Không rõ'}: ${detail.substring(0, 120)}</div>`;
         });
         if (evidence.length > 3) {
             evidenceHTML += `<div style="font-size: 10px; color: #999;">... và ${evidence.length - 3} bằng chứng khác</div>`;
@@ -793,10 +794,8 @@ function renderV3Results(data, urlInfo) {
                 <span style="font-size: 11px; color: #27ae60; font-weight: bold;">⚡ Tiết kiệm ${apiCallsSaved}/${totalComments} lần gọi API (${savingsPercent}%)</span>
             </div>
             <div style="font-size: 10px; color: #888;">
-                Regex: ${filterStats.obvious_toxic || 0} độc hại, 
-                Sạch: ${filterStats.obvious_clean || 0}, 
-                Spam: ${filterStats.spam || 0}, 
-                AI: ${filterStats.sent_to_ai || 0}
+                Phát hiện nhanh: ${filterStats.obvious_toxic || 0} độc hại, ${filterStats.obvious_clean || 0} sạch, ${filterStats.spam || 0} spam
+                 — Gửi AI phân tích sâu: ${filterStats.sent_to_ai || 0} bình luận
             </div>
         `;
     } else {
