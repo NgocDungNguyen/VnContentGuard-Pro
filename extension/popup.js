@@ -17,8 +17,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('warningModal').classList.add('hidden');
         document.getElementById('errorBox').classList.add('hidden');
         document.getElementById('scanBtn').disabled = false;
-        document.getElementById('scanBtn').textContent = '🚀 SCAN THIS PAGE';
-        document.getElementById('status').textContent = 'Ready to Scan';
+        document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
+        document.getElementById('status').textContent = 'Sẵn sàng quét';
         
         // Check for cached results for THIS specific URL
         chrome.storage.local.get([tab.url], (result) => {
@@ -41,8 +41,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('confirmation').classList.add('hidden');
                     document.getElementById('warningModal').classList.add('hidden');
                     document.getElementById('scanBtn').disabled = false;
-                    document.getElementById('scanBtn').textContent = '🚀 SCAN THIS PAGE';
-                    document.getElementById('status').textContent = 'Cache Cleared - Ready to Scan';
+                    document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
+                    document.getElementById('status').textContent = 'Đã xóa bộ nhớ đệm — Sẵn sàng quét';
                 });
             }
         });
@@ -62,7 +62,7 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
     if (!tab) return;
 
     btn.disabled = true;
-    btn.textContent = '⏳ Scraping...';
+    btn.textContent = '⏳ Đang thu thập...';
 
     try {
         console.log(`📍 Scanning: ${tab.url}`);
@@ -74,7 +74,7 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
         });
 
         if (!scrapeResult || !scrapeResult[0] || !scrapeResult[0].result) {
-            throw new Error("Failed to scrape");
+            throw new Error("Không thể thu thập nội dung");
         }
 
         const scrapedData = scrapeResult[0].result;
@@ -86,7 +86,7 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
         });
         
         if (!scrapedData.text || scrapedData.text.trim().length === 0) {
-            throw new Error("No content found - page may be empty or loading");
+            throw new Error("Không tìm thấy nội dung — trang có thể đang tải hoặc trống");
         }
 
         console.log(`✂️ Scraped: ${scrapedData.text.length} chars, ${scrapedData.comments.length} comments`);
@@ -103,7 +103,7 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
         showError(err.message);
     } finally {
         btn.disabled = false;
-        btn.textContent = '🚀 SCAN THIS PAGE';
+        btn.textContent = '🚀 QUÉT TRANG NÀY';
     }
 });
 
@@ -132,7 +132,7 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
 
     const btn = document.getElementById('confirmYes');
     btn.disabled = true;
-    btn.textContent = '⏳ Analyzing... (may take 1-2 min)';
+    btn.textContent = '⏳ Đang phân tích... (có thể mất 1-2 phút)';
 
     try {
         // AUTO-DETECT: Try localhost first (for local testing), fallback to cloud
@@ -204,7 +204,7 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
         showError(err.message);
     } finally {
         btn.disabled = false;
-        btn.textContent = '✅ Scan';
+        btn.textContent = '✅ Quét';
     }
 });
 
@@ -222,7 +222,7 @@ function showError(msg) {
     const errorMessage = document.getElementById('errorMessage');
 
     if (msg.includes('localhost') || msg.includes('Failed to fetch')) {
-        errorMessage.textContent = 'Server not connected\nStart Python API: python api.py';
+        errorMessage.textContent = 'Chưa kết nối máy chủ\nKhởi động API: python api.py';
     } else {
         errorMessage.textContent = msg;
     }
@@ -622,12 +622,12 @@ function renderV3Results(data, urlInfo) {
         document.getElementById('summaryText').textContent = articleSummary.text;
 
         let methodLabel = 'Gemini AI';
-        if (articleSummary.method === 'cached') methodLabel = 'Cached';
-        else if (articleSummary.method === 'fallback') methodLabel = 'Extracted';
+        if (articleSummary.method === 'cached') methodLabel = 'Đã lưu';
+        else if (articleSummary.method === 'fallback') methodLabel = 'Trích xuất';
 
         let metaHTML = `<span class="summary-badge">${methodLabel}</span>`;
         if (articleSummary.cached) {
-            metaHTML += ' <span class="summary-badge cached">⚡ Cached</span>';
+            metaHTML += ' <span class="summary-badge cached">⚡ Đã lưu</span>';
         }
         document.getElementById('summaryMeta').innerHTML = metaHTML;
     } else {
@@ -644,19 +644,24 @@ function renderV3Results(data, urlInfo) {
     else if (riskLevel === 'High') riskColor = '#e74c3c';  // Red
     else if (riskLevel === 'Critical') riskColor = '#c0392b';  // Dark Red
 
+    // Vietnamese risk level labels
+    const riskLevelVi = {
+        'Low': 'Thấp', 'Medium': 'Trung bình', 'High': 'Cao', 'Critical': 'Nguy hiểm'
+    };
+
     document.getElementById('riskScore').innerHTML = `<span style="color: ${riskColor}">${riskValue.toFixed(1)}/100</span>`;
-    document.getElementById('riskLevel').innerHTML = `<strong style="color: white;">${riskLevel} Risk</strong>`;
+    document.getElementById('riskLevel').innerHTML = `<strong style="color: white;">Rủi ro ${riskLevelVi[riskLevel] || riskLevel}</strong>`;
     
     // Risk Breakdown
     if (riskScore.breakdown) {
         const breakdown = riskScore.breakdown;
         let breakdownHTML = '<div style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px;">';
-        breakdownHTML += '<strong>Risk Breakdown:</strong><br/>';
-        breakdownHTML += `Fake News: ${(breakdown.fake_news_component || 0).toFixed(1)} | `;
-        breakdownHTML += `Toxicity: ${(breakdown.toxicity_component || 0).toFixed(1)} | `;
-        breakdownHTML += `Sentiment: ${(breakdown.sentiment_component || 0).toFixed(1)}<br/>`;
-        breakdownHTML += `Source: ${(breakdown.source_component || 0).toFixed(1)} | `;
-        breakdownHTML += `Manipulation: ${(breakdown.manipulation_component || 0).toFixed(1)}`;
+        breakdownHTML += '<strong>Chi tiết rủi ro:</strong><br/>';
+        breakdownHTML += `Tin giả: ${(breakdown.fake_news_component || 0).toFixed(1)} | `;
+        breakdownHTML += `Độc hại: ${(breakdown.toxicity_component || 0).toFixed(1)} | `;
+        breakdownHTML += `Cảm xúc: ${(breakdown.sentiment_component || 0).toFixed(1)}<br/>`;
+        breakdownHTML += `Nguồn: ${(breakdown.source_component || 0).toFixed(1)} | `;
+        breakdownHTML += `Thao túng: ${(breakdown.manipulation_component || 0).toFixed(1)}`;
         breakdownHTML += '</div>';
         document.getElementById('riskBreakdown').innerHTML = breakdownHTML;
     }
@@ -667,17 +672,25 @@ function renderV3Results(data, urlInfo) {
     const sentIntensity = sentiment.intensity || "Weak";
     const sentMethod = sentiment.method || "unknown";
 
+    // Vietnamese sentiment labels
+    const sentLabelVi = {
+        'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập'
+    };
+    const sentIntensityVi = {
+        'Weak': 'Yếu', 'Moderate': 'Vừa', 'Strong': 'Mạnh', 'Very Strong': 'Rất mạnh'
+    };
+
     let sentColor = '#3498db';  // Blue for Neutral
     if (sentLabel === 'Positive') sentColor = '#27ae60';  // Green
     else if (sentLabel === 'Negative') sentColor = '#e74c3c';  // Red
 
     document.getElementById('sentimentStatus').innerHTML = 
-        `<strong style="color: ${sentColor};">${sentLabel}</strong> (${(sentConf * 100).toFixed(0)}% confidence)`;
+        `<strong style="color: ${sentColor};">${sentLabelVi[sentLabel] || sentLabel}</strong> (độ tin cậy ${(sentConf * 100).toFixed(0)}%)`;
     
     document.getElementById('sentimentDetails').innerHTML = `
         <div style="font-size: 11px; color: #666;">
-            <strong>Intensity:</strong> ${sentIntensity}<br/>
-            <strong>Method:</strong> ${sentMethod === 'phobert' ? 'PhoBERT (AI)' : 'Keyword fallback'}<br/>
+            <strong>Cường độ:</strong> ${sentIntensityVi[sentIntensity] || sentIntensity}<br/>
+            <strong>Phương pháp:</strong> ${sentMethod === 'phobert' ? 'PhoBERT (AI)' : 'Phân tích từ khóa'}<br/>
             <div style="margin-top: 4px; background: #f0f0f0; border-radius: 3px; overflow: hidden;">
                 <div style="width: ${sentConf * 100}%; background: ${sentColor}; height: 8px;"></div>
             </div>
@@ -691,22 +704,27 @@ function renderV3Results(data, urlInfo) {
     const toxCategories = toxicity.categories || {};
     const toxLayers = toxicity.detection_layers || [];
 
+    // Vietnamese severity labels
+    const severityVi = {
+        'None': 'Không', 'Low': 'Thấp', 'Medium': 'Trung bình', 'High': 'Cao', 'Critical': 'Nguy hiểm'
+    };
+
     let toxColor = '#27ae60';  // Green for Low
     if (toxSeverity === 'Medium') toxColor = '#f39c12';
     else if (toxSeverity === 'High') toxColor = '#e74c3c';
     else if (toxSeverity === 'Critical') toxColor = '#c0392b';
 
     document.getElementById('toxicStatus').innerHTML = 
-        `<strong style="color: ${toxColor};">${isToxic ? '⚠️ TOXIC' : '✅ CLEAN'}</strong> - Severity: ${toxSeverity} (${(toxScore * 100).toFixed(0)}%)`;
+        `<strong style="color: ${toxColor};">${isToxic ? '⚠️ ĐỘC HẠI' : '✅ AN TOÀN'}</strong> - Mức độ: ${severityVi[toxSeverity] || toxSeverity} (${(toxScore * 100).toFixed(0)}%)`;
     
     let toxDetailsHTML = `
         <div style="font-size: 11px; color: #666; margin-top: 8px;">
-            <strong>Detection Layers:</strong> ${toxLayers.join(', ') || 'none'}<br/>
-            <strong>Score:</strong> ${(toxScore * 100).toFixed(0)}%<br/>
+            <strong>Lớp phát hiện:</strong> ${toxLayers.join(', ') || 'không'}<br/>
+            <strong>Điểm:</strong> ${(toxScore * 100).toFixed(0)}%<br/>
     `;
     
     if (Object.keys(toxCategories).length > 0) {
-        toxDetailsHTML += '<strong>Categories:</strong><br/>';
+        toxDetailsHTML += '<strong>Danh mục:</strong><br/>';
         for (const [cat, score] of Object.entries(toxCategories)) {
             if (score > 0.3) {
                 toxDetailsHTML += `- ${cat}: ${(score * 100).toFixed(0)}%<br/>`;
@@ -722,24 +740,32 @@ function renderV3Results(data, urlInfo) {
     const evidence = factCheck.evidence || [];
     const verificationMethods = factCheck.verification_methods || [];
 
+    // Vietnamese verdict labels
+    const verdictVi = {
+        'Verified True': 'Đã xác minh đúng', 'Likely True': 'Có thể đúng',
+        'Unclear': 'Chưa rõ', 'Likely False': 'Có thể sai', 'False': 'Sai',
+        'Unknown': 'Không xác định', 'Quota Limit': '⏱️ Hết hạn mức API'
+    };
+    const verdictDisplay = verdictVi[verdict] || verdict;
+
     let credColor = '#27ae60';  // Green for high credibility
     if (credScore < 70) credColor = '#f39c12';  // Orange
     if (credScore < 40) credColor = '#e74c3c';  // Red
 
     document.getElementById('fakeStatus').innerHTML = 
-        `<strong style="color: ${credColor};">${verdict}</strong><br/>Credibility: ${credScore}/100`;
+        `<strong style="color: ${credColor};">${verdictDisplay}</strong><br/>Độ tin cậy: ${credScore}/100`;
     
     document.getElementById('fakeSummary').textContent = 
-        `Checked ${verificationMethods.length} source(s). ${evidence.length} piece(s) of evidence found.`;
+        `Đã kiểm tra ${verificationMethods.length} nguồn. Tìm thấy ${evidence.length} bằng chứng.`;
     
     // Show evidence
     if (evidence.length > 0) {
-        let evidenceHTML = '<div style="margin-top: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;"><strong>Evidence:</strong><br/>';
+        let evidenceHTML = '<div style="margin-top: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;"><strong>Bằng chứng:</strong><br/>';
         evidence.slice(0, 3).forEach(ev => {
             evidenceHTML += `<div style="font-size: 10px; margin: 4px 0;">• ${ev.source || 'Unknown'}: ${(ev.claim || ev.description || 'No details').substring(0, 80)}...</div>`;
         });
         if (evidence.length > 3) {
-            evidenceHTML += `<div style="font-size: 10px; color: #999;">... and ${evidence.length - 3} more</div>`;
+            evidenceHTML += `<div style="font-size: 10px; color: #999;">... và ${evidence.length - 3} bằng chứng khác</div>`;
         }
         evidenceHTML += '</div>';
         document.getElementById('fakeEvidence').innerHTML = evidenceHTML;
@@ -754,7 +780,7 @@ function renderV3Results(data, urlInfo) {
     const apiCallsSaved = comments.api_calls_saved || 0;
 
     document.getElementById('commentsStatus').innerHTML = 
-        `Scanned: ${totalComments} comments | Toxic Found: <strong style="color: ${toxicCount > 0 ? '#e74c3c' : '#27ae60'};">${toxicCount}</strong>` +
+        `Đã quét: ${totalComments} bình luận | Độc hại: <strong style="color: ${toxicCount > 0 ? '#e74c3c' : '#27ae60'};">${toxicCount}</strong>` +
         (totalComments > 0 ? ` (${comments.toxic_percentage || 0}%)` : '');
 
     // Show API savings bar
@@ -764,13 +790,13 @@ function renderV3Results(data, urlInfo) {
         savingsBar.style.display = 'block';
         savingsBar.innerHTML = `
             <div style="display: flex; align-items: center; gap: 6px; margin: 6px 0;">
-                <span style="font-size: 11px; color: #27ae60; font-weight: bold;">⚡ ${apiCallsSaved}/${totalComments} API calls saved (${savingsPercent}%)</span>
+                <span style="font-size: 11px; color: #27ae60; font-weight: bold;">⚡ Tiết kiệm ${apiCallsSaved}/${totalComments} lần gọi API (${savingsPercent}%)</span>
             </div>
             <div style="font-size: 10px; color: #888;">
-                Regex: ${filterStats.obvious_toxic || 0} toxic, 
-                Clean: ${filterStats.obvious_clean || 0}, 
+                Regex: ${filterStats.obvious_toxic || 0} độc hại, 
+                Sạch: ${filterStats.obvious_clean || 0}, 
                 Spam: ${filterStats.spam || 0}, 
-                AI batch: ${filterStats.sent_to_ai || 0}
+                AI: ${filterStats.sent_to_ai || 0}
             </div>
         `;
     } else {
@@ -783,7 +809,7 @@ function renderV3Results(data, urlInfo) {
             if (idx < 8) {
                 const sevColor = tc.severity === 'Critical' ? '#c0392b' : tc.severity === 'High' ? '#e74c3c' : '#f39c12';
                 const method = tc.method || 'unknown';
-                const methodBadge = method === 'gemini_context' ? '🤖 AI' : method === 'regex' ? '🔍 Regex' : '📋 Filter';
+                const methodBadge = method === 'gemini_context' ? '🤖 AI' : method === 'regex' ? '🔍 Regex' : '📋 Bộ lọc';
                 commentsHTML += `
                     <div style="margin: 6px 0; padding: 8px; background: #fff3cd; border-left: 3px solid ${sevColor}; border-radius: 3px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -797,12 +823,12 @@ function renderV3Results(data, urlInfo) {
             }
         });
         if (toxicCount > 8) {
-            commentsHTML += `<div style="text-align: center; font-size: 10px; color: #999; margin-top: 4px;">... and ${toxicCount - 8} more</div>`;
+            commentsHTML += `<div style="text-align: center; font-size: 10px; color: #999; margin-top: 4px;">... và ${toxicCount - 8} bình luận độc hại khác</div>`;
         }
         commentsHTML += '</div>';
         document.getElementById('commentsDetails').innerHTML = commentsHTML;
     } else {
-        document.getElementById('commentsDetails').innerHTML = '<div style="text-align: center; color: #27ae60; font-weight: bold; margin-top: 8px;">✅ No toxic comments detected!</div>';
+        document.getElementById('commentsDetails').innerHTML = '<div style="text-align: center; color: #27ae60; font-weight: bold; margin-top: 8px;">✅ Không phát hiện bình luận độc hại!</div>';
     }
 
     // ===== 6. WARNINGS (if any) =====
@@ -847,8 +873,8 @@ function renderV2Results(data, urlInfo) {
     const toxicity = data.toxicity || { total: 0, toxic_count: 0, results: [] };
 
     // Clear v3-specific elements
-    document.getElementById('riskScore').textContent = 'v2 Mode';
-    document.getElementById('riskLevel').textContent = 'Using v2 endpoint';
+    document.getElementById('riskScore').textContent = 'Chế độ v2';
+    document.getElementById('riskLevel').textContent = 'Đang dùng API v2';
     document.getElementById('riskBreakdown').innerHTML = '';
     document.getElementById('sentimentDetails').innerHTML = '';
     document.getElementById('fakeEvidence').innerHTML = '';
@@ -856,31 +882,30 @@ function renderV2Results(data, urlInfo) {
     document.getElementById('recommendationsCard').style.display = 'none';
 
     // Sentiment
+    const sentLabelVi2 = {'Positive':'Tích cực','Negative':'Tiêu cực','Neutral':'Trung lập','Very Negative':'Rất tiêu cực','Very Positive':'Rất tích cực'};
     document.getElementById('sentimentStatus').innerHTML = 
-        `<strong>${sentiment.label}</strong> (${(sentiment.score * 100).toFixed(0)}% confident)`;
+        `<strong>${sentLabelVi2[sentiment.label] || sentiment.label}</strong> (độ tin cậy ${(sentiment.score * 100).toFixed(0)}%)`;
 
     // Fact check
     const riskScore = parseInt(fake.risk_score) || 0;
     let riskClass = riskScore <= 3 ? 'risk-low' : 'risk-high';
     let verdict = fake.verdict || "Unknown";
-    
-    if (verdict === "Quota Limit") {
-        verdict = "⏱️ API Quota Limit";
-    }
+    const verdictVi2 = {'Verified True':'Đã xác minh đúng','Likely True':'Có thể đúng','Unclear':'Chưa rõ','Likely False':'Có thể sai','False':'Sai','Unknown':'Không xác định','Quota Limit':'⏱️ Hết hạn mức API'};
+    verdict = verdictVi2[verdict] || verdict;
     
     document.getElementById('fakeStatus').innerHTML = 
-        `<strong class="${riskClass}">${verdict}</strong><br/>Risk: ${riskScore}/10`;
-    document.getElementById('fakeSummary').textContent = fake.summary || "No summary";
+        `<strong class="${riskClass}">${verdict}</strong><br/>Rủi ro: ${riskScore}/10`;
+    document.getElementById('fakeSummary').textContent = fake.summary || "Không có tóm tắt";
 
     // Toxicity - Summary
     document.getElementById('toxicStatus').textContent = 
-        `Scanned: ${toxicity.total} comments | Threats Found: ${toxicity.toxic_count}`;
+        `Đã quét: ${toxicity.total} bình luận | Phát hiện: ${toxicity.toxic_count} độc hại`;
 
     const toxicDetails = document.getElementById('toxicDetails');
     document.getElementById('toxicFindings').innerHTML = '';
 
     if (toxicity.toxic_count === 0) {
-        toxicDetails.innerHTML = '<div style="text-align: center; color: #27ae60; font-weight: bold;">✅ No threats detected!</div>';
+        toxicDetails.innerHTML = '<div style="text-align: center; color: #27ae60; font-weight: bold;">✅ Không phát hiện mối đe dọa!</div>';
     } else {
         let detailsHTML = '';
         toxicity.results.forEach((item, idx) => {
@@ -907,7 +932,7 @@ function renderV2Results(data, urlInfo) {
         toxicDetails.innerHTML = detailsHTML;
     }
 
-    document.getElementById('commentsStatus').innerHTML = 'v2 mode (see Toxicity Detection above)';
+    document.getElementById('commentsStatus').innerHTML = 'Chế độ v2 (xem phần Phát hiện độc hại ở trên)';
     document.getElementById('commentsDetails').innerHTML = '';
 
     console.log("✅ v2 results rendered (legacy mode)");
@@ -925,6 +950,10 @@ function showWarningModalV3(riskScore, sentiment, toxicity, factCheck) {
     const warningModal = document.getElementById('warningModal');
     const warningContent = document.getElementById('warningContent');
 
+    const riskLevelVi = {
+        'Low': 'Thấp', 'Medium': 'Trung bình', 'High': 'Cao', 'Critical': 'Nguy hiểm'
+    };
+
     let warningHTML = '';
 
     const riskValue = riskScore.risk_score || 0;
@@ -932,13 +961,13 @@ function showWarningModalV3(riskScore, sentiment, toxicity, factCheck) {
 
     if (riskValue >= 50) {
         warningHTML += `
-            <h4>⚠️ ${riskLevel} Risk Content Detected</h4>
-            <p><strong>Risk Score:</strong> ${riskValue.toFixed(1)}/100</p>
-            <p><strong>Level:</strong> ${riskLevel}</p>
+            <h4>⚠️ Phát hiện nội dung rủi ro ${riskLevelVi[riskLevel] || riskLevel}</h4>
+            <p><strong>Điểm rủi ro:</strong> ${riskValue.toFixed(1)}/100</p>
+            <p><strong>Mức độ:</strong> ${riskLevelVi[riskLevel] || riskLevel}</p>
         `;
 
         if (riskScore.warnings && riskScore.warnings.length > 0) {
-            warningHTML += '<p><strong>Warnings:</strong></p><ul>';
+            warningHTML += '<p><strong>Cảnh báo:</strong></p><ul>';
             riskScore.warnings.slice(0, 3).forEach(w => {
                 warningHTML += `<li>${w}</li>`;
             });
@@ -948,17 +977,17 @@ function showWarningModalV3(riskScore, sentiment, toxicity, factCheck) {
 
     if (toxicity.is_toxic) {
         warningHTML += `
-            <h4>🛡️ Toxic Content Detected</h4>
-            <p><strong>Severity:</strong> ${toxicity.severity}</p>
-            <p><strong>Score:</strong> ${(toxicity.overall_score * 100).toFixed(0)}%</p>
+            <h4>🛡️ Phát hiện nội dung độc hại</h4>
+            <p><strong>Mức độ:</strong> ${{None:'Không',Low:'Thấp',Medium:'Trung bình',High:'Cao',Critical:'Nguy hiểm'}[toxicity.severity] || toxicity.severity}</p>
+            <p><strong>Điểm:</strong> ${(toxicity.overall_score * 100).toFixed(0)}%</p>
         `;
     }
 
     if (factCheck.score < 40) {
         warningHTML += `
-            <h4>📰 Low Credibility Warning</h4>
-            <p><strong>Credibility:</strong> ${factCheck.score}/100</p>
-            <p><strong>Verdict:</strong> ${factCheck.verdict}</p>
+            <h4>📰 Cảnh báo độ tin cậy thấp</h4>
+            <p><strong>Độ tin cậy:</strong> ${factCheck.score}/100</p>
+            <p><strong>Kết luận:</strong> ${{  'Verified True':'Đã xác minh đúng','Likely True':'Có thể đúng','Unclear':'Chưa rõ','Likely False':'Có thể sai','False':'Sai'}[factCheck.verdict] || factCheck.verdict}</p>
         `;
     }
 
@@ -1004,20 +1033,20 @@ function showWarningModal(fake, sentiment, toxicity) {
     // Fake news warning
     if ((fake.risk_score || 0) >= 6) {
         warningHTML += `
-            <h4>📰 Potential Fake News/Misinformation</h4>
-            <p><strong>Risk Level:</strong> ${fake.risk_score}/10</p>
-            <p><strong>Verdict:</strong> ${fake.verdict || "High Risk"}</p>
-            <p><strong>Details:</strong> ${fake.summary || "This content may contain misinformation or false claims."}</p>
+            <h4>📰 Có thể là tin giả/sai lệch</h4>
+            <p><strong>Mức rủi ro:</strong> ${fake.risk_score}/10</p>
+            <p><strong>Kết luận:</strong> ${fake.verdict || "Rủi ro cao"}</p>
+            <p><strong>Chi tiết:</strong> ${fake.summary || "Nội dung này có thể chứa thông tin sai lệch hoặc tin giả."}</p>
         `;
     }
 
     // Negative sentiment warning
     if (sentiment.label === "Negative" || sentiment.label === "Very Negative") {
         warningHTML += `
-            <h4>😞 Negative/Harmful Content Detected</h4>
-            <p><strong>Sentiment:</strong> ${sentiment.label}</p>
-            <p><strong>Confidence:</strong> ${(sentiment.score * 100).toFixed(0)}%</p>
-            <p>This content has been detected as negative or potentially harmful.</p>
+            <h4>😞 Phát hiện nội dung tiêu cực/có hại</h4>
+            <p><strong>Cảm xúc:</strong> ${{Positive:'Tích cực',Negative:'Tiêu cực',Neutral:'Trung lập','Very Negative':'Rất tiêu cực','Very Positive':'Rất tích cực'}[sentiment.label] || sentiment.label}</p>
+            <p><strong>Độ tin cậy:</strong> ${(sentiment.score * 100).toFixed(0)}%</p>
+            <p>Nội dung này được phát hiện có tính chất tiêu cực hoặc có hại.</p>
         `;
     }
 
@@ -1028,13 +1057,13 @@ function showWarningModal(fake, sentiment, toxicity) {
             .slice(0, 3);
 
         warningHTML += `
-            <h4>💬 Toxic/Offensive Content Found</h4>
-            <p><strong>Threats Found:</strong> ${toxicity.toxic_count} comments with issues</p>
-            <p><strong>Scanned:</strong> ${toxicity.total} total comments</p>
+            <h4>💬 Phát hiện bình luận độc hại/xúc phạm</h4>
+            <p><strong>Số lượng:</strong> ${toxicity.toxic_count} bình luận có vấn đề</p>
+            <p><strong>Đã quét:</strong> ${toxicity.total} bình luận tổng cộng</p>
         `;
 
         if (topThreats.length > 0) {
-            warningHTML += '<p><strong>Examples:</strong></p><ul>';
+            warningHTML += '<p><strong>Ví dụ:</strong></p><ul>';
             topThreats.forEach(item => {
                 const category = item.Category || item.category || "Toxic";
                 const comment = item.Comment || item.comment || "";

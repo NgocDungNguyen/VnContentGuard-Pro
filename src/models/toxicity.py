@@ -125,9 +125,9 @@ class ToxicityAnalyzer:
                 r"\b(trung kỳ|cá gỗ|hoa thanh quế|dân 36|dân 37|dân 18|36 37|tiểu vương quốc|vương quốc 36|thanh nghệ tĩnh|ăn rau má|phá đường tàu)\b",
                 "Hate: Regional (Anti-Central)",
             ),
-            # 8. RACISM & ETHNIC SLURS
+            # 8. RACISM & ETHNIC SLURS (require phrases, not standalone 'tộc' which appears in 'dân tộc')
             (
-                r"\b(tộc|mán|mường|lũ mọi)\b",
+                r"\b(lũ mán|lũ mường|lũ mọi|bọn mọi|đồ mọi)\b",
                 "Hate: Classism/Ethnic (Contextual)",
             ),
             (
@@ -181,9 +181,13 @@ class ToxicityAnalyzer:
                 r"\b(con mẹ mày|thằng cha mày|cả lò nhà mày|mả cha mày|tiên sư bố|cái mả mẹ|đồ chết tiệt)\b",
                 "Profanity: Family Insults",
             ),
-            # 14. INSULTS: INTELLIGENCE & ABILITY
+            # 14. INSULTS: INTELLIGENCE & ABILITY (require context: 'ngu' needs follow-up or prefix)
             (
-                r"\b(ngu|óc chó|óc lợn|óc bò|ngu si|thiểu năng|bại não|khuyết tật|tự kỷ|ngáo|ngáo đá|ngáo ngơ|não tàn|vô học|mất dạy)\b",
+                r"\b(ngu\s+si|ngu\s+ngốc|ngu\s+vl|ngu\s+vcl|đồ\s+ngu|thằng\s+ngu|con\s+ngu|ngu\s+lắm|ngu\s+quá)\b",
+                "Insult: Ableism/Intelligence",
+            ),
+            (
+                r"\b(óc chó|óc lợn|óc bò|thiểu năng|bại não|khuyết tật|tự kỷ|ngáo|ngáo đá|ngáo ngơ|não tàn|vô học|mất dạy)\b",
                 "Insult: Ableism/Intelligence",
             ),
             # 15. INSULTS: APPEARANCE & CHARACTER
@@ -210,7 +214,7 @@ class ToxicityAnalyzer:
                 "Spam: Job Scam",
             ),
             (
-                r"\b(chứng khoán quốc tế|sàn ảo|tiền ảo|lùa gà|pump dump|đa cấp|hệ thống|mô hình ponzi|hoàn vốn|cam kết lợi nhuận)\b",
+                r"\b(chứng khoán quốc tế|sàn ảo|tiền ảo|lùa gà|pump dump|đa cấp|mô hình ponzi|hoàn vốn nhanh|cam kết lợi nhuận)\b",
                 "Spam: Financial Scam",
             ),
             # 19. ADVERTISING & LINK SPAM

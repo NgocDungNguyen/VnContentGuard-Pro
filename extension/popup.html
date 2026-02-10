@@ -6,24 +6,24 @@
 </head>
 <body>
     <div class="container">
-        <h2>🛡️ VnContentGuard v3</h2>
-        <div id="status" class="status-badge">Ready to Scan</div>
+        <h2>🛡️ VnContentGuard Pro</h2>
+        <div id="status" class="status-badge">Sẵn sàng quét</div>
         
-        <button id="scanBtn" class="btn-primary">🚀 SCAN THIS PAGE</button>
+        <button id="scanBtn" class="btn-primary">🚀 QUÉT TRANG NÀY</button>
         
         <div id="confirmation" class="hidden">
             <div class="card">
-                <h3>📋 Confirm Scan</h3>
+                <h3>📋 Xác nhận quét</h3>
                 <div style="font-size: 12px; margin-bottom: 10px;">
-                    <strong>📍 Link:</strong>
+                    <strong>📍 Đường dẫn:</strong>
                     <div id="confirmUrl" style="font-size: 10px; color: #666; word-break: break-all; margin: 4px 0;"></div>
-                    <strong style="display: block; margin-top: 8px;">📝 Preview:</strong>
+                    <strong style="display: block; margin-top: 8px;">📝 Xem trước:</strong>
                     <div id="confirmPreview" style="background: #f9f9f9; padding: 8px; border-radius: 3px; font-size: 11px; max-height: 80px; overflow-y: auto; margin: 4px 0;"></div>
-                    <strong style="display: block; margin-top: 8px;">💬 Comments: <span id="confirmComments">0</span></strong>
+                    <strong style="display: block; margin-top: 8px;">💬 Bình luận: <span id="confirmComments">0</span></strong>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button id="confirmYes" class="btn-primary" style="flex: 1; margin: 0; padding: 8px;">✅ Scan</button>
-                    <button id="confirmNo" class="btn-secondary" style="flex: 1; padding: 8px;">❌ Cancel</button>
+                    <button id="confirmYes" class="btn-primary" style="flex: 1; margin: 0; padding: 8px;">✅ Quét</button>
+                    <button id="confirmNo" class="btn-secondary" style="flex: 1; padding: 8px;">❌ Hủy</button>
                 </div>
             </div>
         </div>
@@ -31,11 +31,11 @@
         <!-- WARNING MODAL FOR FLAGGED CONTENT -->
         <div id="warningModal" class="hidden warning-overlay">
             <div class="warning-box">
-                <div class="warning-header">⚠️ CONTENT WARNING</div>
+                <div class="warning-header">⚠️ CẢNH BÁO NỘI DUNG</div>
                 <div id="warningContent" class="warning-content"></div>
                 <div class="warning-buttons">
-                    <button id="warningContinue" class="btn-primary">✅ Continue Reading</button>
-                    <button id="warningLeave" class="btn-secondary">❌ Go Back to Site</button>
+                    <button id="warningContinue" class="btn-primary">✅ Tiếp tục đọc</button>
+                    <button id="warningLeave" class="btn-secondary">❌ Quay lại</button>
                 </div>
             </div>
         </div>
@@ -43,71 +43,71 @@
         <div id="results" class="hidden">
             <!-- v3.1 ARTICLE SUMMARY (NEW) -->
             <div class="card summary-card" id="summaryCard" style="display: none;">
-                <h3>📰 Article Summary (AI)</h3>
+                <h3>📰 Tóm tắt bài viết (AI)</h3>
                 <div id="summaryText" class="card-content summary-text"></div>
                 <div id="summaryMeta" class="summary-meta"></div>
             </div>
 
             <!-- v3 RISK SCORE -->
             <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
-                <h3 style="color: white;">📊 Overall Risk Score v3</h3>
+                <h3 style="color: white;">📊 Điểm Rủi Ro Tổng Thể</h3>
                 <div id="riskScore" class="card-content" style="font-size: 32px; font-weight: bold; text-align: center; color: white;">-/100</div>
-                <div id="riskLevel" class="card-content" style="text-align: center; color: white; font-size: 18px;">Calculating...</div>
+                <div id="riskLevel" class="card-content" style="text-align: center; color: white; font-size: 18px;">Đang tính...</div>
                 <div id="riskBreakdown" class="details" style="color: rgba(255,255,255,0.9); font-size: 11px;"></div>
             </div>
 
             <!-- v3 SENTIMENT (Enhanced) -->
             <div class="card">
-                <h3>🎭 Sentiment v3 (PhoBERT)</h3>
+                <h3>🎭 Phân tích cảm xúc</h3>
                 <div id="sentimentStatus" class="card-content">...</div>
                 <div id="sentimentDetails" class="details" style="margin-top: 8px;"></div>
             </div>
 
             <!-- v3 TOXICITY (Enhanced) -->
             <div class="card">
-                <h3>🛡️ Toxicity Detection v3 (4-Layer)</h3>
-                <div id="toxicStatus" class="card-content">Waiting...</div>
+                <h3>🛡️ Phát hiện nội dung độc hại (4 lớp)</h3>
+                <div id="toxicStatus" class="card-content">Đang chờ...</div>
                 <div id="toxicDetails" class="details"></div>
                 <div id="toxicFindings" class="findings"></div>
             </div>
 
             <!-- v3 FACT CHECK (Enhanced) -->
             <div class="card">
-                <h3>📰 Fact Check v3 (Multi-Source)</h3>
-                <div id="fakeStatus" class="card-content">Waiting...</div>
+                <h3>📰 Kiểm tra thực tế (Đa nguồn)</h3>
+                <div id="fakeStatus" class="card-content">Đang chờ...</div>
                 <div id="fakeSummary" class="details"></div>
                 <div id="fakeEvidence" class="details" style="font-size: 11px; margin-top: 8px;"></div>
             </div>
 
             <!-- v3 COMMENTS ANALYSIS (Enhanced v3.1) -->
             <div class="card">
-                <h3>💬 Comments Analysis v3.1</h3>
-                <div id="commentsStatus" class="card-content">Waiting...</div>
+                <h3>💬 Phân tích bình luận v3.1</h3>
+                <div id="commentsStatus" class="card-content">Đang chờ...</div>
                 <div id="commentsApiSavings" class="api-savings-bar" style="display: none;"></div>
                 <div id="commentsDetails" class="details"></div>
             </div>
 
             <!-- v3 WARNINGS & RECOMMENDATIONS -->
             <div class="card" id="warningsCard" style="display: none; border-left: 4px solid #f39c12;">
-                <h3>⚠️ Warnings</h3>
+                <h3>⚠️ Cảnh báo</h3>
                 <div id="warningsList" class="details"></div>
             </div>
 
             <div class="card" id="recommendationsCard" style="display: none; border-left: 4px solid #3498db;">
-                <h3>💡 Recommendations</h3>
+                <h3>💡 Khuyến nghị</h3>
                 <div id="recommendationsList" class="details"></div>
             </div>
 
             <div style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px; text-align: center;">
-                <div style="font-size: 10px; color: #666; margin-bottom: 8px;">Powered by: Gemini AI + Regex + Perspective API + Fact Check API</div>
-                <button id="clearCache" class="btn-secondary" style="width: 100%; padding: 8px;">🗑️ Clear Cached Results</button>
+                <div style="font-size: 10px; color: #666; margin-bottom: 8px;">Hỗ trợ bởi: Gemini AI + Regex + Perspective API + Fact Check API</div>
+                <button id="clearCache" class="btn-secondary" style="width: 100%; padding: 8px;">🗑️ Xóa kết quả đã lưu</button>
             </div>
         </div>
 
         <div id="errorBox" class="hidden">
-            <div class="error-title">❌ Error</div>
+            <div class="error-title">❌ Lỗi</div>
             <div id="errorMessage" class="card-content"></div>
-            <button id="retryBtn" class="btn-secondary" style="margin-top: 10px;">Retry</button>
+            <button id="retryBtn" class="btn-secondary" style="margin-top: 10px;">Thử lại</button>
         </div>
     </div>
     <script src="popup.js"></script>

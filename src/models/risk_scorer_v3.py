@@ -153,7 +153,7 @@ class RiskScorerV3:
 
             if toxicity_result["is_toxic"]:
                 results["recommendations"].append(
-                    f"⚠️ Toxic content detected: {', '.join(toxicity_result['categories'])}"
+                    f"⚠️ Phát hiện nội dung độc hại: {', '.join(toxicity_result['categories'])}"
                 )
 
         # Component 3: Fact-Checking (40% weight - most important)
@@ -175,7 +175,7 @@ class RiskScorerV3:
 
             if fact_result["verdict"] in ["False", "Likely False"]:
                 results["recommendations"].append(
-                    f"⚠️ Questionable claims detected - verify with multiple sources"
+                    f"⚠️ Phát hiện thông tin đáng ngờ — hãy kiểm chứng từ nhiều nguồn"
                 )
 
         # Component 4: Source Credibility (10% weight)
@@ -198,7 +198,7 @@ class RiskScorerV3:
 
                 if source_result["risk_factors"]:
                     results["recommendations"].append(
-                        f"⚠️ Source risks: {', '.join(source_result['risk_factors'])}"
+                        f"⚠️ Rủi ro nguồn: {', '.join(source_result['risk_factors'])}"
                     )
 
         # Component 5: Manipulation Indicators (10% weight)
@@ -215,7 +215,7 @@ class RiskScorerV3:
                 }
             )
             results["recommendations"].append(
-                "⚠️ Content shows signs of manipulation (clickbait, sensationalism)"
+                "⚠️ Nội dung có dấu hiệu thao túng (giật tít, giật gân)"
             )
 
         # Calculate final risk score
@@ -230,19 +230,19 @@ class RiskScorerV3:
         # Add summary recommendations
         if results["risk_level"] == "Critical":
             results["recommendations"].insert(
-                0, "🚨 CRITICAL: Do NOT share or trust this content"
+                0, "🚨 NGUY HIỂM: KHÔNG chia sẻ hoặc tin tưởng nội dung này"
             )
         elif results["risk_level"] == "High":
             results["recommendations"].insert(
-                0, "⚠️ HIGH RISK: Verify thoroughly before trusting"
+                0, "⚠️ RỦI RO CAO: Hãy kiểm chứng kỹ trước khi tin tưởng"
             )
         elif results["risk_level"] == "Medium":
             results["recommendations"].insert(
-                0, "⚠️ MODERATE RISK: Exercise caution and verify claims"
+                0, "⚠️ RỦI RO VỮA: Cẩn thận và kiểm chứng thông tin"
             )
         else:
             results["recommendations"].insert(
-                0, "✅ LOW RISK: Content appears relatively safe"
+                0, "✅ AN TOÀN: Nội dung tương đối đáng tin cậy"
             )
 
         return results

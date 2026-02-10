@@ -39,9 +39,9 @@ class CommentFilter:
             r"\b(giết|chém|đâm|bắn|tao giết|tao đánh)\b",
             r"\b(chết|giết|đập|đánh|đấm|đá)\s+(mày|bạn|người|nó|họ)\b",
             r"\b(tao|mày)\s+(giết|đập|đấm)\b",
-            # Hostile commands
-            r"\b(câm|câm\s+mồm|câm\s+họng|câm\s+đi)\b",
-            r"\b(cút|cút\s+đi|biến|biến\s+đi)\b",
+            # Hostile commands (require full phrase — standalone 'biến'/'câm' are normal words)
+            r"\b(câm\s+mồm|câm\s+họng|câm\s+miệng|câm\s+đi)\b",
+            r"\b(cút|cút\s+đi|biến\s+đi|biến\s+ngay)\b",
             r"\b(đi\s+chết|chết\s+đi|chết\s+mẹ)\b",
             # Brain/intelligence insults
             r"\b(óc\s+chó|não\s+chó|đầu\s+gối|ngu\s+vl|ngu\s+vcl)\b",
