@@ -97,7 +97,7 @@ class ArticleSummarizer:
                         "Hãy viết MỘT ĐOẠN VĂN tóm tắt CHI TIẾT bài báo dưới đây.\n\n"
                         "QUY TẮC BẮT BUỘC (QUAN TRỌNG - PHẢI TUÂN THỦ):\n"
                         "1. Đoạn tóm tắt BẮT BUỘC PHẢI có TỐI THIỂU 8-10 câu đầy đủ\n"
-                        "2. Đoạn tóm tắt PHẢI dài TỐI THIỂU 1000 ký tự (khoảng 400-500 từ)\n"
+                        "2. Đoạn tóm tắt PHẢI dài TỐI THIỂU 1000 ký tự (khoảng 500-600 từ)\n"
                         "3. Câu 1-2: Nêu chủ đề chính, ai/cái gì đang xảy ra, ở đâu, khi nào\n"
                         "4. Câu 3: Nêu con số, dữ liệu, giá cả cụ thể quan trọng nhất\n"
                         "5. Câu 4-5: Giải thích nguyên nhân, bối cảnh, diễn biến chi tiết\n"
@@ -108,7 +108,7 @@ class ArticleSummarizer:
                         "10. Chỉ trả về đoạn tóm tắt, KHÔNG thêm tiêu đề hay giải thích\n"
                         "11. NẾU đoạn tóm tắt dưới 1000 ký tự → BẠN ĐÃ LÀM SAI, hãy viết dài hơn\n\n"
                         f"BÀI BÁO:\n{truncated}\n\n"
-                        "ĐOẠN TÓM TẮT CHI TIẾT (8-10 câu, tối thiểu 1000 ký tự, khoảng 400-500 từ):"
+                        "ĐOẠN TÓM TẮT CHI TIẾT (8-10 câu, tối thiểu 1000 ký tự, khoảng 500-600 từ):"
                     )
 
                     response = self.client.models.generate_content(
