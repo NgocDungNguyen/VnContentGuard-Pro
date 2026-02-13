@@ -51,6 +51,7 @@ class ToxicityAnalyzerV3:
         if use_detoxify:
             try:
                 from detoxify import Detoxify
+
                 # Use 'multilingual' model for better Vietnamese support
                 self.detoxify_model = Detoxify("multilingual")
                 print("✅ Layer 2: Detoxify multilingual model loaded")
@@ -205,9 +206,10 @@ class ToxicityAnalyzerV3:
         # Skip for Vietnamese text — Perspective doesn't support Vietnamese well
         # even with languages=["en"]. Only use for English-dominant text.
         import re as _re
+
         vietnamese_chars = _re.search(
-            r'[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]',
-            text.lower()
+            r"[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]",
+            text.lower(),
         )
         if vietnamese_chars:
             return None  # Skip — Perspective can't handle Vietnamese
@@ -218,7 +220,9 @@ class ToxicityAnalyzerV3:
             url = f"https://commentanalyzer.googleapis.com/v1alpha1/comments:analyze?key={self.perspective_api_key}"
             payload = {
                 "comment": {"text": text[:3000]},
-                "languages": ["en"],  # Vietnamese not supported by any attribute — use English detection
+                "languages": [
+                    "en"
+                ],  # Vietnamese not supported by any attribute — use English detection
                 "requestedAttributes": {
                     "TOXICITY": {},
                     "SEVERE_TOXICITY": {},
