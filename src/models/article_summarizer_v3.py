@@ -121,6 +121,9 @@ class ArticleSummarizer:
 
                     summary = response.text.strip()
 
+                    # Strip Gemini meta-text prefixes (echoed instructions)
+                    summary = self._strip_meta_prefix(summary)
+
                     # If summary is too short, retry with stronger prompt
                     if summary and len(summary) < 300:
                         retry_prompt = (
@@ -141,6 +144,7 @@ class ArticleSummarizer:
                             ),
                         )
                         retry_text = retry_resp.text.strip()
+                        retry_text = self._strip_meta_prefix(retry_text)
                         if retry_text and len(retry_text) > len(summary):
                             summary = retry_text
                     if summary:
@@ -170,6 +174,30 @@ class ArticleSummarizer:
 
         # 3. Fallback: extract first 2 sentences
         return self._fallback_summary(article_text)
+
+    def _strip_meta_prefix(self, text: str) -> str:
+        """
+        Remove Gemini meta-text prefixes where it echoes prompt instructions
+        like 'Dưới đây là đoạn tóm tắt...' before the actual summary.
+        """
+        import re
+
+        # Common Vietnamese meta-prefixes Gemini adds
+        meta_patterns = [
+            r'^Dưới đây là[^.,:]*[.,:]\s*',
+            r'^Đây là[^.,:]*[.,:]\s*',
+            r'^Tóm tắt[^.,:]*[.,:]\s*',
+            r'^Đoạn tóm tắt[^.,:]*[.,:]\s*',
+            r'^Theo yêu cầu[^.,:]*[.,:]\s*',
+            r'^Bài viết[^.,:]*[.,:]\s*',
+        ]
+        result = text
+        for pattern in meta_patterns:
+            result = re.sub(pattern, '', result, count=1, flags=re.IGNORECASE)
+            if result != text:
+                break  # Only strip one prefix
+
+        return result.strip()
 
     def _fallback_summary(self, article_text: str) -> Dict[str, Any]:
         """

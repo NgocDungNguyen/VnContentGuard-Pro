@@ -359,15 +359,6 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
     btn.textContent = '⏳ Đang gửi...';
 
     try {
-        // v5.0 — Show INSTANT offline results while waiting for AI
-        if (typeof offlineFullAnalysis === 'function') {
-            const offlineResults = offlineFullAnalysis(scannedDataCache.text, scannedDataCache.comments, currentTabUrl);
-            currentResultsData = offlineResults;
-            document.getElementById('confirmation').classList.add('hidden');
-            renderResults(offlineResults, currentTabUrl);
-            document.getElementById('status').textContent = '⚡ Chế độ nhanh — Đang chờ AI phân tích đầy đủ...';
-        }
-
         // Delegate to background service worker (SSE streaming mode v4.9!)
         const response = await chrome.runtime.sendMessage({
             type: 'START_SCAN_STREAM',
@@ -381,16 +372,15 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
         if (response && response.status === 'started') {
             console.log("✅ Scan delegated to background service worker");
 
-            // Show in-progress state
+            // Hide confirmation, show streaming progress — NO partial results until AI finishes
             document.getElementById('confirmation').classList.add('hidden');
+            document.getElementById('results').classList.add('hidden');
             document.getElementById('scanBtn').disabled = true;
             document.getElementById('scanBtn').textContent = '⏳ Đang phân tích...';
-            if (!currentResultsData || !currentResultsData.offline_mode) {
-                document.getElementById('status').textContent = 'Đang streaming phân tích... (có thể đóng popup)';
-                // Show streaming progress bar
-                document.getElementById('streamProgress').classList.remove('hidden');
-                updateStreamProgress(0, {});
-            }
+            document.getElementById('status').textContent = 'Đang streaming phân tích... (có thể đóng popup)';
+            // Show streaming progress bar
+            document.getElementById('streamProgress').classList.remove('hidden');
+            updateStreamProgress(0, {});
 
             // Start polling for results
             startPollingForResults(currentTabUrl);

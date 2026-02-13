@@ -287,10 +287,130 @@ class RiskScorerV3:
 
         return min(100, risk)
 
+    def score_from_results(
+        self,
+        text: str,
+        url: Optional[str],
+        sentiment_result: Optional[Dict] = None,
+        toxicity_result: Optional[Dict] = None,
+        fact_check_result: Optional[Dict] = None,
+    ) -> Dict:
+        """
+        Calculate risk score using PRE-COMPUTED module results.
+        Avoids running sentiment/toxicity/fact-check again, preventing double work
+        and contradictory results between modules.
+        """
+        if not text or not text.strip():
+            return self._empty_result()
+
+        results = {
+            "risk_score": 0,
+            "risk_level": "Unknown",
+            "breakdown": {
+                "fake_news_component": 0,
+                "toxicity_component": 0,
+                "sentiment_component": 0,
+                "source_component": 0,
+                "manipulation_component": 0,
+            },
+            "raw_scores": {},
+            "evidence": [],
+            "recommendations": [],
+        }
+
+        # Component 1: Sentiment (15% weight) — use pre-computed
+        if sentiment_result:
+            results["raw_scores"]["sentiment"] = sentiment_result
+            sentiment_risk = self._calculate_sentiment_risk(sentiment_result)
+            results["breakdown"]["sentiment_component"] = sentiment_risk * 0.15
+            sentiment_label = sentiment_result.get("sentiment") or sentiment_result.get("label", "Unknown")
+            results["evidence"].append({
+                "module": "Phân tích cảm xúc v3",
+                "finding": f"{sentiment_label} (độ tin cậy {sentiment_result.get('confidence', 0)*100:.0f}%)",
+                "risk_contribution": f"{sentiment_risk}/100",
+            })
+
+        # Component 2: Toxicity (25% weight) — use pre-computed
+        if toxicity_result:
+            results["raw_scores"]["toxicity"] = toxicity_result
+            toxicity_risk = self._calculate_toxicity_risk(toxicity_result)
+            results["breakdown"]["toxicity_component"] = toxicity_risk * 0.25
+            results["evidence"].append({
+                "module": "Phát hiện độc hại v3",
+                "finding": f"Mức độ: {toxicity_result.get('severity', 'None')} (Điểm: {toxicity_result.get('overall_score', 0):.2f})",
+                "risk_contribution": f"{toxicity_risk}/100",
+            })
+            if toxicity_result.get("is_toxic"):
+                cats = toxicity_result.get("categories", {})
+                if cats:
+                    results["recommendations"].append(
+                        f"⚠️ Phát hiện nội dung độc hại: {', '.join(cats)}"
+                    )
+
+        # Component 3: Fact-Check (40% weight) — use pre-computed
+        if fact_check_result:
+            results["raw_scores"]["fact_check"] = fact_check_result
+            credibility_risk = 100 - fact_check_result.get("score", 50)
+            results["breakdown"]["fake_news_component"] = credibility_risk * 0.40
+            results["evidence"].append({
+                "module": "Kiểm tra thực tế v3",
+                "finding": f"{fact_check_result.get('verdict', 'Unknown')} (độ tin cậy {fact_check_result.get('confidence', 'Low')})",
+                "risk_contribution": f"{credibility_risk}/100",
+            })
+            if fact_check_result.get("verdict") in ["False", "Likely False"]:
+                results["recommendations"].append(
+                    "⚠️ Phát hiện thông tin đáng ngờ — hãy kiểm chứng từ nhiều nguồn"
+                )
+
+        # Component 4: Source Credibility (10% weight) — compute fresh
+        if url and self.fact_checker and self.fact_checker.source_analyzer:
+            source_result = self.fact_checker.source_analyzer.analyze(url)
+            if source_result:
+                results["raw_scores"]["source"] = source_result
+                source_risk = 100 - source_result["reputation_score"]
+                results["breakdown"]["source_component"] = source_risk * 0.10
+                results["evidence"].append({
+                    "module": "Phân tích nguồn v3",
+                    "finding": f"{source_result['verdict']} (Điểm: {source_result['reputation_score']}/100)",
+                    "risk_contribution": f"{source_risk}/100",
+                })
+                if source_result.get("risk_factors"):
+                    results["recommendations"].append(
+                        f"⚠️ Rủi ro nguồn: {', '.join(source_result['risk_factors'])}"
+                    )
+
+        # Component 5: Manipulation (10% weight) — compute fresh
+        manipulation_risk = self._detect_manipulation_patterns(text)
+        results["breakdown"]["manipulation_component"] = manipulation_risk * 0.10
+        results["raw_scores"]["manipulation"] = manipulation_risk
+        if manipulation_risk > 50:
+            results["evidence"].append({
+                "module": "Phát hiện thao túng",
+                "finding": "Phát hiện dấu hiệu thao túng trong nội dung",
+                "risk_contribution": f"{manipulation_risk}/100",
+            })
+            results["recommendations"].append("⚠️ Nội dung có dấu hiệu thao túng (giật tít, giật gân)")
+
+        # Final score
+        results["risk_score"] = max(0, min(100, sum(results["breakdown"].values())))
+        results["risk_level"] = self._calculate_risk_level(results["risk_score"])
+
+        # Summary recommendation
+        level_recs = {
+            "Critical": "🚨 NGUY HIỂM: KHÔNG chia sẻ hoặc tin tưởng nội dung này",
+            "High": "⚠️ RỦI RO CAO: Hãy kiểm chứng kỹ trước khi tin tưởng",
+            "Medium": "⚠️ RỦI RO VỮA: Cẩn thận và kiểm chứng thông tin",
+        }
+        results["recommendations"].insert(
+            0, level_recs.get(results["risk_level"], "✅ AN TOÀN: Nội dung tương đối đáng tin cậy")
+        )
+
+        return results
+
     def _calculate_toxicity_risk(self, toxicity_result: Dict) -> int:
         """Convert toxicity to risk score"""
-        if not toxicity_result["is_toxic"]:
-            return 10  # Low baseline risk
+        if not toxicity_result.get("is_toxic", False):
+            return 0  # Not toxic = 0 risk contribution
 
         # Map severity to risk
         severity_map = {"None": 10, "Low": 30, "Medium": 55, "High": 75, "Critical": 95}

@@ -341,7 +341,7 @@ def analyze_content_v3_stream(req: ScanRequest):
                 "module", {"module": "fact_check_v3", "data": fact_check_v3}
             )
 
-            # Module 5: Risk Score
+            # Module 5: Risk Score — use pre-computed modules to avoid contradictions
             yield _sse_event(
                 "progress", {"module": "risk_score", "status": "running", "step": "5/6"}
             )
@@ -355,8 +355,12 @@ def analyze_content_v3_stream(req: ScanRequest):
             }
             if len(req.article_text) > 20:
                 try:
-                    risk_score_v3 = risk_scorer_v3_engine.score(
-                        req.article_text, req.url
+                    risk_score_v3 = risk_scorer_v3_engine.score_from_results(
+                        req.article_text,
+                        req.url,
+                        sentiment_result=sentiment_v3,
+                        toxicity_result=toxicity_v3,
+                        fact_check_result=fact_check_v3,
                     )
                 except Exception as e:
                     print(f"⚠️ [SSE] Risk score failed: {e}")
@@ -1032,7 +1036,7 @@ Quy tắc:
                 print(f"✅ [v3.1] Repaired raw JSON ({len(parsed)} items)")
             except json.JSONDecodeError:
                 # Last resort: extract individual complete JSON objects
-                objects = _re.findall(r'\{[^{}]*\}', raw)
+                objects = _re.findall(r"\{[^{}]*\}", raw)
                 if objects:
                     parsed = []
                     for obj_str in objects:
@@ -1040,7 +1044,9 @@ Quy tắc:
                             parsed.append(json.loads(obj_str))
                         except json.JSONDecodeError:
                             continue
-                    print(f"✅ [v3.1] Extracted {len(parsed)} objects from malformed JSON")
+                    print(
+                        f"✅ [v3.1] Extracted {len(parsed)} objects from malformed JSON"
+                    )
                 else:
                     print(f"⚠️ [v3.1] Could not parse Gemini response, using fallback")
                     return _fallback_results(comments)
@@ -1094,24 +1100,24 @@ def _repair_truncated_json(raw: str) -> str:
 
     # Remove trailing incomplete object/entry (after last complete },)
     # Find last complete JSON object ending with }
-    last_complete = s.rfind('},')
+    last_complete = s.rfind("},")
     if last_complete > 0:
-        s = s[:last_complete + 1]  # Keep up to the }
+        s = s[: last_complete + 1]  # Keep up to the }
 
     # If we're inside an unterminated string, close it
     # Count unescaped quotes
     in_string = False
     for ch in s:
-        if ch == '"' and (not in_string or s[max(0, s.index(ch) - 1)] != '\\'):
+        if ch == '"' and (not in_string or s[max(0, s.index(ch) - 1)] != "\\"):
             in_string = not in_string
     if in_string:
         s += '"'
 
     # Close any open braces/brackets
-    open_braces = s.count('{') - s.count('}')
-    open_brackets = s.count('[') - s.count(']')
-    s += '}' * max(0, open_braces)
-    s += ']' * max(0, open_brackets)
+    open_braces = s.count("{") - s.count("}")
+    open_brackets = s.count("[") - s.count("]")
+    s += "}" * max(0, open_braces)
+    s += "]" * max(0, open_brackets)
 
     return s
 

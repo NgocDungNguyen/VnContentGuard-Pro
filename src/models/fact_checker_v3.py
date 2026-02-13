@@ -197,17 +197,17 @@ class FactCheckerV3:
         for attempt in range(max_retries):
             try:
                 # Create verification prompt
-                prompt = f"""Analyze this claim for factual accuracy:
+                prompt = f"""Phân tích tính chính xác của nội dung sau:
 
-Claim: "{text[:2000]}"
-{f'Source URL: {url}' if url else ''}
+Nội dung: "{text[:2000]}"
+{f'URL nguồn: {url}' if url else ''}
 
-Provide a brief assessment:
-1. Is this claim likely true, false, or unclear?
-2. What are the key facts or concerns?
-3. Overall assessment in 2-3 sentences.
+Hãy đánh giá ngắn gọn bằng tiếng Việt:
+1. Nội dung này có khả năng đúng, sai, hay không rõ ràng?
+2. Các sự kiện hoặc vấn đề chính là gì?
+3. Đánh giá tổng thể trong 2-3 câu.
 
-Be concise and objective."""
+Trả lời ngắn gọn, khách quan, bằng tiếng Việt."""
 
                 response = self.gemini_client.models.generate_content(
                     model=self.model_name, contents=prompt
@@ -222,12 +222,16 @@ Be concise and objective."""
                 assessment = "unclear"
                 if any(
                     word in analysis.lower()
-                    for word in ["likely true", "appears true", "verified"]
+                    for word in ["likely true", "appears true", "verified",
+                                 "có khả năng đúng", "đúng sự thật", "chính xác",
+                                 "khả năng cao là đúng", "tương đối chính xác"]
                 ):
                     assessment = "likely_true"
                 elif any(
                     word in analysis.lower()
-                    for word in ["likely false", "appears false", "misleading", "fake"]
+                    for word in ["likely false", "appears false", "misleading", "fake",
+                                 "có khả năng sai", "sai sự thật", "gây hiểu lầm",
+                                 "thông tin giả", "không chính xác"]
                 ):
                     assessment = "likely_false"
 
