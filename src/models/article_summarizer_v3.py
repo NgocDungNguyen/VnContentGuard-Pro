@@ -39,7 +39,10 @@ class ArticleSummarizer:
             # Use shared key rotator if provided, otherwise create own (not recommended)
             self.key_rotator = key_rotator or APIKeyRotator(API_KEY_POOL)
             self._init_client()
-            print("✅ Article Summarizer initialized" + (" (shared rotator)" if key_rotator else ""))
+            print(
+                "✅ Article Summarizer initialized"
+                + (" (shared rotator)" if key_rotator else "")
+            )
         except Exception as e:
             print(f"⚠️ Article Summarizer init failed (will use fallback): {e}")
             self.key_rotator = None
@@ -123,7 +126,11 @@ class ArticleSummarizer:
 
                 except Exception as e:
                     error_str = str(e).lower()
-                    is_quota = "429" in error_str or "quota" in error_str or "exhausted" in error_str
+                    is_quota = (
+                        "429" in error_str
+                        or "quota" in error_str
+                        or "exhausted" in error_str
+                    )
                     print(f"⚠️ Summary attempt {attempt+1}/{max_attempts} failed: {e}")
 
                     if is_quota and self.key_rotator and attempt < max_attempts - 1:
