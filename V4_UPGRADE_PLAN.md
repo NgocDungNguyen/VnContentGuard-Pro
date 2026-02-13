@@ -1,5 +1,5 @@
 # 🛡️ VNCONTENTGUARD PRO — V4 UPGRADE PLAN
-### Version: 4.5 | Started: February 13, 2026
+### Version: 4.9 | Started: February 13, 2026
 ### Tracking Document — Update status as each feature is completed
 
 ---
@@ -135,7 +135,7 @@
 | **Files** | `api.py`, `popup.js`, `popup.html`, `style.css` |
 | **Effort** | 2-3 days |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.9) — Backend SSE streaming endpoint, background.js stream handler, popup progress bar "X/6 mô-đun hoàn tất", fallback to regular POST |
 
 ---
 
@@ -280,7 +280,8 @@
 | **Cost** | $0 |
 | **Status** | ✅ Completed (v4.0) — GET /api/stats endpoint with model info, key availability, exhausted count |
 
---- — Notification System
+### 3.5 — Notification System
+
 | Field | Detail |
 |-------|--------|
 | **What** | Use `chrome.notifications` API to alert user when: a previously-safe page gets re-flagged, risk score changes significantly, or auto-scan detects high-risk content. |
@@ -296,7 +297,7 @@
 | **Files** | `manifest.json`, `background.js`, `popup.js` |
 | **Effort** | 1-2 days |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.9) — chrome.notifications for risk>=50, notification history in storage, click opens URL |
 
 ---
 
@@ -318,7 +319,7 @@
 | **Files** | `api.py`, new `src/utils/blocklist.py`, `popup.js`, `background.js` |
 | **Effort** | 3-4 days |
 | **Cost** | $0 (SQLite, no extra infra) |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.9) — CommunityBlocklist class (JSON storage, 5+ report threshold), POST /api/report, GET /api/blocklist, report button in popup, background periodic refresh |
 
 ---
 
@@ -339,7 +340,7 @@
 | **Files** | `manifest.json`, `background.js`, new `block.html`, `popup.js` |
 | **Effort** | 4-5 days |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.9) — Parental toggle + PIN + risk threshold slider in popup, webNavigation intercept in background.js, block.html with PIN unlock |
 
 ---
 
@@ -359,7 +360,7 @@
 | **Files** | `manifest.json`, `background.js`, new `warning.html`, new `warning.js` |
 | **Effort** | 2-3 days |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.9) — warning.html interstitial with domain info + risk + report count, proceed/go-back/whitelist buttons, webNavigation.onCompleted check in background.js |
 
 ---
 
@@ -379,7 +380,7 @@
 | **Files** | `background.js`, new `report.html`, new `report.js` |
 | **Effort** | 2 days |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.9) — chrome.alarms weekly alarm, report.html + report.js with stats visualization (risk distribution, top domains, feedback accuracy), notification button to open report |
 
 ---
 

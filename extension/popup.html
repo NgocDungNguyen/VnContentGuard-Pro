@@ -13,10 +13,21 @@
                 <button id="autoScanBtn" class="icon-btn" title="Tự động quét">⚡</button>
                 <button id="historyBtn" class="icon-btn" title="Lịch sử quét">📜</button>
                 <button id="compareBtn" class="icon-btn" title="So sánh 2 trang">📊</button>
+                <button id="reportPageBtn" class="icon-btn" title="Báo cáo trang này">🚩</button>
+                <button id="weeklyReportBtn" class="icon-btn" title="Báo cáo hàng tuần">📈</button>
+                <button id="parentalBtn" class="icon-btn" title="Kiểm soát gia đình">🔒</button>
                 <button id="darkModeBtn" class="icon-btn" title="Chế độ tối">🌙</button>
             </div>
         </div>
         <div id="status" class="status-badge">Sẵn sàng quét</div>
+
+        <!-- STREAMING PROGRESS BAR (1.5) -->
+        <div id="streamProgress" class="hidden">
+            <div class="stream-progress-bar">
+                <div class="stream-progress-fill" id="streamProgressFill" style="width: 0%"></div>
+            </div>
+            <div id="streamProgressText" class="stream-progress-text">0/6 mô-đun hoàn tất</div>
+        </div>
         
         <button id="scanBtn" class="btn-primary">🚀 QUÉT TRANG NÀY</button>
         
@@ -74,7 +85,71 @@
             </div>
         </div>
 
+        <!-- REPORT PAGE PANEL (4.1) -->
+        <div id="reportPanel" class="hidden">
+            <div class="card" style="border-left: 4px solid #e74c3c;">
+                <h3>🚩 Báo cáo trang web</h3>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Báo cáo trang này với cộng đồng VnContentGuard.</p>
+                <div id="reportUrl" style="font-size: 11px; margin-bottom: 8px; word-break: break-all; color: var(--text-secondary);"></div>
+                <select id="reportReason" style="width: 100%; padding: 6px; margin-bottom: 8px; font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #fff); color: var(--text-primary);">
+                    <option value="misinformation">Thông tin sai lệch</option>
+                    <option value="toxic">Nội dung độc hại</option>
+                    <option value="scam">Lừa đảo</option>
+                    <option value="hate_speech">Phát ngôn thù ghét</option>
+                    <option value="spam">Spam / Quảng cáo</option>
+                    <option value="other">Khác</option>
+                </select>
+                <button id="reportSubmitBtn" class="btn-primary" style="padding: 8px; margin: 0; background: #e74c3c;">🚩 Gửi báo cáo</button>
+                <div id="reportResult" class="hidden" style="margin-top: 8px; font-size: 11px; text-align: center;"></div>
+            </div>
+        </div>
+
+        <!-- PARENTAL CONTROL PANEL (4.2) -->
+        <div id="parentalPanel" class="hidden">
+            <div class="card" style="border-left: 4px solid #8e44ad;">
+                <h3>🔒 Kiểm soát gia đình</h3>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Tự động chặn trang web có rủi ro cao.</p>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <label style="font-size: 12px; font-weight: bold;">Bật/Tắt:</label>
+                    <label class="switch">
+                        <input type="checkbox" id="parentalToggle">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div style="margin-bottom: 8px;">
+                    <label style="font-size: 11px; color: var(--text-secondary);">Ngưỡng rủi ro (0-100):</label>
+                    <input type="range" id="parentalThreshold" min="30" max="100" value="70" style="width: 100%;">
+                    <span id="parentalThresholdVal" style="font-size: 12px; font-weight: bold;">70</span>
+                </div>
+                <div style="margin-bottom: 8px;">
+                    <label style="font-size: 11px; color: var(--text-secondary);">Mã PIN (4-6 số):</label>
+                    <input type="password" id="parentalPinInput" maxlength="6" placeholder="0000" style="width: 80px; padding: 4px 8px; text-align: center; font-size: 14px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #fff); color: var(--text-primary);">
+                </div>
+                <button id="parentalSaveBtn" class="btn-primary" style="padding: 8px; margin: 0; background: #8e44ad;">💾 Lưu cài đặt</button>
+            </div>
+        </div>
+
         <div id="results" class="hidden">
+            <!-- BLOCKLIST WARNING (4.1) -->
+            <div id="blocklistWarning" class="hidden" style="margin-bottom: 10px;">
+                <div class="card" style="border-left: 4px solid #e74c3c; background: rgba(231,76,60,0.1);">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 24px;">🚫</span>
+                        <div>
+                            <div style="font-weight: bold; font-size: 12px; color: #e74c3c;">Trang web trong danh sách đen cộng đồng</div>
+                            <div id="blocklistDetail" style="font-size: 11px; color: var(--text-secondary);">Đã bị nhiều người dùng báo cáo.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEARNING APPLIED INDICATOR -->
+            <div id="learningIndicator" class="hidden" style="margin-bottom: 8px;">
+                <div style="font-size: 11px; color: #27ae60; text-align: center; padding: 4px; background: rgba(39,174,96,0.1); border-radius: 4px;">
+                    🧠 AI đã học từ <span id="learningCount">0</span> phản hồi trước đó
+                </div>
+            </div>
+
             <!-- v3.1 ARTICLE SUMMARY (NEW) -->
             <div class="card summary-card" id="summaryCard" style="display: none;">
                 <h3>📰 Tóm tắt bài viết (AI)</h3>
@@ -151,7 +226,7 @@
             </div>
 
             <div style="margin-top: 15px; padding: 10px; background: var(--footer-bg, #f0f0f0); border-radius: 5px; text-align: center;">
-                <div style="font-size: 10px; color: var(--text-secondary, #666); margin-bottom: 8px;">VnContentGuard Pro v5.0 — Gemini AI + Regex + Perspective API + Fact Check API</div>
+                <div style="font-size: 10px; color: var(--text-secondary, #666); margin-bottom: 8px;">VnContentGuard Pro v4.9 — Gemini AI + Streaming + Learning + Blocklist</div>
                 <div style="display: flex; gap: 6px;">
                     <button id="exportBtn" class="btn-secondary" style="flex: 1; padding: 8px;">📥 Xuất báo cáo</button>
                     <button id="clearCache" class="btn-secondary" style="flex: 1; padding: 8px;">🗑️ Xóa kết quả</button>

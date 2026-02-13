@@ -1,15 +1,19 @@
 /**
- * VnContentGuard Pro v5.0 — Popup Script
+ * VnContentGuard Pro v4.9 — Popup Script
  * ========================================
  * - Delegates API calls to background.js (survives popup close)
  * - Resumes scan state on popup reopen
  * - Scan history support
  * - Dark mode support
  * - Export report support
- * - Auto-scan toggle (v5.0)
- * - Offline regex mode with instant partial results (v5.0)
- * - Comparison mode (v5.0)
- * - User feedback loop (v5.0)
+ * - Auto-scan toggle
+ * - Offline regex mode with instant partial results
+ * - Comparison mode
+ * - User feedback loop with learning
+ * - SSE Streaming results (1.5)
+ * - Community report & blocklist (4.1)
+ * - Parental control UI (4.2)
+ * - Weekly safety report (4.4)
  */
 
 let currentResultsData = null;
@@ -27,9 +31,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('confirmation').classList.add('hidden');
         document.getElementById('warningModal').classList.add('hidden');
         document.getElementById('errorBox').classList.add('hidden');
+        document.getElementById('streamProgress').classList.add('hidden');
         document.getElementById('scanBtn').disabled = false;
         document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
         document.getElementById('status').textContent = 'Sẵn sàng quét';
+
+        // Check blocklist for current URL (4.1)
+        checkBlocklistStatus(tab.url);
 
         // Apply saved dark mode preference
         chrome.storage.sync.get(['darkMode'], (result) => {
@@ -161,6 +169,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (feedbackSubmit) {
         feedbackSubmit.addEventListener('click', submitFeedbackWithCorrection);
     }
+
+    // v4.9 — Report page button handler (4.1)
+    const reportPageBtn = document.getElementById('reportPageBtn');
+    if (reportPageBtn) {
+        reportPageBtn.addEventListener('click', toggleReportPanel);
+    }
+
+    const reportSubmitBtn = document.getElementById('reportSubmitBtn');
+    if (reportSubmitBtn) {
+        reportSubmitBtn.addEventListener('click', submitPageReport);
+    }
+
+    // v4.9 — Weekly report button handler (4.4)
+    const weeklyReportBtn = document.getElementById('weeklyReportBtn');
+    if (weeklyReportBtn) {
+        weeklyReportBtn.addEventListener('click', () => {
+            chrome.runtime.sendMessage({ type: 'OPEN_WEEKLY_REPORT' });
+        });
+    }
+
+    // v4.9 — Parental control button handler (4.2)
+    const parentalBtn = document.getElementById('parentalBtn');
+    if (parentalBtn) {
+        parentalBtn.addEventListener('click', toggleParentalPanel);
+    }
+
+    const parentalSaveBtn = document.getElementById('parentalSaveBtn');
+    if (parentalSaveBtn) {
+        parentalSaveBtn.addEventListener('click', saveParentalSettings);
+    }
+
+    const parentalThreshold = document.getElementById('parentalThreshold');
+    if (parentalThreshold) {
+        parentalThreshold.addEventListener('input', (e) => {
+            document.getElementById('parentalThresholdVal').textContent = e.target.value;
+        });
+    }
 });
 
 // ============================================================================
@@ -218,6 +263,12 @@ function startPollingForResults(url) {
             showError(status.error || 'Phân tích thất bại');
         } else if (status.status === 'scanning') {
             document.getElementById('status').textContent = status.progress || 'Đang phân tích...';
+
+            // Update streaming progress bar if available (1.5)
+            if (status.stream_modules && Object.keys(status.stream_modules).length > 0) {
+                const count = Object.keys(status.stream_modules).length;
+                updateStreamProgress(count, status.stream_modules);
+            }
         }
     }, 2000);
 }
@@ -317,9 +368,9 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
             document.getElementById('status').textContent = '⚡ Chế độ nhanh — Đang chờ AI phân tích đầy đủ...';
         }
 
-        // Delegate to background service worker (survives popup close!)
+        // Delegate to background service worker (SSE streaming mode v4.9!)
         const response = await chrome.runtime.sendMessage({
-            type: 'START_SCAN',
+            type: 'START_SCAN_STREAM',
             data: {
                 url: currentTabUrl,
                 article_text: scannedDataCache.text,
@@ -335,7 +386,10 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
             document.getElementById('scanBtn').disabled = true;
             document.getElementById('scanBtn').textContent = '⏳ Đang phân tích...';
             if (!currentResultsData || !currentResultsData.offline_mode) {
-                document.getElementById('status').textContent = 'Đang phân tích... (có thể mất 1-2 phút — bạn có thể đóng popup)';
+                document.getElementById('status').textContent = 'Đang streaming phân tích... (có thể đóng popup)';
+                // Show streaming progress bar
+                document.getElementById('streamProgress').classList.remove('hidden');
+                updateStreamProgress(0, {});
             }
 
             // Start polling for results
@@ -733,7 +787,7 @@ function scrapePageContent() {
 
 function renderResults(data, urlInfo) {
     // Check if v3 or v2 response
-    const isV3 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "5.0" || data.sentiment_v3;
+    const isV3 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v3;
     
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
@@ -760,6 +814,30 @@ function renderV3Results(data, urlInfo) {
     const isOffline = data.offline_mode === true;
 
     console.log("📊 Rendering v3.1 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
+
+    // Hide streaming progress bar
+    const streamEl = document.getElementById('streamProgress');
+    if (streamEl) streamEl.classList.add('hidden');
+
+    // Show learning indicator if AI used feedback (v4.9)
+    const learningIndicator = document.getElementById('learningIndicator');
+    if (learningIndicator && data.learning_applied) {
+        learningIndicator.classList.remove('hidden');
+        const learningCount = document.getElementById('learningCount');
+        if (learningCount) learningCount.textContent = data.domain_feedback?.total || '?';
+    } else if (learningIndicator) {
+        learningIndicator.classList.add('hidden');
+    }
+
+    // Show blocklist warning if applicable (4.1)
+    const blockWarning = document.getElementById('blocklistWarning');
+    if (blockWarning && data.blocklist_info && data.blocklist_info.is_blocked) {
+        blockWarning.classList.remove('hidden');
+        const detail = document.getElementById('blocklistDetail');
+        if (detail) detail.textContent = `${data.blocklist_info.report_count || 5}+ lượt báo cáo từ cộng đồng`;
+    } else if (blockWarning) {
+        blockWarning.classList.add('hidden');
+    }
 
     // ===== 0. ARTICLE SUMMARY (NEW in v3.1) =====
     const summaryCard = document.getElementById('summaryCard');
@@ -1010,7 +1088,7 @@ function renderV3Results(data, urlInfo) {
 
     console.log("✅ v3 results rendered");
 
-    // ===== v5.0 — SHOW FEEDBACK SECTION (after results) =====
+    // ===== v4.9 — SHOW FEEDBACK SECTION (after results) =====
     const feedbackSection = document.getElementById('feedbackSection');
     if (feedbackSection && !isOffline) {
         feedbackSection.classList.remove('hidden');
@@ -1377,7 +1455,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function exportReport(data, url) {
-    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "5.0" || data.sentiment_v3;
+    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v3;
     if (!isSupported) return;
 
     const sentiment = data.sentiment_v3 || {};
@@ -1430,7 +1508,7 @@ function exportReport(data, url) {
     <h1>🛡️ VnContentGuard Pro — Báo cáo phân tích</h1>
     <p><strong>URL:</strong> <a href="${url || '#'}">${url || 'N/A'}</a></p>
     <p><strong>Ngày quét:</strong> ${dateStr}</p>
-    <p><strong>Phiên bản:</strong> v5.0</p>
+    <p><strong>Phiên bản:</strong> v4.9</p>
 
     <h2>📊 Điểm Rủi Ro Tổng Thể</h2>
     <div style="text-align: center; margin: 15px 0;">
@@ -1489,7 +1567,7 @@ function exportReport(data, url) {
     <ul>${riskScore.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
 
     <div class="footer">
-        <p>Báo cáo được tạo bởi VnContentGuard Pro v5.0</p>
+        <p>Báo cáo được tạo bởi VnContentGuard Pro v4.9</p>
         <p>⚠️ Kết quả phân tích mang tính tham khảo. Hãy luôn kiểm chứng thông tin từ nhiều nguồn.</p>
     </div>
 </body>
@@ -1553,8 +1631,23 @@ async function submitFeedbackToBackend(rating, correction) {
             url: currentTabUrl || '',
             rating: rating,
             correction: correction,
-            modules: {}
+            modules: {},
+            scan_results: currentResultsData || {}
         };
+
+        // Also save to local feedback history for weekly report
+        chrome.storage.local.get(['feedbackHistory'], (stored) => {
+            const history = stored.feedbackHistory || [];
+            history.unshift({
+                url: currentTabUrl,
+                feedback: rating === 'positive' ? 'agree' : 'disagree',
+                is_correct: rating === 'positive',
+                correction: correction,
+                timestamp: new Date().toISOString()
+            });
+            if (history.length > 100) history.splice(100);
+            chrome.storage.local.set({ feedbackHistory: history });
+        });
 
         // Send via background service worker
         const result = await chrome.runtime.sendMessage({
@@ -1729,4 +1822,186 @@ function renderComparison(data1, data2, url1, url2) {
 
 function getDomain(url) {
     try { return new URL(url).hostname.replace('www.', ''); } catch { return url.substring(0, 30); }
+}
+
+// ============================================================================
+// STREAMING PROGRESS — Feature 1.5 (v4.9)
+// ============================================================================
+
+const MODULE_NAMES = {
+    summary: '📰 Tóm tắt',
+    sentiment: '🎭 Cảm xúc',
+    toxicity: '🛡️ Độc hại',
+    fact_check: '📰 Kiểm tra TT',
+    risk_score: '📊 Rủi ro',
+    comments: '💬 Bình luận'
+};
+
+function updateStreamProgress(count, modules) {
+    const total = 6;
+    const pct = Math.round((count / total) * 100);
+    const fill = document.getElementById('streamProgressFill');
+    const text = document.getElementById('streamProgressText');
+    const progressEl = document.getElementById('streamProgress');
+
+    if (fill) fill.style.width = `${pct}%`;
+    if (text) {
+        const names = Object.keys(modules).map(m => MODULE_NAMES[m] || m).join(', ');
+        text.textContent = `${count}/${total} mô-đun hoàn tất${names ? ' — ' + names : ''}`;
+    }
+    if (progressEl && count > 0) progressEl.classList.remove('hidden');
+}
+
+// ============================================================================
+// BLOCKLIST CHECK — Feature 4.1 (v4.9)
+// ============================================================================
+
+async function checkBlocklistStatus(url) {
+    try {
+        const result = await chrome.runtime.sendMessage({ type: 'CHECK_BLOCKLIST', url: url });
+        const warning = document.getElementById('blocklistWarning');
+        if (result && result.blocked && warning) {
+            warning.classList.remove('hidden');
+            const detail = document.getElementById('blocklistDetail');
+            if (detail) detail.textContent = `${result.domain} — đã bị cộng đồng báo cáo.`;
+        }
+    } catch {
+        // Background service worker not yet ready
+    }
+}
+
+// ============================================================================
+// REPORT PAGE — Feature 4.1 (v4.9)
+// ============================================================================
+
+function toggleReportPanel() {
+    const panel = document.getElementById('reportPanel');
+    if (!panel) return;
+
+    if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('historyPanel').classList.add('hidden');
+        document.getElementById('comparePanel').classList.add('hidden');
+        document.getElementById('parentalPanel').classList.add('hidden');
+        // Set current URL
+        const reportUrl = document.getElementById('reportUrl');
+        if (reportUrl) reportUrl.textContent = currentTabUrl || 'N/A';
+        // Reset result
+        const reportResult = document.getElementById('reportResult');
+        if (reportResult) reportResult.classList.add('hidden');
+    } else {
+        panel.classList.add('hidden');
+        if (currentResultsData) document.getElementById('results').classList.remove('hidden');
+    }
+}
+
+async function submitPageReport() {
+    const reason = document.getElementById('reportReason')?.value || 'other';
+    const resultEl = document.getElementById('reportResult');
+
+    if (!currentTabUrl) {
+        if (resultEl) {
+            resultEl.textContent = '❌ Không có URL để báo cáo.';
+            resultEl.style.color = '#e74c3c';
+            resultEl.classList.remove('hidden');
+        }
+        return;
+    }
+
+    const riskScore = currentResultsData?.risk_score_v3?.risk_score || 50;
+    const btn = document.getElementById('reportSubmitBtn');
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang gửi...'; }
+
+    try {
+        const result = await chrome.runtime.sendMessage({
+            type: 'SUBMIT_REPORT',
+            data: {
+                url: currentTabUrl,
+                risk_score: riskScore,
+                reason: reason
+            }
+        });
+
+        if (resultEl) {
+            if (result && result.status === 'reported') {
+                resultEl.textContent = `✅ Đã báo cáo! (${result.report_count || 1} lượt)`;
+                resultEl.style.color = '#27ae60';
+            } else if (result && result.status === 'already_blocked') {
+                resultEl.textContent = '🚫 Trang này đã bị chặn.';
+                resultEl.style.color = '#f39c12';
+            } else {
+                resultEl.textContent = '❌ Không thể gửi báo cáo.';
+                resultEl.style.color = '#e74c3c';
+            }
+            resultEl.classList.remove('hidden');
+        }
+    } catch {
+        if (resultEl) {
+            resultEl.textContent = '❌ Lỗi kết nối.';
+            resultEl.style.color = '#e74c3c';
+            resultEl.classList.remove('hidden');
+        }
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = '🚩 Gửi báo cáo'; }
+    }
+}
+
+// ============================================================================
+// PARENTAL CONTROL — Feature 4.2 (v4.9)
+// ============================================================================
+
+function toggleParentalPanel() {
+    const panel = document.getElementById('parentalPanel');
+    if (!panel) return;
+
+    if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('historyPanel').classList.add('hidden');
+        document.getElementById('comparePanel').classList.add('hidden');
+        document.getElementById('reportPanel').classList.add('hidden');
+
+        // Load current parental settings
+        chrome.runtime.sendMessage({ type: 'GET_PARENTAL_CONTROL' }, (response) => {
+            if (response) {
+                const toggle = document.getElementById('parentalToggle');
+                const threshold = document.getElementById('parentalThreshold');
+                const thresholdVal = document.getElementById('parentalThresholdVal');
+                const pin = document.getElementById('parentalPinInput');
+
+                if (toggle) toggle.checked = response.enabled;
+                if (threshold) threshold.value = response.threshold;
+                if (thresholdVal) thresholdVal.textContent = response.threshold;
+                if (pin) pin.value = response.pin;
+            }
+        });
+    } else {
+        panel.classList.add('hidden');
+        if (currentResultsData) document.getElementById('results').classList.remove('hidden');
+    }
+}
+
+async function saveParentalSettings() {
+    const enabled = document.getElementById('parentalToggle')?.checked || false;
+    const pin = document.getElementById('parentalPinInput')?.value || '0000';
+    const threshold = parseInt(document.getElementById('parentalThreshold')?.value || '70');
+
+    if (pin.length < 4) {
+        alert('Mã PIN phải từ 4 ký tự trở lên.');
+        return;
+    }
+
+    const result = await chrome.runtime.sendMessage({
+        type: 'SET_PARENTAL_CONTROL',
+        enabled: enabled,
+        pin: pin,
+        threshold: threshold
+    });
+
+    const statusEl = document.getElementById('status');
+    if (statusEl) {
+        statusEl.textContent = enabled ? `🔒 Kiểm soát gia đình: BẬT (ngưỡng ${threshold})` : '🔓 Kiểm soát gia đình: TẮT';
+        setTimeout(() => { statusEl.textContent = 'Sẵn sàng quét'; }, 3000);
+    }
 }

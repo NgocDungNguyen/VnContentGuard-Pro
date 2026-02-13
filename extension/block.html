@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <title>🚫 Bị chặn — Parental Control</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #ecf0f1;
+        }
+        .block-container {
+            max-width: 500px;
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            border: 2px solid #8e44ad;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .icon { font-size: 80px; margin-bottom: 20px; }
+        h1 { font-size: 22px; color: #e74c3c; margin-bottom: 10px; }
+        .msg { font-size: 14px; color: #bdc3c7; line-height: 1.6; margin: 15px 0 25px; }
+        .domain { font-size: 16px; color: #e67e22; font-weight: bold; word-break: break-all; }
+        .pin-section { margin-top: 25px; }
+        .pin-section label { font-size: 13px; color: #95a5a6; display: block; margin-bottom: 8px; }
+        .pin-input {
+            padding: 12px 16px; width: 180px; text-align: center;
+            font-size: 20px; letter-spacing: 8px; border: 2px solid #555;
+            background: rgba(255,255,255,0.08); color: #ecf0f1;
+            border-radius: 8px; outline: none;
+        }
+        .pin-input:focus { border-color: #8e44ad; }
+        .pin-error { font-size: 12px; color: #e74c3c; margin-top: 8px; display: none; }
+        .btn-unlock {
+            margin-top: 15px; padding: 12px 30px;
+            background: #8e44ad; color: white; border: none;
+            border-radius: 8px; font-size: 14px; font-weight: bold;
+            cursor: pointer; transition: all 0.3s;
+        }
+        .btn-unlock:hover { background: #7d3c98; transform: translateY(-2px); }
+        .btn-back {
+            margin-top: 15px; display: block; width: 100%;
+            padding: 12px; background: #27ae60; color: white;
+            border: none; border-radius: 8px; font-size: 14px;
+            font-weight: bold; cursor: pointer; transition: all 0.3s;
+        }
+        .btn-back:hover { background: #229954; }
+        .risk-badge {
+            display: inline-block; padding: 4px 12px; border-radius: 12px;
+            font-size: 12px; font-weight: bold; margin-top: 10px;
+        }
+        .risk-high { background: #e74c3c; }
+        .risk-medium { background: #f39c12; }
+    </style>
+</head>
+<body>
+    <div class="block-container">
+        <div class="icon">🔒</div>
+        <h1>🚫 TRANG BỊ CHẶN</h1>
+        <div class="msg">
+            Chế độ Kiểm soát gia đình (Parental Control) đã chặn trang web này
+            vì phát hiện nội dung không phù hợp.
+        </div>
+        <div class="domain" id="domainDisplay">-</div>
+        <div class="risk-badge risk-high" id="riskBadge">Rủi ro: Cao</div>
+
+        <button class="btn-back" id="btnBack">🔙 Quay lại an toàn</button>
+
+        <div class="pin-section">
+            <label>🔐 Nhập mã PIN để mở khóa:</label>
+            <input type="password" class="pin-input" id="pinInput" maxlength="6" placeholder="••••">
+            <div class="pin-error" id="pinError">Sai mã PIN. Vui lòng thử lại.</div>
+            <br>
+            <button class="btn-unlock" id="btnUnlock">Mở khóa</button>
+        </div>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const targetUrl = params.get('url') || '';
+        const risk = params.get('risk') || 'Cao';
+
+        try {
+            const domain = new URL(targetUrl).hostname.replace('www.', '');
+            document.getElementById('domainDisplay').textContent = domain;
+        } catch { document.getElementById('domainDisplay').textContent = targetUrl.substring(0, 50); }
+
+        document.getElementById('riskBadge').textContent = `Rủi ro: ${risk}`;
+
+        document.getElementById('btnBack').addEventListener('click', () => {
+            history.back();
+        });
+
+        document.getElementById('btnUnlock').addEventListener('click', () => {
+            const pin = document.getElementById('pinInput').value;
+            chrome.storage.local.get(['parentalPIN'], (data) => {
+                const storedPIN = data.parentalPIN || '0000';
+                if (pin === storedPIN) {
+                    // Temporarily whitelist for this session
+                    chrome.storage.local.get(['parentalBypass'], (d) => {
+                        const bypassed = d.parentalBypass || [];
+                        bypassed.push(targetUrl);
+                        chrome.storage.local.set({ parentalBypass: bypassed }, () => {
+                            window.location.href = targetUrl;
+                        });
+                    });
+                } else {
+                    document.getElementById('pinError').style.display = 'block';
+                    document.getElementById('pinInput').value = '';
+                    document.getElementById('pinInput').focus();
+                }
+            });
+        });
+
+        document.getElementById('pinInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') document.getElementById('btnUnlock').click();
+        });
+    </script>
+</body>
+</html>

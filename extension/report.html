@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <title>📊 Báo cáo an toàn hàng tuần — VnContentGuard Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #ecf0f1;
+            padding: 30px;
+        }
+        .report-container { max-width: 800px; margin: 0 auto; }
+        .header {
+            text-align: center; padding: 30px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 16px; margin-bottom: 25px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header .subtitle { color: #95a5a6; font-size: 13px; }
+        .header .period { color: #3498db; font-size: 15px; margin-top: 8px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card {
+            padding: 20px; text-align: center;
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .stat-card .value { font-size: 32px; font-weight: bold; }
+        .stat-card .label { font-size: 11px; color: #95a5a6; margin-top: 5px; }
+        .section {
+            background: rgba(255,255,255,0.06);
+            border-radius: 12px; padding: 25px;
+            margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .section h2 { font-size: 18px; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .risk-bar { display: flex; height: 30px; border-radius: 8px; overflow: hidden; margin: 10px 0; }
+        .risk-bar div { display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; }
+        .risk-safe { background: #27ae60; }
+        .risk-medium { background: #f39c12; }
+        .risk-high { background: #e74c3c; }
+        .domain-list { list-style: none; }
+        .domain-list li {
+            padding: 10px 15px; display: flex; justify-content: space-between;
+            align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .domain-list li:last-child { border-bottom: none; }
+        .domain-name { font-size: 14px; }
+        .domain-risk { font-size: 12px; padding: 3px 10px; border-radius: 10px; font-weight: bold; }
+        .risk-tag-high { background: #e74c3c; }
+        .risk-tag-medium { background: #f39c12; color: #2c3e50; }
+        .risk-tag-safe { background: #27ae60; }
+        .feedback-summary { display: flex; gap: 20px; }
+        .fb-stat { flex: 1; text-align: center; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+        .fb-stat .val { font-size: 24px; font-weight: bold; }
+        .fb-stat .lbl { font-size: 11px; color: #95a5a6; }
+        .footer { text-align: center; padding: 20px; color: #7f8c8d; font-size: 12px; }
+        .btn-export {
+            margin: 20px auto; display: block; padding: 12px 30px;
+            background: #3498db; color: white; border: none; border-radius: 8px;
+            font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.3s;
+        }
+        .btn-export:hover { background: #2980b9; transform: translateY(-2px); }
+        @media (max-width: 600px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .feedback-summary { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <div class="header">
+            <h1>📊 BÁO CÁO AN TOÀN HÀNG TUẦN</h1>
+            <div class="subtitle">VnContentGuard Pro v4.9</div>
+            <div class="period" id="periodDisplay">-</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="value" id="totalScans" style="color: #3498db;">0</div>
+                <div class="label">Tổng quét</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="highRisk" style="color: #e74c3c;">0</div>
+                <div class="label">Rủi ro cao</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="medRisk" style="color: #f39c12;">0</div>
+                <div class="label">Rủi ro TB</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="safeScans" style="color: #27ae60;">0</div>
+                <div class="label">An toàn</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📈 Phân bổ mức rủi ro</h2>
+            <div class="risk-bar" id="riskBar">
+                <div class="risk-safe" style="width:60%;">An toàn 60%</div>
+                <div class="risk-medium" style="width:25%;">TB 25%</div>
+                <div class="risk-high" style="width:15%;">Cao 15%</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔥 Trang web rủi ro cao nhất</h2>
+            <ul class="domain-list" id="topRiskDomains">
+                <li><span class="domain-name">Chưa có dữ liệu</span></li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>🌐 Trang web quét nhiều nhất</h2>
+            <ul class="domain-list" id="topScannedDomains">
+                <li><span class="domain-name">Chưa có dữ liệu</span></li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>💬 Phản hồi của bạn</h2>
+            <div class="feedback-summary">
+                <div class="fb-stat">
+                    <div class="val" id="fbTotal" style="color: #3498db;">0</div>
+                    <div class="lbl">Tổng phản hồi</div>
+                </div>
+                <div class="fb-stat">
+                    <div class="val" id="fbPositive" style="color: #27ae60;">0</div>
+                    <div class="lbl">👍 Đồng ý</div>
+                </div>
+                <div class="fb-stat">
+                    <div class="val" id="fbNegative" style="color: #e74c3c;">0</div>
+                    <div class="lbl">👎 Không đồng ý</div>
+                </div>
+                <div class="fb-stat">
+                    <div class="val" id="fbAccuracy" style="color: #f39c12;">-</div>
+                    <div class="lbl">Độ chính xác</div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn-export" id="btnExport">🖨️ In / Xuất PDF</button>
+
+        <div class="footer">
+            VnContentGuard Pro v4.9 — Báo cáo tự động tạo từ lịch sử quét<br>
+            Dữ liệu được lưu trữ cục bộ trên trình duyệt của bạn.
+        </div>
+    </div>
+
+    <script src="report.js"></script>
+</body>
+</html>

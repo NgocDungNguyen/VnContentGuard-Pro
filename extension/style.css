@@ -700,3 +700,101 @@ body.dark-mode .feedback-btn {
     background: var(--bg-card);
     border-color: var(--border-color);
 }
+
+/* ============================================================================ */
+/* v4.9 STREAMING PROGRESS BAR — Feature 1.5                                    */
+/* ============================================================================ */
+
+.stream-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: var(--border-color);
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 8px 0 4px;
+}
+
+.stream-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #27ae60);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+}
+
+.stream-progress-text {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+/* ============================================================================ */
+/* v4.9 PARENTAL CONTROL TOGGLE SWITCH — Feature 4.2                             */
+/* ============================================================================ */
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 22px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 22px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+input:checked + .slider {
+    background-color: #8e44ad;
+}
+
+input:checked + .slider:before {
+    transform: translateX(18px);
+}
+
+/* ============================================================================ */
+/* v4.9 REPORT BUTTON + PANELS                                                  */
+/* ============================================================================ */
+
+#reportPageBtn.active,
+#parentalBtn.active {
+    background: var(--bg-card-hover);
+    box-shadow: 0 0 6px rgba(142, 68, 173, 0.4);
+}
+
+body.dark-mode #reportPanel .card,
+body.dark-mode #parentalPanel .card {
+    background: var(--bg-card);
+}
+
+body.dark-mode #reportReason,
+body.dark-mode #parentalPinInput {
+    background: var(--input-bg);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}

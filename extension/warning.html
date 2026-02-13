@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <title>⚠️ Cảnh báo nội dung — VnContentGuard Pro</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #2c3e50 0%, #1a1a2e 100%);
+            color: #ecf0f1;
+        }
+        .warning-container {
+            max-width: 600px;
+            text-align: center;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
+            border: 2px solid #c0392b;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+        .shield { font-size: 80px; margin-bottom: 20px; }
+        h1 { font-size: 24px; color: #e74c3c; margin-bottom: 12px; }
+        .domain { font-size: 18px; color: #f39c12; font-weight: bold; margin: 10px 0; word-break: break-all; }
+        .reason { font-size: 14px; color: #bdc3c7; line-height: 1.6; margin: 20px 0; }
+        .risk-info { display: flex; gap: 20px; justify-content: center; margin: 20px 0; }
+        .risk-stat { padding: 12px 20px; background: rgba(255,255,255,0.08); border-radius: 8px; }
+        .risk-stat .value { font-size: 28px; font-weight: bold; }
+        .risk-stat .label { font-size: 11px; color: #95a5a6; }
+        .buttons { display: flex; gap: 15px; margin-top: 30px; }
+        .btn {
+            flex: 1; padding: 14px 20px; border: none; border-radius: 8px;
+            font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.3s;
+        }
+        .btn-back { background: #27ae60; color: white; }
+        .btn-back:hover { background: #229954; transform: translateY(-2px); }
+        .btn-proceed { background: rgba(255,255,255,0.1); color: #bdc3c7; border: 1px solid #555; }
+        .btn-proceed:hover { background: rgba(255,255,255,0.15); }
+        .btn-whitelist { background: transparent; color: #7f8c8d; font-size: 12px; border: none; cursor: pointer; margin-top: 15px; text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="warning-container">
+        <div class="shield">🛡️</div>
+        <h1>⚠️ CẢNH BÁO NỘI DUNG</h1>
+        <div class="domain" id="domainDisplay">Loading...</div>
+        <div class="reason" id="reasonText">
+            Trang web này đã bị cộng đồng VnContentGuard báo cáo có nội dung nguy hiểm hoặc sai lệch.
+        </div>
+        <div class="risk-info">
+            <div class="risk-stat">
+                <div class="value" id="reportCount" style="color: #e74c3c;">-</div>
+                <div class="label">Lượt báo cáo</div>
+            </div>
+            <div class="risk-stat">
+                <div class="value" id="riskDisplay" style="color: #f39c12;">-</div>
+                <div class="label">Mức rủi ro</div>
+            </div>
+        </div>
+        <div class="buttons">
+            <button class="btn btn-back" id="btnBack">🔙 Quay lại an toàn</button>
+            <button class="btn btn-proceed" id="btnProceed">Tiếp tục (rủi ro)</button>
+        </div>
+        <button class="btn-whitelist" id="btnWhitelist">✅ Luôn cho phép trang này</button>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const targetUrl = params.get('url') || '';
+        const reports = params.get('reports') || '0';
+        const risk = params.get('risk') || 'Cao';
+
+        try {
+            const domain = new URL(targetUrl).hostname.replace('www.', '');
+            document.getElementById('domainDisplay').textContent = domain;
+        } catch { document.getElementById('domainDisplay').textContent = targetUrl.substring(0, 50); }
+
+        document.getElementById('reportCount').textContent = reports;
+        document.getElementById('riskDisplay').textContent = risk;
+
+        document.getElementById('btnBack').addEventListener('click', () => {
+            history.back();
+        });
+
+        document.getElementById('btnProceed').addEventListener('click', () => {
+            // Mark as acknowledged, then navigate
+            chrome.storage.local.get(['warningAcknowledged'], (data) => {
+                const acked = data.warningAcknowledged || [];
+                if (!acked.includes(targetUrl)) {
+                    acked.push(targetUrl);
+                    // Keep last 100
+                    if (acked.length > 100) acked.shift();
+                    chrome.storage.local.set({ warningAcknowledged: acked });
+                }
+                window.location.href = targetUrl;
+            });
+        });
+
+        document.getElementById('btnWhitelist').addEventListener('click', () => {
+            try {
+                const domain = new URL(targetUrl).hostname.replace('www.', '');
+                chrome.storage.local.get(['whitelistedDomains'], (data) => {
+                    const wl = data.whitelistedDomains || [];
+                    if (!wl.includes(domain)) wl.push(domain);
+                    chrome.storage.local.set({ whitelistedDomains: wl }, () => {
+                        window.location.href = targetUrl;
+                    });
+                });
+            } catch { window.location.href = targetUrl; }
+        });
+    </script>
+</body>
+</html>

@@ -1,15 +1,20 @@
 /**
- * VnContentGuard Pro v5.0 — Background Service Worker
+ * VnContentGuard Pro v4.9 — Background Service Worker
  * =====================================================
  * Handles API calls in the background so they survive popup close.
  * 
  * Responsibilities:
  * 1. Receive scan requests from popup via chrome.runtime.sendMessage
- * 2. Execute API call (try local → cloud fallback)
+ * 2. Execute API call (try local → cloud fallback) + SSE streaming (1.5)
  * 3. Save results to chrome.storage.local
  * 4. Update badge with risk score
  * 5. Notify popup when done (if still open)
- * 6. Auto-scan supported sites when toggle is ON (v5.0)
+ * 6. Auto-scan supported sites when toggle is ON
+ * 7. 🔔 Notification system (3.5)
+ * 8. 🚩 Community Blocklist checking (4.1)
+ * 9. 🔒 Parental Control interception (4.2)
+ * 10. ⚠️ Browser Content Warning redirect (4.3)
+ * 11. 📊 Weekly Safety Report via alarms (4.4)
  */
 
 // API endpoints (local first, cloud fallback)
@@ -18,11 +23,36 @@ const API_ENDPOINTS = [
     "https://vncontentguard-pro.onrender.com/analyze/v3"
 ];
 
+const STREAM_ENDPOINTS = [
+    "http://127.0.0.1:8000/analyze/v3/stream",
+    "https://vncontentguard-pro.onrender.com/analyze/v3/stream"
+];
+
 // Feedback endpoints
 const FEEDBACK_ENDPOINTS = [
     "http://127.0.0.1:8000/api/feedback",
     "https://vncontentguard-pro.onrender.com/api/feedback"
 ];
+
+const REPORT_ENDPOINTS = [
+    "http://127.0.0.1:8000/api/report",
+    "https://vncontentguard-pro.onrender.com/api/report"
+];
+
+const BLOCKLIST_ENDPOINTS = [
+    "http://127.0.0.1:8000/api/blocklist",
+    "https://vncontentguard-pro.onrender.com/api/blocklist"
+];
+
+const BLOCKLIST_CHECK_ENDPOINTS = [
+    "http://127.0.0.1:8000/api/blocklist/check",
+    "https://vncontentguard-pro.onrender.com/api/blocklist/check"
+];
+
+// Cached blocklist (refreshed every 6h)
+let cachedBlocklist = [];
+let blocklistLastFetch = 0;
+const BLOCKLIST_REFRESH_MS = 6 * 60 * 60 * 1000;
 
 // Supported domains for auto-scan
 const AUTO_SCAN_DOMAINS = [
@@ -42,12 +72,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'START_SCAN') {
         handleScan(message.data);
         sendResponse({ status: 'started' });
-        return true; // Keep channel open for async
+        return true;
+    }
+
+    if (message.type === 'START_SCAN_STREAM') {
+        handleStreamScan(message.data);
+        sendResponse({ status: 'started' });
+        return true;
     }
 
     if (message.type === 'GET_SCAN_STATUS') {
         getScanStatus(message.url).then(status => sendResponse(status));
-        return true; // Async response
+        return true;
     }
 
     if (message.type === 'CANCEL_SCAN') {
@@ -61,6 +97,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === 'SUBMIT_REPORT') {
+        submitReport(message.data).then(result => sendResponse(result));
+        return true;
+    }
+
     if (message.type === 'SET_AUTO_SCAN') {
         chrome.storage.sync.set({ autoScan: message.enabled });
         sendResponse({ status: 'ok', enabled: message.enabled });
@@ -71,6 +112,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         chrome.storage.sync.get(['autoScan'], (result) => {
             sendResponse({ enabled: !!result.autoScan });
         });
+        return true;
+    }
+
+    if (message.type === 'SET_PARENTAL_CONTROL') {
+        setParentalControl(message.enabled, message.pin, message.threshold).then(r => sendResponse(r));
+        return true;
+    }
+
+    if (message.type === 'GET_PARENTAL_CONTROL') {
+        chrome.storage.local.get(['parentalEnabled', 'parentalPIN', 'parentalThreshold'], (d) => {
+            sendResponse({
+                enabled: !!d.parentalEnabled,
+                pin: d.parentalPIN || '0000',
+                threshold: d.parentalThreshold || 70
+            });
+        });
+        return true;
+    }
+
+    if (message.type === 'OPEN_WEEKLY_REPORT') {
+        chrome.tabs.create({ url: chrome.runtime.getURL('report.html') });
+        sendResponse({ status: 'opened' });
+        return true;
+    }
+
+    if (message.type === 'CHECK_BLOCKLIST') {
+        checkBlocklist(message.url).then(result => sendResponse(result));
         return true;
     }
 });
@@ -179,6 +247,9 @@ async function handleScan(data) {
         await addToScanHistory(url, results);
 
         console.log(`[BG] Scan completed for: ${url}`);
+
+        // 7. Send notification if high risk (3.5)
+        sendRiskNotification(url, riskScore, riskLevel);
 
     } catch (err) {
         console.error(`[BG] Scan failed:`, err.message);
@@ -292,7 +363,384 @@ function extractDomain(url) {
 }
 
 // ============================================================================
-// FEEDBACK SUBMISSION (v5.0)
+// SSE STREAMING SCAN — Feature 1.5 (v4.9)
+// ============================================================================
+
+async function handleStreamScan(data) {
+    const { url, article_text, comments } = data;
+    const storageKey = `scan_${url}`;
+
+    try {
+        await chrome.storage.local.set({
+            [storageKey]: {
+                status: 'scanning',
+                url: url,
+                timestamp: new Date().toISOString(),
+                progress: 'Đang kết nối streaming...',
+                stream_modules: {}
+            }
+        });
+
+        chrome.action.setBadgeText({ text: '...' });
+        chrome.action.setBadgeBackgroundColor({ color: '#3498db' });
+
+        let response = null;
+        for (const endpoint of STREAM_ENDPOINTS) {
+            try {
+                console.log(`[BG] Stream trying: ${endpoint}`);
+                const isLocal = endpoint.includes('127.0.0.1') || endpoint.includes('localhost');
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), isLocal ? 180000 : 60000);
+
+                response = await fetch(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url, article_text, comments }),
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                if (response.ok) break;
+            } catch (err) {
+                console.log(`[BG] Stream failed: ${endpoint} (${err.message})`);
+                response = null;
+            }
+        }
+
+        if (!response || !response.ok) {
+            // Fallback to regular scan
+            console.log(`[BG] Stream unavailable, falling back to regular scan`);
+            handleScan(data);
+            return;
+        }
+
+        // Parse SSE stream
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        const streamModules = {};
+        let finalResult = null;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+                if (line.startsWith('event: ')) {
+                    // We'll handle this with the data line
+                } else if (line.startsWith('data: ')) {
+                    try {
+                        const jsonStr = line.substring(6);
+                        const evt = JSON.parse(jsonStr);
+
+                        if (evt.type === 'module') {
+                            streamModules[evt.module] = evt.data;
+                            // Save progressive update
+                            await chrome.storage.local.set({
+                                [storageKey]: {
+                                    status: 'scanning',
+                                    url: url,
+                                    timestamp: new Date().toISOString(),
+                                    progress: `Hoàn tất: ${evt.module}`,
+                                    stream_modules: streamModules,
+                                    completed_count: Object.keys(streamModules).length
+                                }
+                            });
+                        } else if (evt.type === 'complete') {
+                            finalResult = evt.data;
+                        } else if (evt.type === 'error') {
+                            console.error(`[BG] Stream error: ${evt.message}`);
+                        }
+                    } catch (parseErr) {
+                        // Skip malformed lines
+                    }
+                }
+            }
+        }
+
+        // Use final result or build from modules
+        const results = finalResult || buildResultFromModules(streamModules);
+        const resultData = {
+            status: 'completed',
+            url: url,
+            timestamp: new Date().toISOString(),
+            results: results,
+            stream_modules: streamModules
+        };
+
+        await chrome.storage.local.set({ [storageKey]: resultData });
+        await chrome.storage.local.set({
+            [url]: { ...results, timestamp: new Date().toISOString(), url: url }
+        });
+
+        const riskScore = results.risk_score_v3?.risk_score || 0;
+        const riskLevel = results.risk_score_v3?.risk_level || 'Low';
+        updateBadge(riskScore, riskLevel);
+        await addToScanHistory(url, results);
+        sendRiskNotification(url, riskScore, riskLevel);
+
+        console.log(`[BG] Stream scan completed for: ${url}`);
+
+    } catch (err) {
+        console.error(`[BG] Stream scan fail:`, err.message);
+        // Fallback to regular scan
+        handleScan(data);
+    }
+}
+
+function buildResultFromModules(modules) {
+    return {
+        article_summary_v3: modules.summary || {},
+        sentiment_v3: modules.sentiment || {},
+        toxicity_v3: modules.toxicity || {},
+        fact_check_v3: modules.fact_check || {},
+        risk_score_v3: modules.risk_score || {},
+        comments_analysis: modules.comments || {}
+    };
+}
+
+// ============================================================================
+// NOTIFICATION SYSTEM — Feature 3.5 (v4.9)
+// ============================================================================
+
+function sendRiskNotification(url, riskScore, riskLevel) {
+    if (riskScore < 50) return; // Only notify for medium+ risk
+
+    const domain = extractDomain(url);
+    const icons = { 'Low': '✅', 'Medium': '⚠️', 'High': '🚨', 'Critical': '🔴' };
+    const icon = icons[riskLevel] || '⚠️';
+
+    const notifId = `risk_${Date.now()}`;
+    chrome.notifications.create(notifId, {
+        type: 'basic',
+        iconUrl: 'icons/icon.png',
+        title: `${icon} VnContentGuard — Cảnh báo rủi ro`,
+        message: `${domain}: Mức rủi ro ${riskLevel} (${Math.round(riskScore)}/100)`,
+        priority: riskScore >= 70 ? 2 : 1,
+        requireInteraction: riskScore >= 70
+    }, () => {
+        console.log(`[BG] Notification sent: ${notifId}`);
+    });
+
+    // Store notification in history
+    chrome.storage.local.get(['notificationHistory'], (data) => {
+        const history = data.notificationHistory || [];
+        history.unshift({
+            id: notifId,
+            url: url,
+            domain: domain,
+            riskScore: riskScore,
+            riskLevel: riskLevel,
+            timestamp: new Date().toISOString(),
+            read: false
+        });
+        // Keep last 50
+        if (history.length > 50) history.splice(50);
+        chrome.storage.local.set({ notificationHistory: history });
+    });
+}
+
+chrome.notifications.onClicked.addListener((notifId) => {
+    // Mark as read
+    chrome.storage.local.get(['notificationHistory'], (data) => {
+        const history = data.notificationHistory || [];
+        const notif = history.find(n => n.id === notifId);
+        if (notif) {
+            notif.read = true;
+            chrome.storage.local.set({ notificationHistory: history });
+            // Open the URL in a new tab
+            if (notif.url) chrome.tabs.create({ url: notif.url });
+        }
+    });
+});
+
+// ============================================================================
+// COMMUNITY REPORT — Feature 4.1 (v4.9)
+// ============================================================================
+
+async function submitReport(data) {
+    for (const endpoint of REPORT_ENDPOINTS) {
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+            if (response.ok) {
+                const result = await response.json();
+                console.log(`[BG] Report submitted to: ${endpoint}`);
+                // Refresh blocklist
+                await refreshBlocklist(true);
+                return result;
+            }
+        } catch (err) {
+            console.log(`[BG] Report endpoint failed: ${endpoint}`);
+        }
+    }
+    return { status: 'error', message: 'Không thể gửi báo cáo' };
+}
+
+// ============================================================================
+// COMMUNITY BLOCKLIST — Feature 4.1 (v4.9)
+// ============================================================================
+
+async function refreshBlocklist(force = false) {
+    const now = Date.now();
+    if (!force && (now - blocklistLastFetch) < BLOCKLIST_REFRESH_MS && cachedBlocklist.length > 0) {
+        return cachedBlocklist;
+    }
+
+    for (const endpoint of BLOCKLIST_ENDPOINTS) {
+        try {
+            const response = await fetch(endpoint, { method: 'GET' });
+            if (response.ok) {
+                const data = await response.json();
+                cachedBlocklist = data.blocklist || [];
+                blocklistLastFetch = now;
+                console.log(`[BG] Blocklist refreshed: ${cachedBlocklist.length} domains`);
+                return cachedBlocklist;
+            }
+        } catch { /* try next endpoint */ }
+    }
+    return cachedBlocklist;
+}
+
+async function checkBlocklist(url) {
+    await refreshBlocklist();
+    try {
+        const domain = new URL(url).hostname.replace('www.', '');
+        const isBlocked = cachedBlocklist.some(d => domain.includes(d) || d.includes(domain));
+        return { blocked: isBlocked, domain: domain };
+    } catch {
+        return { blocked: false, domain: url };
+    }
+}
+
+// ============================================================================
+// PARENTAL CONTROL — Feature 4.2 (v4.9)
+// ============================================================================
+
+async function setParentalControl(enabled, pin, threshold) {
+    await chrome.storage.local.set({
+        parentalEnabled: enabled,
+        parentalPIN: pin || '0000',
+        parentalThreshold: threshold || 70
+    });
+    console.log(`[BG] Parental control: ${enabled ? 'ON' : 'OFF'}, threshold: ${threshold}`);
+    return { status: 'ok', enabled, threshold };
+}
+
+// ============================================================================
+// CONTENT WARNING + PARENTAL INTERCEPT — Features 4.2 + 4.3 (v4.9)
+// ============================================================================
+
+chrome.webNavigation.onCompleted.addListener(async (details) => {
+    if (details.frameId !== 0 || !details.url) return;
+    if (details.url.startsWith('chrome') || details.url.startsWith('about')) return;
+
+    try {
+        const url = details.url;
+        const domain = new URL(url).hostname.replace('www.', '');
+
+        // Check whitelisted domains
+        const storage = await chrome.storage.local.get([
+            'whitelistedDomains', 'warningAcknowledged',
+            'parentalEnabled', 'parentalThreshold', 'parentalBypass'
+        ]);
+
+        const whitelisted = storage.whitelistedDomains || [];
+        if (whitelisted.includes(domain)) return;
+
+        const acknowledged = storage.warningAcknowledged || [];
+        if (acknowledged.includes(url)) return;
+
+        const parentalBypass = storage.parentalBypass || [];
+        if (parentalBypass.includes(url)) return;
+
+        // Check community blocklist
+        const blockResult = await checkBlocklist(url);
+        if (blockResult.blocked) {
+            // 4.3 — Redirect to warning page
+            const warningUrl = chrome.runtime.getURL('warning.html') +
+                `?url=${encodeURIComponent(url)}&reports=5%2B&risk=Cao`;
+            chrome.tabs.update(details.tabId, { url: warningUrl });
+            return;
+        }
+
+        // 4.2 — Parental control: check previous scan results
+        if (storage.parentalEnabled) {
+            const threshold = storage.parentalThreshold || 70;
+            const scanData = await chrome.storage.local.get([url]);
+            const cached = scanData[url];
+
+            if (cached) {
+                const risk = cached.risk_score_v3?.risk_score || 0;
+                if (risk >= threshold) {
+                    const blockUrl = chrome.runtime.getURL('block.html') +
+                        `?url=${encodeURIComponent(url)}&risk=${risk >= 70 ? 'Cao' : 'Trung bình'}`;
+                    chrome.tabs.update(details.tabId, { url: blockUrl });
+                    return;
+                }
+            }
+        }
+    } catch (err) {
+        console.log(`[BG] Warning/Parental check error:`, err.message);
+    }
+});
+
+// ============================================================================
+// WEEKLY SAFETY REPORT — Feature 4.4 (v4.9)
+// ============================================================================
+
+// Set up weekly alarm
+chrome.alarms.create('weeklyReport', {
+    // Fire every 7 days (in minutes)
+    periodInMinutes: 7 * 24 * 60
+});
+
+chrome.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === 'weeklyReport') {
+        generateWeeklyReportNotification();
+    }
+});
+
+async function generateWeeklyReportNotification() {
+    const data = await chrome.storage.local.get(['scanHistory']);
+    const history = data.scanHistory || [];
+
+    if (history.length === 0) return;
+
+    // Count this week's stats
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
+    const weekScans = history.filter(s => new Date(s.timestamp) >= weekAgo);
+    const highRisk = weekScans.filter(s => (s.riskScore || 0) >= 70).length;
+    const total = weekScans.length;
+
+    if (total === 0) return;
+
+    chrome.notifications.create('weekly_report_' + Date.now(), {
+        type: 'basic',
+        iconUrl: 'icons/icon.png',
+        title: '📊 Báo cáo an toàn hàng tuần',
+        message: `Tuần này: ${total} trang đã quét, ${highRisk} rủi ro cao. Nhấn để xem chi tiết.`,
+        priority: 1,
+        buttons: [{ title: '📋 Xem báo cáo' }]
+    });
+}
+
+chrome.notifications.onButtonClicked.addListener((notifId, btnIdx) => {
+    if (notifId.startsWith('weekly_report_') && btnIdx === 0) {
+        chrome.tabs.create({ url: chrome.runtime.getURL('report.html') });
+    }
+});
+
+// ============================================================================
+// FEEDBACK SUBMISSION
 // ============================================================================
 
 async function submitFeedback(data) {
@@ -428,8 +876,17 @@ function autoScrapeContent() {
 // ============================================================================
 
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('[BG] VnContentGuard Pro v5.0 service worker installed');
+    console.log('[BG] VnContentGuard Pro v4.9 service worker installed');
     chrome.action.setBadgeText({ text: '' });
+
+    // Initialize weekly report alarm
+    chrome.alarms.create('weeklyReport', { periodInMinutes: 7 * 24 * 60 });
+
+    // Initialize blocklist
+    refreshBlocklist(true);
+
+    // Clear old parental bypass on install
+    chrome.storage.local.set({ parentalBypass: [] });
 });
 
 // Keep service worker alive during scans

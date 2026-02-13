@@ -2,6 +2,7 @@ import asyncio
 import json
 import platform
 import sys
+import time
 from typing import List, Optional
 
 # Fix CP1258 encoding issues on Windows (emoji in print statements)
@@ -11,6 +12,7 @@ sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 if platform.system() == "Windows":
@@ -29,8 +31,9 @@ from src.models.toxicity_v3 import ToxicityAnalyzerV3
 from src.utils.cache_manager import CacheManager
 from src.utils.comment_filter import CommentFilter
 from src.utils.feedback_store import FeedbackStore
+from src.utils.blocklist import CommunityBlocklist
 
-app = FastAPI(title="VnContentGuard Pro API", version="5.0")
+app = FastAPI(title="VnContentGuard Pro API", version="4.9")
 
 # Enable CORS for Chrome Extension
 app.add_middleware(
@@ -70,6 +73,9 @@ try:
 
     # v5.0 Feedback Store
     feedback_store = FeedbackStore()
+
+    # v4.9 Community Blocklist
+    community_blocklist = CommunityBlocklist()
 
     # Reuse same shared key rotator for batch comment analysis
     batch_key_rotator = shared_key_rotator
@@ -123,12 +129,13 @@ def health_check():
 
 @app.get("/api/stats")
 def api_stats():
-    """v5.0 — API usage statistics and model status."""
+    """v4.9 — API usage statistics and model status."""
     try:
         gemini_status = gemini_agent.get_status()
         feedback_stats = feedback_store.get_stats()
+        blocklist_stats = community_blocklist.get_stats()
         return {
-            "version": "5.0.0",
+            "version": "4.9.0",
             "model": gemini_status.get("model", "unknown"),
             "using_fallback": gemini_status.get("using_fallback", False),
             "api_keys": {
@@ -138,10 +145,11 @@ def api_stats():
                 "current": gemini_status.get("current_key", 0),
             },
             "feedback": feedback_stats,
+            "blocklist": blocklist_stats,
             "status": "🟢 Online",
         }
     except Exception as e:
-        return {"version": "5.0.0", "status": "🔴 Error", "error": str(e)}
+        return {"version": "4.9.0", "status": "🔴 Error", "error": str(e)}
 
 
 # ============================================================================
@@ -156,23 +164,202 @@ class FeedbackRequest(BaseModel):
     rating: str  # "positive" or "negative"
     correction: str = ""
     modules: dict = {}
+    scan_results: dict = {}
 
 
 @app.post("/api/feedback")
 def submit_feedback(req: FeedbackRequest):
-    """v5.0 — Accept user feedback on scan results."""
+    """v4.9 — Accept user feedback on scan results. Feeds into learning system."""
     try:
         result = feedback_store.add_feedback(
             url=req.url,
             rating=req.rating,
             correction=req.correction,
             modules=req.modules,
+            scan_results=req.scan_results,
         )
+        feedback_store.invalidate_cache()  # Reset learning cache
         print(f"📝 Feedback received: {req.rating} for {req.url}")
         return result
     except Exception as e:
         print(f"⚠️ Feedback error: {e}")
         return {"status": "error", "message": str(e)}
+
+
+# ============================================================================
+# Community Blocklist Endpoints (v4.9)
+# ============================================================================
+
+
+class ReportRequest(BaseModel):
+    """Request model for community report."""
+
+    url: str
+    risk_score: float = 0.0
+    reason: str = ""
+
+
+@app.post("/api/report")
+def report_page(req: ReportRequest):
+    """v4.9 — Report a page/domain to the community blocklist."""
+    try:
+        result = community_blocklist.add_report(
+            url=req.url,
+            risk_score=req.risk_score,
+            reason=req.reason,
+        )
+        print(f"🚩 Report: {req.url} (risk: {req.risk_score})")
+        return result
+    except Exception as e:
+        print(f"⚠️ Report error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/blocklist")
+def get_blocklist():
+    """v4.9 — Get community blocklist (domains with 5+ reports)."""
+    try:
+        domains = community_blocklist.get_blocklist()
+        return {"blocklist": domains, "count": len(domains)}
+    except Exception as e:
+        return {"blocklist": [], "count": 0, "error": str(e)}
+
+
+@app.get("/api/blocklist/check")
+def check_blocklist(url: str):
+    """v4.9 — Check if a URL is blocked."""
+    try:
+        is_blocked = community_blocklist.is_blocked(url)
+        report_count = community_blocklist.get_domain_report_count(url)
+        return {
+            "url": url,
+            "is_blocked": is_blocked,
+            "report_count": report_count,
+        }
+    except Exception as e:
+        return {"url": url, "is_blocked": False, "error": str(e)}
+
+
+@app.get("/api/feedback/domain")
+def get_domain_feedback(url: str):
+    """v4.9 — Get feedback learning data for a domain."""
+    try:
+        return feedback_store.get_domain_feedback(url)
+    except Exception as e:
+        return {"domain": url, "total": 0, "error": str(e)}
+
+
+# ============================================================================
+# v4.9 Streaming Analysis Endpoint (SSE)
+# ============================================================================
+
+
+@app.post("/analyze/v3/stream")
+def analyze_content_v3_stream(req: ScanRequest):
+    """
+    v4.9 — Streaming analysis endpoint using Server-Sent Events.
+    Yields each module result as it completes so the frontend can render progressively.
+    """
+
+    def event_stream():
+        try:
+            # Get learning context from feedback history
+            learning_ctx = feedback_store.get_learning_context(req.url)
+
+            # Module 1: Article Summary
+            yield _sse_event("progress", {"module": "summary", "status": "running", "step": "1/6"})
+            article_summary = {"summary": "", "method": "none", "cached": False}
+            summary_text = ""
+            if len(req.article_text) > 30:
+                try:
+                    article_summary = article_summarizer.summarize(req.article_text, req.url)
+                    summary_text = article_summary.get("summary", "")
+                except Exception as e:
+                    print(f"⚠️ [SSE] Summary failed: {e}")
+            yield _sse_event("module", {"module": "article_summary", "data": article_summary})
+
+            # Module 2: Sentiment
+            yield _sse_event("progress", {"module": "sentiment", "status": "running", "step": "2/6"})
+            sentiment_v3 = {"label": "Neutral", "confidence": 0.0, "intensity": "Weak", "method": "none"}
+            if len(req.article_text) > 5:
+                try:
+                    sentiment_v3 = sentiment_v3_engine.analyze(req.article_text[:512])
+                except Exception as e:
+                    print(f"⚠️ [SSE] Sentiment failed: {e}")
+            yield _sse_event("module", {"module": "sentiment_v3", "data": sentiment_v3})
+
+            # Module 3: Toxicity
+            yield _sse_event("progress", {"module": "toxicity", "status": "running", "step": "3/6"})
+            toxicity_v3 = {"is_toxic": False, "overall_score": 0.0, "severity": "Low", "categories": {}, "detection_layers": []}
+            if len(req.article_text) > 5:
+                try:
+                    toxicity_v3 = toxicity_v3_engine.analyze(req.article_text[:1000])
+                except Exception as e:
+                    print(f"⚠️ [SSE] Toxicity failed: {e}")
+            yield _sse_event("module", {"module": "toxicity_v3", "data": toxicity_v3})
+
+            # Module 4: Fact Check
+            yield _sse_event("progress", {"module": "fact_check", "status": "running", "step": "4/6"})
+            fact_check_v3 = {"score": 50, "verdict": "Unverifiable", "confidence": "Low", "evidence": [], "verification_methods": []}
+            if len(req.article_text) > 20:
+                try:
+                    fact_check_v3 = fact_checker_v3_engine.check(req.article_text, req.url)
+                except Exception as e:
+                    print(f"⚠️ [SSE] Fact check failed: {e}")
+            yield _sse_event("module", {"module": "fact_check_v3", "data": fact_check_v3})
+
+            # Module 5: Risk Score
+            yield _sse_event("progress", {"module": "risk_score", "status": "running", "step": "5/6"})
+            risk_score_v3 = {"risk_score": 0.0, "risk_level": "Low", "confidence": 0.0, "risk_breakdown": {}, "warnings": [], "recommendations": []}
+            if len(req.article_text) > 20:
+                try:
+                    risk_score_v3 = risk_scorer_v3_engine.score(req.article_text, req.url)
+                except Exception as e:
+                    print(f"⚠️ [SSE] Risk score failed: {e}")
+            yield _sse_event("module", {"module": "risk_score_v3", "data": risk_score_v3})
+
+            # Module 6: Comments
+            yield _sse_event("progress", {"module": "comments", "status": "running", "step": "6/6"})
+            comments_analysis = {"total": 0, "toxic_count": 0, "toxic_percentage": 0.0, "toxic_comments": [], "filter_stats": {}, "api_calls_saved": 0}
+            if req.comments:
+                comments_analysis = _analyze_comments_v31(req.comments[:50], summary_text, req.url, learning_ctx)
+            yield _sse_event("module", {"module": "comments_analysis", "data": comments_analysis})
+
+            # Check blocklist
+            blocklist_info = {
+                "is_blocked": community_blocklist.is_blocked(req.url),
+                "report_count": community_blocklist.get_domain_report_count(req.url),
+            }
+
+            # Domain feedback
+            domain_feedback = feedback_store.get_domain_feedback(req.url)
+
+            # Final complete event
+            final = {
+                "version": "4.9",
+                "article_summary": article_summary,
+                "sentiment_v3": sentiment_v3,
+                "toxicity_v3": toxicity_v3,
+                "fact_check_v3": fact_check_v3,
+                "risk_score_v3": risk_score_v3,
+                "comments_analysis": comments_analysis,
+                "url": req.url,
+                "cache_stats": cache_manager.get_stats(),
+                "blocklist_info": blocklist_info,
+                "domain_feedback": domain_feedback,
+                "learning_applied": bool(learning_ctx),
+            }
+            yield _sse_event("complete", final)
+
+        except Exception as e:
+            yield _sse_event("error", {"message": str(e)})
+
+    return StreamingResponse(event_stream(), media_type="text/event-stream")
+
+
+def _sse_event(event_type: str, data: dict) -> str:
+    """Format a Server-Sent Event."""
+    return f"event: {event_type}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
 # ============================================================================
@@ -316,6 +503,11 @@ def analyze_content_v3(req: ScanRequest):
     """
     print(f"📥 [v3.1] Received Scan Request for: {req.url}")
     try:
+        # ========== LEARNING CONTEXT (v4.9) ==========
+        learning_ctx = feedback_store.get_learning_context(req.url)
+        if learning_ctx:
+            print(f"🧠 [v4.9] Learning context loaded for {req.url}")
+
         # ========== 0. ARTICLE SUMMARY (NEW) ==========
         article_summary = {"summary": "", "method": "none", "cached": False}
         summary_text = ""
@@ -431,12 +623,21 @@ def analyze_content_v3(req: ScanRequest):
 
         if req.comments:
             comments_analysis = _analyze_comments_v31(
-                req.comments[:50], summary_text, req.url
+                req.comments[:50], summary_text, req.url, learning_ctx
             )
 
-        # ========== 6. COMPILE v3.1 RESPONSE ==========
+        # ========== 6. BLOCKLIST CHECK (v4.9) ==========
+        blocklist_info = {
+            "is_blocked": community_blocklist.is_blocked(req.url),
+            "report_count": community_blocklist.get_domain_report_count(req.url),
+        }
+
+        # ========== 7. DOMAIN FEEDBACK (v4.9) ==========
+        domain_feedback = feedback_store.get_domain_feedback(req.url)
+
+        # ========== 8. COMPILE v4.9 RESPONSE ==========
         response = {
-            "version": "5.0",
+            "version": "4.9",
             "article_summary": article_summary,
             "sentiment_v3": sentiment_v3,
             "toxicity_v3": toxicity_v3,
@@ -445,6 +646,9 @@ def analyze_content_v3(req: ScanRequest):
             "comments_analysis": comments_analysis,
             "url": req.url,
             "cache_stats": cache_manager.get_stats(),
+            "blocklist_info": blocklist_info,
+            "domain_feedback": domain_feedback,
+            "learning_applied": bool(learning_ctx),
         }
 
         print(
@@ -462,7 +666,7 @@ def analyze_content_v3(req: ScanRequest):
         raise HTTPException(status_code=500, detail=f"v3.1 analysis error: {str(e)}")
 
 
-def _analyze_comments_v31(comments: List[str], article_summary: str, url: str) -> dict:
+def _analyze_comments_v31(comments: List[str], article_summary: str, url: str, learning_ctx: str = "") -> dict:
     """
     Context-aware batch comment analysis.
 
@@ -599,7 +803,7 @@ def _analyze_comments_v31(comments: List[str], article_summary: str, url: str) -
                         f"⚡ Batch {chunk_num}/{total_chunks}: Analyzing {len(chunk)} comments..."
                     )
 
-                chunk_results = _batch_gemini_analyze(chunk, article_summary)
+                chunk_results = _batch_gemini_analyze(chunk, article_summary, learning_ctx)
                 all_batch_results.extend(chunk_results)
 
                 # Rate limit protection: sleep between chunks (10 RPM = ~6s between calls)
@@ -632,7 +836,7 @@ def _analyze_comments_v31(comments: List[str], article_summary: str, url: str) -
     }
 
 
-def _batch_gemini_analyze(comments: List[str], article_summary: str) -> List[dict]:
+def _batch_gemini_analyze(comments: List[str], article_summary: str, learning_ctx: str = "") -> List[dict]:
     """
     Send multiple comments in ONE Gemini API call with article context.
     Returns list of analysis dicts.
@@ -657,7 +861,7 @@ def _batch_gemini_analyze(comments: List[str], article_summary: str) -> List[dic
             return _fallback_results(comments)
 
         try:
-            return _try_batch_gemini(comments, article_summary, api_key)
+            return _try_batch_gemini(comments, article_summary, api_key, learning_ctx)
         except Exception as e:
             error_str = str(e).lower()
             if "429" in error_str or "quota" in error_str:
@@ -675,7 +879,7 @@ def _batch_gemini_analyze(comments: List[str], article_summary: str) -> List[dic
 
 
 def _try_batch_gemini(
-    comments: List[str], article_summary: str, api_key: str
+    comments: List[str], article_summary: str, api_key: str, learning_ctx: str = ""
 ) -> List[dict]:
     """Execute a single batch Gemini call. Raises on 429 for retry."""
     from google import genai
@@ -690,7 +894,12 @@ def _try_batch_gemini(
     if article_summary:
         context_line = f"Bối cảnh bài báo: {article_summary[:500]}\n\n"
 
-    prompt = f"""{context_line}Phân tích {len(comments)} bình luận sau:
+    # v4.9: Inject learning from user feedback
+    learning_line = ""
+    if learning_ctx:
+        learning_line = f"\n{learning_ctx}\n\n"
+
+    prompt = f"""{context_line}{learning_line}Phân tích {len(comments)} bình luận sau:
 {comments_text}
 
 Với MỖI bình luận, trả lời JSON array:
