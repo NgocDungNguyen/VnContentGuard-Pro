@@ -10,7 +10,9 @@
         <div class="header-bar">
             <h2>🛡️ VnContentGuard Pro</h2>
             <div class="header-actions">
+                <button id="autoScanBtn" class="icon-btn" title="Tự động quét">⚡</button>
                 <button id="historyBtn" class="icon-btn" title="Lịch sử quét">📜</button>
+                <button id="compareBtn" class="icon-btn" title="So sánh 2 trang">📊</button>
                 <button id="darkModeBtn" class="icon-btn" title="Chế độ tối">🌙</button>
             </div>
         </div>
@@ -55,6 +57,20 @@
                     <button id="clearHistoryBtn" class="btn-secondary" style="padding: 4px 10px; font-size: 10px;">🗑️ Xóa</button>
                 </div>
                 <div id="historyList" style="max-height: 300px; overflow-y: auto;"></div>
+            </div>
+        </div>
+
+        <!-- v5 COMPARISON MODE PANEL -->
+        <div id="comparePanel" class="hidden">
+            <div class="card" style="border-left: 4px solid #e67e22;">
+                <h3>📊 So sánh 2 trang</h3>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Chọn 2 lần quét từ lịch sử để so sánh song song.</p>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <select id="compareSelect1" class="compare-select"><option value="">— Chọn trang 1 —</option></select>
+                    <select id="compareSelect2" class="compare-select"><option value="">— Chọn trang 2 —</option></select>
+                </div>
+                <button id="compareGoBtn" class="btn-primary" style="padding: 8px; margin: 0;">🔍 So sánh</button>
+                <div id="compareResults" style="margin-top: 10px;"></div>
             </div>
         </div>
 
@@ -116,8 +132,26 @@
                 <div id="recommendationsList" class="details"></div>
             </div>
 
+            <!-- v5 FEEDBACK SECTION -->
+            <div id="feedbackSection" class="hidden" style="margin-top: 10px;">
+                <div class="card" style="border-left: 4px solid #9b59b6; padding: 10px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; font-weight: bold;">Kết quả chính xác không?</span>
+                        <div style="display: flex; gap: 6px;">
+                            <button id="feedbackUp" class="feedback-btn" title="Chính xác">👍</button>
+                            <button id="feedbackDown" class="feedback-btn" title="Không chính xác">👎</button>
+                        </div>
+                    </div>
+                    <div id="feedbackExtra" class="hidden" style="margin-top: 8px;">
+                        <textarea id="feedbackText" placeholder="Bạn nghĩ kết quả nên là gì? (tùy chọn)" style="width: 100%; height: 50px; font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; resize: none; background: var(--input-bg); color: var(--text-primary);"></textarea>
+                        <button id="feedbackSubmit" class="btn-primary" style="padding: 6px; margin: 4px 0 0 0; font-size: 11px;">📤 Gửi phản hồi</button>
+                    </div>
+                    <div id="feedbackThanks" class="hidden" style="text-align: center; color: #27ae60; font-weight: bold; padding: 8px;">🙏 Cảm ơn phản hồi của bạn!</div>
+                </div>
+            </div>
+
             <div style="margin-top: 15px; padding: 10px; background: var(--footer-bg, #f0f0f0); border-radius: 5px; text-align: center;">
-                <div style="font-size: 10px; color: var(--text-secondary, #666); margin-bottom: 8px;">VnContentGuard Pro v4.0 — Gemini AI + Regex + Perspective API + Fact Check API</div>
+                <div style="font-size: 10px; color: var(--text-secondary, #666); margin-bottom: 8px;">VnContentGuard Pro v5.0 — Gemini AI + Regex + Perspective API + Fact Check API</div>
                 <div style="display: flex; gap: 6px;">
                     <button id="exportBtn" class="btn-secondary" style="flex: 1; padding: 8px;">📥 Xuất báo cáo</button>
                     <button id="clearCache" class="btn-secondary" style="flex: 1; padding: 8px;">🗑️ Xóa kết quả</button>
@@ -131,6 +165,7 @@
             <button id="retryBtn" class="btn-secondary" style="margin-top: 10px;">Thử lại</button>
         </div>
     </div>
+    <script src="offline_analyzer.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>

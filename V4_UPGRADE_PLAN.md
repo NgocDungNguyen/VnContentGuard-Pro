@@ -1,5 +1,5 @@
 # 🛡️ VNCONTENTGUARD PRO — V4 UPGRADE PLAN
-### Version: 4.0 | Started: February 13, 2026
+### Version: 4.5 | Started: February 13, 2026
 ### Tracking Document — Update status as each feature is completed
 
 ---
@@ -19,7 +19,7 @@
 | | 4. **Badge update** — Service worker sets `chrome.action.setBadgeText` with risk score when done, so user sees results even without opening popup. |
 | **Files to Change** | `manifest.json` (add `background.service_worker`), new `background.js`, `popup.js` (refactor scan flow) |
 | **Effort** | 1-2 days |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.0) |
 
 ---
 
@@ -52,7 +52,7 @@
 | **Files** | `popup.html`, `popup.js`, `style.css` |
 | **Effort** | 1 day |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.0) — 20-entry FIFO history, color-coded risk cards, relative timestamps, click to open URL |
 
 ---
 
@@ -73,7 +73,7 @@
 | **Files** | `popup.html`, `popup.js` |
 | **Effort** | 1 day |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.5) — HTML report with styled template, risk hero, tables, comment cards, PDF print button, chrome.downloads API |
 
 ---
 
@@ -94,7 +94,7 @@
 | **Files** | `popup.html`, `popup.js`, `background.js`, `manifest.json` |
 | **Effort** | 1 day |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v5.0) — Auto-scan toggle in popup, background.js tabs.onUpdated listener, domain whitelist, 30-min rate limit |
 
 ---
 
@@ -112,7 +112,7 @@
 | **Files** | `popup.html`, `popup.js`, `style.css` |
 | **Effort** | 3-4 hours |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.0) — CSS variables, dark-mode class, chrome.storage.sync preference, header toggle button |
 
 ---
 
@@ -217,7 +217,7 @@
 | **Files** | `popup.html`, `popup.js`, `style.css`, possibly `api.py` |
 | **Effort** | 3-4 days |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v5.0) — Side-by-side comparison from scan history, renderComparison() with score bars |
 
 ---
 
@@ -236,7 +236,7 @@
 | **Files** | `popup.js` (add regex engine), possibly new `offline_analyzer.js` |
 | **Effort** | 2-3 days |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v5.0) — offline_analyzer.js with 30+ regex patterns + sentiment keywords, instant partial results with ⚡ badge |
 
 ---
 
@@ -256,7 +256,7 @@
 | **Files** | `popup.html`, `popup.js`, `api.py`, new `src/utils/feedback_store.py` |
 | **Effort** | 2 days |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v5.0) — feedback_store.py JSON storage, POST /api/feedback endpoint, 👍/👎 UI with correction textarea |
 
 ---
 
@@ -278,11 +278,9 @@
 | **Files** | `api.py`, `popup.js`, `popup.html`, `style.css` |
 | **Effort** | 1 day |
 | **Cost** | $0 |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.0) — GET /api/stats endpoint with model info, key availability, exhausted count |
 
----
-
-### 3.5 — Notification System
+--- — Notification System
 | Field | Detail |
 |-------|--------|
 | **What** | Use `chrome.notifications` API to alert user when: a previously-safe page gets re-flagged, risk score changes significantly, or auto-scan detects high-risk content. |
@@ -401,7 +399,7 @@
 | **Files** | `src/models/gemini_llm.py`, `api.py` (response field) |
 | **Effort** | 2-3 hours |
 | **Cost** | $0 (same free tier API) |
-| **Status** | ⬜ Not started |
+| **Status** | ✅ Completed (v4.0) — gemini-2.5-flash primary, flash-lite fallback, _try_fallback_model(), shared key rotator |
 
 ---
 

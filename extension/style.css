@@ -1,5 +1,5 @@
 /**
- * VnContentGuard Pro v4.0 - Clean Design with Dark Mode
+ * VnContentGuard Pro v5.0 - Clean Design with Dark Mode
  */
 
 /* ============================================================================ */
@@ -608,4 +608,95 @@ body.dark-mode .history-card {
 
 body.dark-mode .history-card:hover {
     background: var(--bg-card-hover);
+}
+
+/* ============================================================================ */
+/* v5.0 AUTO-SCAN BUTTON (active state)                                          */
+/* ============================================================================ */
+
+.icon-btn.active {
+    background: #27ae60;
+    color: white;
+    border-color: #229954;
+    box-shadow: 0 0 6px rgba(39, 174, 96, 0.4);
+}
+
+body.dark-mode .icon-btn.active {
+    background: #27ae60;
+    color: white;
+    border-color: #229954;
+}
+
+/* ============================================================================ */
+/* v5.0 OFFLINE MODE BADGE                                                       */
+/* ============================================================================ */
+
+.summary-badge.offline {
+    background: #e67e22;
+    animation: pulse-offline 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-offline {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* ============================================================================ */
+/* v5.0 COMPARISON MODE                                                          */
+/* ============================================================================ */
+
+.compare-select {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 11px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    cursor: pointer;
+    max-width: 48%;
+}
+
+.compare-select:focus {
+    outline: 2px solid #3498db;
+    border-color: #3498db;
+}
+
+body.dark-mode .compare-select {
+    background: var(--input-bg);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+/* ============================================================================ */
+/* v5.0 FEEDBACK BUTTONS                                                         */
+/* ============================================================================ */
+
+.feedback-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.feedback-btn:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 8px var(--shadow-color);
+}
+
+.feedback-btn:disabled {
+    cursor: default;
+    opacity: 0.7;
+}
+
+body.dark-mode .feedback-btn {
+    background: var(--bg-card);
+    border-color: var(--border-color);
 }

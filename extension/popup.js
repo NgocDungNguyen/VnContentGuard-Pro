@@ -1,11 +1,15 @@
 /**
- * VnContentGuard Pro v4.0 — Popup Script
+ * VnContentGuard Pro v5.0 — Popup Script
  * ========================================
  * - Delegates API calls to background.js (survives popup close)
  * - Resumes scan state on popup reopen
  * - Scan history support
  * - Dark mode support
  * - Export report support
+ * - Auto-scan toggle (v5.0)
+ * - Offline regex mode with instant partial results (v5.0)
+ * - Comparison mode (v5.0)
+ * - User feedback loop (v5.0)
  */
 
 let currentResultsData = null;
@@ -106,6 +110,56 @@ document.addEventListener('DOMContentLoaded', async () => {
                 exportReport(currentResultsData, currentTabUrl);
             }
         });
+    }
+
+    // v5.0 — Auto-scan toggle handler
+    const autoScanBtn = document.getElementById('autoScanBtn');
+    if (autoScanBtn) {
+        // Load current auto-scan state
+        chrome.runtime.sendMessage({ type: 'GET_AUTO_SCAN' }, (response) => {
+            if (response && response.enabled) {
+                autoScanBtn.classList.add('active');
+                autoScanBtn.title = 'Tự động quét: BẬT';
+            }
+        });
+
+        autoScanBtn.addEventListener('click', async () => {
+            const isActive = autoScanBtn.classList.toggle('active');
+            autoScanBtn.title = isActive ? 'Tự động quét: BẬT' : 'Tự động quét: TẮT';
+            chrome.runtime.sendMessage({ type: 'SET_AUTO_SCAN', enabled: isActive });
+            
+            // Show brief status
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = isActive ? '⚡ Tự động quét: BẬT' : 'Tự động quét: TẮT';
+            setTimeout(() => { statusEl.textContent = 'Sẵn sàng quét'; }, 2000);
+        });
+    }
+
+    // v5.0 — Comparison mode button handler
+    const compareBtn = document.getElementById('compareBtn');
+    if (compareBtn) {
+        compareBtn.addEventListener('click', toggleComparePanel);
+    }
+
+    // v5.0 — Compare Go button
+    const compareGoBtn = document.getElementById('compareGoBtn');
+    if (compareGoBtn) {
+        compareGoBtn.addEventListener('click', runComparison);
+    }
+
+    // v5.0 — Feedback button handlers
+    const feedbackUp = document.getElementById('feedbackUp');
+    const feedbackDown = document.getElementById('feedbackDown');
+    if (feedbackUp) {
+        feedbackUp.addEventListener('click', () => handleFeedback('positive'));
+    }
+    if (feedbackDown) {
+        feedbackDown.addEventListener('click', () => handleFeedback('negative'));
+    }
+
+    const feedbackSubmit = document.getElementById('feedbackSubmit');
+    if (feedbackSubmit) {
+        feedbackSubmit.addEventListener('click', submitFeedbackWithCorrection);
     }
 });
 
@@ -254,6 +308,15 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
     btn.textContent = '⏳ Đang gửi...';
 
     try {
+        // v5.0 — Show INSTANT offline results while waiting for AI
+        if (typeof offlineFullAnalysis === 'function') {
+            const offlineResults = offlineFullAnalysis(scannedDataCache.text, scannedDataCache.comments, currentTabUrl);
+            currentResultsData = offlineResults;
+            document.getElementById('confirmation').classList.add('hidden');
+            renderResults(offlineResults, currentTabUrl);
+            document.getElementById('status').textContent = '⚡ Chế độ nhanh — Đang chờ AI phân tích đầy đủ...';
+        }
+
         // Delegate to background service worker (survives popup close!)
         const response = await chrome.runtime.sendMessage({
             type: 'START_SCAN',
@@ -271,7 +334,9 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
             document.getElementById('confirmation').classList.add('hidden');
             document.getElementById('scanBtn').disabled = true;
             document.getElementById('scanBtn').textContent = '⏳ Đang phân tích...';
-            document.getElementById('status').textContent = 'Đang phân tích... (có thể mất 1-2 phút — bạn có thể đóng popup)';
+            if (!currentResultsData || !currentResultsData.offline_mode) {
+                document.getElementById('status').textContent = 'Đang phân tích... (có thể mất 1-2 phút — bạn có thể đóng popup)';
+            }
 
             // Start polling for results
             startPollingForResults(currentTabUrl);
@@ -668,7 +733,7 @@ function scrapePageContent() {
 
 function renderResults(data, urlInfo) {
     // Check if v3 or v2 response
-    const isV3 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.sentiment_v3;
+    const isV3 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "5.0" || data.sentiment_v3;
     
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
@@ -692,8 +757,9 @@ function renderV3Results(data, urlInfo) {
     const riskScore = data.risk_score_v3 || { risk_score: 0, risk_level: "Low" };
     const comments = data.comments_analysis || { total: 0, toxic_count: 0, toxic_comments: [], details: [] };
     const articleSummary = data.article_summary || null;
+    const isOffline = data.offline_mode === true;
 
-    console.log("📊 Rendering v3.1 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary });
+    console.log("📊 Rendering v3.1 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
 
     // ===== 0. ARTICLE SUMMARY (NEW in v3.1) =====
     const summaryCard = document.getElementById('summaryCard');
@@ -703,12 +769,16 @@ function renderV3Results(data, urlInfo) {
         document.getElementById('summaryText').textContent = summaryContent;
 
         let methodLabel = 'Gemini AI';
-        if (articleSummary.method === 'cached') methodLabel = 'Đã lưu';
+        if (isOffline) methodLabel = '⚡ Chế độ nhanh';
+        else if (articleSummary.method === 'cached') methodLabel = 'Đã lưu';
         else if (articleSummary.method === 'fallback') methodLabel = 'Trích xuất';
 
-        let metaHTML = `<span class="summary-badge">${methodLabel}</span>`;
+        let metaHTML = `<span class="summary-badge${isOffline ? ' offline' : ''}">${methodLabel}</span>`;
         if (articleSummary.cached) {
             metaHTML += ' <span class="summary-badge cached">⚡ Đã lưu</span>';
+        }
+        if (isOffline) {
+            metaHTML += ' <span class="summary-badge" style="background: #e67e22;">Đang chờ AI...</span>';
         }
         document.getElementById('summaryMeta').innerHTML = metaHTML;
     } else {
@@ -939,6 +1009,17 @@ function renderV3Results(data, urlInfo) {
     }
 
     console.log("✅ v3 results rendered");
+
+    // ===== v5.0 — SHOW FEEDBACK SECTION (after results) =====
+    const feedbackSection = document.getElementById('feedbackSection');
+    if (feedbackSection && !isOffline) {
+        feedbackSection.classList.remove('hidden');
+        // Reset feedback state
+        document.getElementById('feedbackExtra').classList.add('hidden');
+        document.getElementById('feedbackThanks').classList.add('hidden');
+        document.getElementById('feedbackUp').disabled = false;
+        document.getElementById('feedbackDown').disabled = false;
+    }
 
     // ===== SHOW WARNING MODAL if high risk (after delay) =====
     if (riskValue >= 50) {  // Medium-High or higher (0-100 scale)
@@ -1296,7 +1377,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function exportReport(data, url) {
-    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.sentiment_v3;
+    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "5.0" || data.sentiment_v3;
     if (!isSupported) return;
 
     const sentiment = data.sentiment_v3 || {};
@@ -1341,7 +1422,7 @@ function exportReport(data, url) {
     <h1>🛡️ VnContentGuard Pro — Báo cáo phân tích</h1>
     <p><strong>URL:</strong> <a href="${url || '#'}">${url || 'N/A'}</a></p>
     <p><strong>Ngày quét:</strong> ${dateStr}</p>
-    <p><strong>Phiên bản:</strong> v4.0</p>
+    <p><strong>Phiên bản:</strong> v5.0</p>
 
     <h2>📊 Điểm Rủi Ro Tổng Thể</h2>
     <div style="text-align: center; margin: 15px 0;">
@@ -1400,7 +1481,7 @@ function exportReport(data, url) {
     <ul>${riskScore.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
 
     <div class="footer">
-        <p>Báo cáo được tạo bởi VnContentGuard Pro v4.0</p>
+        <p>Báo cáo được tạo bởi VnContentGuard Pro v5.0</p>
         <p>⚠️ Kết quả phân tích mang tính tham khảo. Hãy luôn kiểm chứng thông tin từ nhiều nguồn.</p>
     </div>
 </body>
@@ -1418,4 +1499,219 @@ function exportReport(data, url) {
     }, () => {
         URL.revokeObjectURL(downloadUrl);
     });
+}
+
+// ============================================================================
+// USER FEEDBACK — Feature 3.3 (v5.0)
+// ============================================================================
+
+let feedbackRating = null;
+
+function handleFeedback(rating) {
+    feedbackRating = rating;
+
+    // Highlight selected button
+    const upBtn = document.getElementById('feedbackUp');
+    const downBtn = document.getElementById('feedbackDown');
+    upBtn.disabled = true;
+    downBtn.disabled = true;
+
+    if (rating === 'positive') {
+        upBtn.style.transform = 'scale(1.3)';
+        // For positive, submit immediately
+        submitFeedbackToBackend(rating, '');
+    } else {
+        downBtn.style.transform = 'scale(1.3)';
+        // For negative, show correction input
+        document.getElementById('feedbackExtra').classList.remove('hidden');
+    }
+}
+
+function submitFeedbackWithCorrection() {
+    const correction = document.getElementById('feedbackText').value.trim();
+    submitFeedbackToBackend(feedbackRating || 'negative', correction);
+}
+
+async function submitFeedbackToBackend(rating, correction) {
+    try {
+        const data = {
+            url: currentTabUrl || '',
+            rating: rating,
+            correction: correction,
+            modules: {}
+        };
+
+        // Send via background service worker
+        const result = await chrome.runtime.sendMessage({
+            type: 'SUBMIT_FEEDBACK',
+            data: data
+        });
+
+        console.log('📝 Feedback result:', result);
+
+    } catch (err) {
+        console.error('Feedback error:', err);
+    }
+
+    // Show thank you message
+    document.getElementById('feedbackExtra').classList.add('hidden');
+    document.getElementById('feedbackThanks').classList.remove('hidden');
+
+    setTimeout(() => {
+        document.getElementById('feedbackThanks').classList.add('hidden');
+    }, 3000);
+}
+
+// ============================================================================
+// COMPARISON MODE — Feature 2.5 (v5.0)
+// ============================================================================
+
+async function toggleComparePanel() {
+    const comparePanel = document.getElementById('comparePanel');
+    if (!comparePanel) return;
+
+    if (comparePanel.classList.contains('hidden')) {
+        // Show panel and populate selects from history
+        await populateCompareSelects();
+        comparePanel.classList.remove('hidden');
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('historyPanel').classList.add('hidden');
+        document.getElementById('confirmation').classList.add('hidden');
+    } else {
+        comparePanel.classList.add('hidden');
+        if (currentResultsData) {
+            document.getElementById('results').classList.remove('hidden');
+        }
+    }
+}
+
+async function populateCompareSelects() {
+    const data = await chrome.storage.local.get(['scanHistory']);
+    const history = data.scanHistory || [];
+
+    const select1 = document.getElementById('compareSelect1');
+    const select2 = document.getElementById('compareSelect2');
+
+    // Clear existing options
+    select1.innerHTML = '<option value="">— Chọn trang 1 —</option>';
+    select2.innerHTML = '<option value="">— Chọn trang 2 —</option>';
+
+    history.forEach((entry, idx) => {
+        const domain = entry.title || entry.url;
+        const risk = Math.round(entry.riskScore);
+        const opt1 = new Option(`${domain} (Rủi ro: ${risk})`, entry.url);
+        const opt2 = new Option(`${domain} (Rủi ro: ${risk})`, entry.url);
+        select1.add(opt1);
+        select2.add(opt2);
+    });
+}
+
+async function runComparison() {
+    const url1 = document.getElementById('compareSelect1').value;
+    const url2 = document.getElementById('compareSelect2').value;
+
+    if (!url1 || !url2) {
+        document.getElementById('compareResults').innerHTML = '<div style="color: #e74c3c; font-size: 12px;">⚠️ Vui lòng chọn 2 trang để so sánh.</div>';
+        return;
+    }
+
+    if (url1 === url2) {
+        document.getElementById('compareResults').innerHTML = '<div style="color: #e74c3c; font-size: 12px;">⚠️ Vui lòng chọn 2 trang khác nhau.</div>';
+        return;
+    }
+
+    // Load cached results for both URLs
+    const cached = await chrome.storage.local.get([url1, url2]);
+    const data1 = cached[url1];
+    const data2 = cached[url2];
+
+    if (!data1 || !data2) {
+        document.getElementById('compareResults').innerHTML = '<div style="color: #e74c3c; font-size: 12px;">⚠️ Không tìm thấy dữ liệu đầy đủ. Hãy quét cả 2 trang trước.</div>';
+        return;
+    }
+
+    renderComparison(data1, data2, url1, url2);
+}
+
+function renderComparison(data1, data2, url1, url2) {
+    const risk1 = data1.risk_score_v3?.risk_score || 0;
+    const risk2 = data2.risk_score_v3?.risk_score || 0;
+    const level1 = data1.risk_score_v3?.risk_level || 'Low';
+    const level2 = data2.risk_score_v3?.risk_level || 'Low';
+    const sent1 = data1.sentiment_v3?.overall || 'Neutral';
+    const sent2 = data2.sentiment_v3?.overall || 'Neutral';
+    const toxic1 = data1.toxicity_v3?.is_toxic || false;
+    const toxic2 = data2.toxicity_v3?.is_toxic || false;
+    const fact1 = data1.fact_check_v3?.score || 50;
+    const fact2 = data2.fact_check_v3?.score || 50;
+    const verdict1 = data1.fact_check_v3?.verdict || '?';
+    const verdict2 = data2.fact_check_v3?.verdict || '?';
+    const toxicCount1 = data1.comments_analysis?.toxic_count || 0;
+    const toxicCount2 = data2.comments_analysis?.toxic_count || 0;
+    const totalComments1 = data1.comments_analysis?.total || 0;
+    const totalComments2 = data2.comments_analysis?.total || 0;
+
+    const domain1 = getDomain(url1);
+    const domain2 = getDomain(url2);
+
+    const riskColor = (r) => r < 25 ? '#27ae60' : r < 50 ? '#f39c12' : r < 75 ? '#e74c3c' : '#c0392b';
+    const sentColor = (s) => s === 'Positive' ? '#27ae60' : s === 'Negative' ? '#e74c3c' : '#3498db';
+    const riskLabelVi = { 'Low': 'Thấp', 'Medium': 'TB', 'High': 'Cao', 'Critical': 'Nguy hiểm' };
+    const sentLabelVi = { 'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập' };
+
+    // Which is more reliable?
+    const moreReliable = fact1 > fact2 ? domain1 : fact2 > fact1 ? domain2 : 'Ngang nhau';
+    const lowerRisk = risk1 < risk2 ? domain1 : risk2 < risk1 ? domain2 : 'Ngang nhau';
+
+    const html = `
+        <div style="margin-top: 8px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                <thead>
+                    <tr style="background: var(--bg-card-hover); border-bottom: 2px solid var(--border-color);">
+                        <th style="padding: 6px; text-align: left;">Tiêu chí</th>
+                        <th style="padding: 6px; text-align: center; max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${domain1}</th>
+                        <th style="padding: 6px; text-align: center; max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${domain2}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 6px; border-bottom: 1px solid var(--border-color);">📊 Rủi ro</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color); color: ${riskColor(risk1)}; font-weight: bold;">${risk1.toFixed(0)}/100 (${riskLabelVi[level1] || level1})</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color); color: ${riskColor(risk2)}; font-weight: bold;">${risk2.toFixed(0)}/100 (${riskLabelVi[level2] || level2})</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px; border-bottom: 1px solid var(--border-color);">🎭 Cảm xúc</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color); color: ${sentColor(sent1)};">${sentLabelVi[sent1] || sent1}</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color); color: ${sentColor(sent2)};">${sentLabelVi[sent2] || sent2}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px; border-bottom: 1px solid var(--border-color);">🛡️ Độc hại</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color);">${toxic1 ? '⚠️ Có' : '✅ Không'}</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color);">${toxic2 ? '⚠️ Có' : '✅ Không'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px; border-bottom: 1px solid var(--border-color);">📰 Tin cậy</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color);">${fact1}/100 (${verdict1})</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color);">${fact2}/100 (${verdict2})</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 6px; border-bottom: 1px solid var(--border-color);">💬 BL độc hại</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color);">${toxicCount1}/${totalComments1}</td>
+                        <td style="padding: 6px; text-align: center; border-bottom: 1px solid var(--border-color);">${toxicCount2}/${totalComments2}</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top: 10px; padding: 8px; background: var(--summary-bg); border-radius: 6px; font-size: 11px;">
+                <strong>📋 Kết luận:</strong><br/>
+                🏆 Đáng tin hơn: <strong>${moreReliable}</strong><br/>
+                🛡️ An toàn hơn: <strong>${lowerRisk}</strong>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('compareResults').innerHTML = html;
+}
+
+function getDomain(url) {
+    try { return new URL(url).hostname.replace('www.', ''); } catch { return url.substring(0, 30); }
 }

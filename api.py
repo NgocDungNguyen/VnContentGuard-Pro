@@ -23,8 +23,9 @@ from src.models.toxicity import ToxicityAnalyzer
 from src.models.toxicity_v3 import ToxicityAnalyzerV3
 from src.utils.cache_manager import CacheManager
 from src.utils.comment_filter import CommentFilter
+from src.utils.feedback_store import FeedbackStore
 
-app = FastAPI(title="VnContentGuard Pro API", version="4.0")
+app = FastAPI(title="VnContentGuard Pro API", version="5.0")
 
 # Enable CORS for Chrome Extension
 app.add_middleware(
@@ -61,6 +62,9 @@ try:
     article_summarizer = ArticleSummarizer(
         cache_manager, key_rotator=shared_key_rotator
     )
+
+    # v5.0 Feedback Store
+    feedback_store = FeedbackStore()
 
     # Reuse same shared key rotator for batch comment analysis
     batch_key_rotator = shared_key_rotator
@@ -114,11 +118,12 @@ def health_check():
 
 @app.get("/api/stats")
 def api_stats():
-    """v4.0 — API usage statistics and model status."""
+    """v5.0 — API usage statistics and model status."""
     try:
         gemini_status = gemini_agent.get_status()
+        feedback_stats = feedback_store.get_stats()
         return {
-            "version": "4.0.0",
+            "version": "5.0.0",
             "model": gemini_status.get("model", "unknown"),
             "using_fallback": gemini_status.get("using_fallback", False),
             "api_keys": {
@@ -127,10 +132,42 @@ def api_stats():
                 "exhausted": gemini_status.get("exhausted_count", 0),
                 "current": gemini_status.get("current_key", 0),
             },
+            "feedback": feedback_stats,
             "status": "🟢 Online",
         }
     except Exception as e:
-        return {"version": "4.0.0", "status": "🔴 Error", "error": str(e)}
+        return {"version": "5.0.0", "status": "🔴 Error", "error": str(e)}
+
+
+# ============================================================================
+# User Feedback Endpoint (v5.0)
+# ============================================================================
+
+
+class FeedbackRequest(BaseModel):
+    """Request model for user feedback."""
+
+    url: str
+    rating: str  # "positive" or "negative"
+    correction: str = ""
+    modules: dict = {}
+
+
+@app.post("/api/feedback")
+def submit_feedback(req: FeedbackRequest):
+    """v5.0 — Accept user feedback on scan results."""
+    try:
+        result = feedback_store.add_feedback(
+            url=req.url,
+            rating=req.rating,
+            correction=req.correction,
+            modules=req.modules,
+        )
+        print(f"📝 Feedback received: {req.rating} for {req.url}")
+        return result
+    except Exception as e:
+        print(f"⚠️ Feedback error: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 # ============================================================================
@@ -394,7 +431,7 @@ def analyze_content_v3(req: ScanRequest):
 
         # ========== 6. COMPILE v3.1 RESPONSE ==========
         response = {
-            "version": "4.0",
+            "version": "5.0",
             "article_summary": article_summary,
             "sentiment_v3": sentiment_v3,
             "toxicity_v3": toxicity_v3,

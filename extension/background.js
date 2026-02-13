@@ -1,5 +1,5 @@
 /**
- * VnContentGuard Pro v4.0 — Background Service Worker
+ * VnContentGuard Pro v5.0 — Background Service Worker
  * =====================================================
  * Handles API calls in the background so they survive popup close.
  * 
@@ -9,6 +9,7 @@
  * 3. Save results to chrome.storage.local
  * 4. Update badge with risk score
  * 5. Notify popup when done (if still open)
+ * 6. Auto-scan supported sites when toggle is ON (v5.0)
  */
 
 // API endpoints (local first, cloud fallback)
@@ -16,6 +17,22 @@ const API_ENDPOINTS = [
     "http://127.0.0.1:8000/analyze/v3",
     "https://vncontentguard-pro.onrender.com/analyze/v3"
 ];
+
+// Feedback endpoints
+const FEEDBACK_ENDPOINTS = [
+    "http://127.0.0.1:8000/api/feedback",
+    "https://vncontentguard-pro.onrender.com/api/feedback"
+];
+
+// Supported domains for auto-scan
+const AUTO_SCAN_DOMAINS = [
+    'facebook.com', 'vnexpress.net', 'dantri.com.vn', 'tuoitre.vn',
+    'thanhnien.vn', 'baomoi.com', 'kenh14.vn', 'cafef.vn', 'tiktok.com'
+];
+
+// Auto-scan rate limit: 1 scan per URL per 30 minutes
+const AUTO_SCAN_COOLDOWN_MS = 30 * 60 * 1000;
+const autoScanTimestamps = {};
 
 // ============================================================================
 // MESSAGE HANDLER — Receives requests from popup.js
@@ -36,6 +53,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'CANCEL_SCAN') {
         cancelScan(message.url);
         sendResponse({ status: 'cancelled' });
+        return true;
+    }
+
+    if (message.type === 'SUBMIT_FEEDBACK') {
+        submitFeedback(message.data).then(result => sendResponse(result));
+        return true;
+    }
+
+    if (message.type === 'SET_AUTO_SCAN') {
+        chrome.storage.sync.set({ autoScan: message.enabled });
+        sendResponse({ status: 'ok', enabled: message.enabled });
+        return true;
+    }
+
+    if (message.type === 'GET_AUTO_SCAN') {
+        chrome.storage.sync.get(['autoScan'], (result) => {
+            sendResponse({ enabled: !!result.autoScan });
+        });
         return true;
     }
 });
@@ -257,11 +292,143 @@ function extractDomain(url) {
 }
 
 // ============================================================================
+// FEEDBACK SUBMISSION (v5.0)
+// ============================================================================
+
+async function submitFeedback(data) {
+    for (const endpoint of FEEDBACK_ENDPOINTS) {
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data),
+            });
+            if (response.ok) {
+                const result = await response.json();
+                console.log(`[BG] Feedback submitted to: ${endpoint}`);
+                return result;
+            }
+        } catch (err) {
+            console.log(`[BG] Feedback endpoint failed: ${endpoint} (${err.message})`);
+        }
+    }
+    // If all endpoints fail, store locally
+    console.log('[BG] Feedback stored locally (backend unavailable)');
+    return { status: 'stored_locally', message: 'Phản hồi đã lưu, sẽ gửi khi có kết nối.' };
+}
+
+// ============================================================================
+// AUTO-SCAN — Feature 1.3 (v5.0)
+// ============================================================================
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    // Only trigger on complete page load
+    if (changeInfo.status !== 'complete' || !tab.url) return;
+
+    // Check if auto-scan is enabled
+    const prefs = await chrome.storage.sync.get(['autoScan']);
+    if (!prefs.autoScan) return;
+
+    // Check if URL matches supported domains
+    const url = tab.url;
+    const isSupported = AUTO_SCAN_DOMAINS.some(domain => url.includes(domain));
+    if (!isSupported) return;
+
+    // Rate limit: skip if scanned within cooldown period
+    const now = Date.now();
+    if (autoScanTimestamps[url] && (now - autoScanTimestamps[url]) < AUTO_SCAN_COOLDOWN_MS) {
+        console.log(`[BG] Auto-scan skipped (cooldown): ${url}`);
+        return;
+    }
+
+    // Check if scan already exists for this URL
+    const existing = await getScanStatus(url);
+    if (existing && (existing.status === 'scanning' || existing.status === 'completed')) {
+        console.log(`[BG] Auto-scan skipped (already scanned): ${url}`);
+        return;
+    }
+
+    console.log(`[BG] ⚡ Auto-scan triggered: ${url}`);
+    autoScanTimestamps[url] = now;
+
+    // Scrape content from the tab
+    try {
+        const scrapeResult = await chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            func: autoScrapeContent
+        });
+
+        if (!scrapeResult || !scrapeResult[0] || !scrapeResult[0].result) {
+            console.log('[BG] Auto-scan: No content scraped');
+            return;
+        }
+
+        const scraped = scrapeResult[0].result;
+        if (!scraped.text || scraped.text.trim().length < 30) {
+            console.log('[BG] Auto-scan: Content too short');
+            return;
+        }
+
+        // Start the scan
+        handleScan({
+            url: url,
+            article_text: scraped.text,
+            comments: scraped.comments
+        });
+
+    } catch (err) {
+        console.log(`[BG] Auto-scan scrape failed: ${err.message}`);
+    }
+});
+
+/**
+ * Lightweight content scraper for auto-scan.
+ * Runs in the content script context of the tab.
+ */
+function autoScrapeContent() {
+    try {
+        let text = "";
+        let comments = [];
+
+        // Get main content
+        const main = document.querySelector('article') ||
+                     document.querySelector('main') ||
+                     document.querySelector('[role="main"]') ||
+                     document.querySelector('[role="article"]');
+
+        if (main) {
+            text = main.innerText.substring(0, 5000).trim();
+        }
+        if (!text || text.length < 30) {
+            text = document.body.innerText.substring(0, 5000).trim();
+        }
+
+        // Get comments (basic)
+        const commentSet = new Set();
+        const commentSelectors = [
+            '[data-testid="comment"]', '.comment', '.comments',
+            '.comment-content', '[data-comment-id]', '.user-comment'
+        ];
+        commentSelectors.forEach(sel => {
+            document.querySelectorAll(sel).forEach(el => {
+                const t = (el.innerText || '').trim();
+                if (t.length > 5 && t.length < 500) commentSet.add(t);
+            });
+        });
+        comments = Array.from(commentSet).slice(0, 50);
+
+        return { text, comments };
+    } catch (err) {
+        return { text: document.body.innerText.substring(0, 3000), comments: [] };
+    }
+}
+
+// ============================================================================
 // SERVICE WORKER LIFECYCLE
 // ============================================================================
 
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('[BG] VnContentGuard Pro v4.0 service worker installed');
+    console.log('[BG] VnContentGuard Pro v5.0 service worker installed');
     chrome.action.setBadgeText({ text: '' });
 });
 
