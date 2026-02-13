@@ -94,15 +94,17 @@ class ArticleSummarizer:
 
                     prompt = (
                         "Bạn là chuyên gia tóm tắt tin tức tiếng Việt.\n"
-                        "Hãy tóm tắt bài báo dưới đây thành 3-5 câu hoàn chỉnh, đầy đủ ý chính.\n"
+                        "Hãy tóm tắt bài báo dưới đây thành MỘT ĐOẠN VĂN gồm 3-5 câu hoàn chỉnh.\n"
+                        "QUAN TRỌNG: Đoạn tóm tắt PHẢI dài ít nhất 150 ký tự và có ít nhất 3 câu.\n"
                         "Yêu cầu:\n"
-                        "- Nêu rõ chủ đề chính của bài viết\n"
-                        "- Đề cập các con số, sự kiện quan trọng\n"
+                        "- Câu 1: Nêu chủ đề chính của bài viết\n"
+                        "- Câu 2-3: Đề cập các con số, sự kiện, nhân vật quan trọng\n"
+                        "- Câu 4-5: Nêu ý nghĩa, tác động hoặc bối cảnh\n"
                         "- Giữ nguyên tên riêng, số liệu cụ thể\n"
-                        "- Viết mạch lạc, dễ hiểu\n"
-                        "- Chỉ trả về đoạn tóm tắt, không thêm gì khác\n\n"
+                        "- Viết liền mạch thành một đoạn văn, không xuống dòng\n"
+                        "- Chỉ trả về đoạn tóm tắt, không thêm tiêu đề hay ghi chú\n\n"
                         f"BÀI BÁO:\n{truncated}\n\n"
-                        "TÓM TẮT:"
+                        "ĐOẠN TÓM TẮT (3-5 câu, ít nhất 150 ký tự):"
                     )
 
                     response = self.client.models.generate_content(

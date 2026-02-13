@@ -43,31 +43,24 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Scan is in progress — show loading state and poll for completion
             showScanInProgress(scanStatus);
             startPollingForResults(tab.url);
-            return;
-        }
-        
-        if (scanStatus && scanStatus.status === 'completed' && scanStatus.results) {
+        } else if (scanStatus && scanStatus.status === 'completed' && scanStatus.results) {
             // Scan just completed — show results
             console.log("📂 Loading completed scan results for:", tab.url);
             currentResultsData = scanStatus.results;
             renderResults(scanStatus.results);
-            return;
-        }
-
-        if (scanStatus && scanStatus.status === 'error') {
+        } else if (scanStatus && scanStatus.status === 'error') {
             // Scan failed — show error
             showError(scanStatus.error || 'Phân tích thất bại');
-            return;
+        } else {
+            // CHECK 2: Any cached results for this URL?
+            chrome.storage.local.get([tab.url], (result) => {
+                if (result[tab.url]) {
+                    console.log("📂 Loading cached results for:", tab.url);
+                    currentResultsData = result[tab.url];
+                    renderResults(result[tab.url]);
+                }
+            });
         }
-
-        // CHECK 2: Any cached results for this URL?
-        chrome.storage.local.get([tab.url], (result) => {
-            if (result[tab.url]) {
-                console.log("📂 Loading cached results for:", tab.url);
-                currentResultsData = result[tab.url];
-                renderResults(result[tab.url]);
-            }
-        });
     }
 
     // Dark mode toggle
@@ -675,7 +668,7 @@ function scrapePageContent() {
 
 function renderResults(data, urlInfo) {
     // Check if v3 or v2 response
-    const isV3 = data.version === "3.0" || data.version === "3.1" || data.sentiment_v3;
+    const isV3 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.sentiment_v3;
     
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
