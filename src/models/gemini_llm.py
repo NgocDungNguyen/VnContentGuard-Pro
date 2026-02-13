@@ -204,7 +204,9 @@ class GeminiAgent:
     def _try_fallback_model(self) -> bool:
         """Switch to fallback model if primary model fails"""
         if not self.using_fallback_model:
-            print(f"⚠️ Primary model {self.model_name} failing, switching to fallback: {self.fallback_model_name}")
+            print(
+                f"⚠️ Primary model {self.model_name} failing, switching to fallback: {self.fallback_model_name}"
+            )
             self.model_name = self.fallback_model_name
             self.using_fallback_model = True
             # Reset key rotator to try all keys with fallback model
