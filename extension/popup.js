@@ -639,79 +639,144 @@ function scrapePageContent() {
                     .substring(0, 5000);
             }
 
-            // ===== EXTRACT COMMENTS - Handle Dynamic Content =====
-            // VnExpress comments are loaded dynamically, so we look for various containers
+            // ===== EXTRACT COMMENTS - Site-specific selectors =====
             const commentSet = new Set();
 
-            // Strategy 1: Look for comment container ID used by VnExpress
-            const commentBox = document.getElementById('box_comment_app_inner') || 
-                              document.getElementById('box_comment_vne') ||
-                              document.querySelector('[data-component-type="comment_library"]') ||
-                              document.querySelector('[data-component-function="showComment"]');
+            // Helper: clean comment text, remove UI noise
+            const cleanComment = (raw) => {
+                if (!raw) return '';
+                return raw
+                    .replace(/\n+/g, ' ')
+                    .replace(/\s{2,}/g, ' ')
+                    .replace(/^(Thích|Like|Reply|Trả lời|Chia sẻ|Share|Xem thêm|Tặng sao|Xem tất cả.*trả lời)\s*/gi, '')
+                    .replace(/(Thích|Like|Reply|Trả lời|Chia sẻ|Share|Tặng sao)\s*$/gi, '')
+                    .trim();
+            };
+            const isValidComment = (txt) => {
+                if (!txt || txt.length < 8 || txt.length > 2000) return false;
+                if (txt.match(/^(Like|Reply|Share|Delete|Edit|Thích|Trả lời|Chia sẻ|Xóa|Chỉnh sửa|Xem thêm|Tặng sao|Xem tất cả.*trả lời|Vui|Buồn|Ngạc nhiên|Phẫn nộ)$/i)) return false;
+                if (txt.match(/^\d+\s*(giờ|phút|ngày|tuần|tháng|hour|minute|day|week|h trước|giờ trước|phút trước)$/i)) return false;
+                if (txt.match(/^[👍❤️😂😮😢😠🔥\s]+$/)) return false;
+                if (txt.match(/^\d+h?\s*trước$/i)) return false;
+                return true;
+            };
 
-            if (commentBox && commentBox.innerText) {
-                // If comments are loaded, extract them from container
-                const commentItems = commentBox.querySelectorAll(
-                    '[data-comment-id], ' +
-                    '.comment-item, ' +
-                    '.comment-content, ' +
-                    '[class*="comment"], ' +
-                    '[class*="reply"]'
-                );
-                
-                commentItems.forEach(item => {
-                    const txt = item.innerText || item.textContent;
-                    if (txt && txt.length > 8 && txt.length < 1000) {
-                        const trimmed = txt.trim();
-                        if (!trimmed.match(/^(Like|Reply|Share|Delete|Edit|Thích|Trả lời|Chia sẻ|Xóa|Chỉnh sửa|Xem thêm)$/i) &&
-                            !trimmed.match(/^\d+\s*(giờ|phút|ngày|tuần|tháng|hour|minute|day|week)$/i) &&
-                            !commentSet.has(trimmed)) {
-                            commentSet.add(trimmed);
-                        }
-                    }
+            // ===== VNEXPRESS =====
+            if (hostname.includes('vnexpress')) {
+                // Primary: p.full_content inside div.content-comment (exact VnExpress structure)
+                document.querySelectorAll('div.content-comment p.full_content').forEach(el => {
+                    const txt = cleanComment(el.innerText || el.textContent);
+                    if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
                 });
-            }
 
-            // Strategy 2: Look for loaded comment HTML structures
-            const commentSelectors = [
-                '.comment-content',
-                '.comment-text',
-                '.comments',
-                '[data-component="comment"]',
-                '.comment-item',
-                '.user-comment',
-                '[class*="cmt_content"]',
-                '[class*="comment-body"]'
-            ];
-
-            if (commentSet.size === 0) {
-                commentSelectors.forEach(selector => {
-                    document.querySelectorAll(selector).forEach(el => {
-                        const commentText = el.innerText || el.textContent;
-                        if (commentText && commentText.length > 8 && commentText.length < 1000) {
-                            const trimmed = commentText.trim();
-                            if (!trimmed.match(/^(Like|Reply|Share|Delete|Edit)$/i) && !commentSet.has(trimmed)) {
-                                commentSet.add(trimmed);
-                            }
+                // Also try: comment_item containers
+                if (commentSet.size === 0) {
+                    document.querySelectorAll('.comment_item').forEach(item => {
+                        const contentEl = item.querySelector('.content-comment') || item.querySelector('p.full_content');
+                        if (contentEl) {
+                            const txt = cleanComment(contentEl.innerText || contentEl.textContent);
+                            if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
                         }
                     });
-                });
+                }
+
+                // Fallback: comment box containers
+                if (commentSet.size === 0) {
+                    const commentBox = document.getElementById('box_comment_app_inner') ||
+                                      document.getElementById('box_comment_vne') ||
+                                      document.querySelector('[data-component-type="comment_library"]') ||
+                                      document.querySelector('[data-component-function="showComment"]');
+                    if (commentBox) {
+                        commentBox.querySelectorAll('[data-comment-id], [class*="comment"]').forEach(item => {
+                            const txt = cleanComment(item.innerText || item.textContent);
+                            if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
+                        });
+                    }
+                }
             }
 
-            // Strategy 3: Look for any div with substantial text in comment section
-            if (commentSet.size === 0 && commentBox) {
-                const allDivs = commentBox.querySelectorAll('div[class*="item"], div[class*="content"]');
-                allDivs.forEach(div => {
-                    const txt = div.innerText;
-                    if (txt && txt.length > 15 && txt.length < 800) {
-                        const trimmed = txt.trim();
-                        if (!trimmed.match(/^(Like|Reply|Share|Like|Delete|Edit)$/i) && 
-                            !trimmed.match(/^\d+\s*(giờ|phút|ngày|tuần|tháng|hour|minute|day|week)$/i) &&
-                            !commentSet.has(trimmed) &&
-                            !trimmed.includes('loading')) {
-                            commentSet.add(trimmed);
+            // ===== DANTRI =====
+            else if (hostname.includes('dantri')) {
+                // Primary: div.comment-text inside div.comment-item (exact DanTri structure)
+                document.querySelectorAll('div.comment-item div.comment-text').forEach(el => {
+                    const txt = cleanComment(el.innerText || el.textContent);
+                    if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
+                });
+
+                // Also try: comment-content containers
+                if (commentSet.size === 0) {
+                    document.querySelectorAll('div.comment-item div.comment-content').forEach(item => {
+                        const textEl = item.querySelector('.comment-text');
+                        if (textEl) {
+                            const txt = cleanComment(textEl.innerText || textEl.textContent);
+                            if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
+                        } else {
+                            // Get text directly, skip author/time
+                            const authorEl = item.querySelector('.comment-author');
+                            const timeEl = item.querySelector('.comment-time');
+                            let raw = item.innerText || '';
+                            if (authorEl) raw = raw.replace(authorEl.innerText, '');
+                            if (timeEl) raw = raw.replace(timeEl.innerText, '');
+                            const txt = cleanComment(raw);
+                            if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
                         }
-                    }
+                    });
+                }
+
+                // Fallback: broader comment selectors
+                if (commentSet.size === 0) {
+                    document.querySelectorAll('.comment-content, [class*="cmt_content"]').forEach(el => {
+                        const txt = cleanComment(el.innerText || el.textContent);
+                        if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
+                    });
+                }
+            }
+
+            // ===== TUOITRE =====
+            else if (hostname.includes('tuoitre')) {
+                // Primary: span.contentcomment inside div.maincmt (exact TuoiTre structure)
+                document.querySelectorAll('div.maincmt span.contentcomment').forEach(el => {
+                    // TuoiTre uses span.remain for truncated content, combine with visible text
+                    const visibleText = el.querySelector('.remain')
+                        ? (el.textContent || '').replace(/\+$/, '').trim()
+                        : (el.innerText || el.textContent || '').trim();
+                    const txt = cleanComment(visibleText);
+                    if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
+                });
+
+                // Also try: direct maincmt containers
+                if (commentSet.size === 0) {
+                    document.querySelectorAll('div.maincmt').forEach(item => {
+                        const contentEl = item.querySelector('span.contentcomment') || item.querySelector('.minimize');
+                        if (contentEl) {
+                            const txt = cleanComment(contentEl.innerText || contentEl.textContent);
+                            if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
+                        }
+                    });
+                }
+
+                // Fallback: broader selectors for tuoitre
+                if (commentSet.size === 0) {
+                    document.querySelectorAll('[class*="cmt"], [class*="comment"]').forEach(el => {
+                        const txt = cleanComment(el.innerText || el.textContent);
+                        if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
+                    });
+                }
+            }
+
+            // ===== GENERIC FALLBACK for other news sites =====
+            if (commentSet.size === 0) {
+                const genericSelectors = [
+                    '.comment-content', '.comment-text', '.comment-item',
+                    '.comments', '[data-component="comment"]', '.user-comment',
+                    '[class*="cmt_content"]', '[class*="comment-body"]',
+                    '[data-comment-id]'
+                ];
+                genericSelectors.forEach(selector => {
+                    document.querySelectorAll(selector).forEach(el => {
+                        const txt = cleanComment(el.innerText || el.textContent);
+                        if (isValidComment(txt) && !commentSet.has(txt)) commentSet.add(txt);
+                    });
                 });
             }
 
