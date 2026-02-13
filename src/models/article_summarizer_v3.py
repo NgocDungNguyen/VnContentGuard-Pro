@@ -149,6 +149,9 @@ class ArticleSummarizer:
                         if retry_text and len(retry_text) > len(summary):
                             summary = retry_text
                     if summary:
+                        # Mark key as successful (resets 429 counter)
+                        if self.key_rotator:
+                            self.key_rotator.mark_key_success()
                         self.cache.set(cache_key, summary)
                         print(f"✅ Generated AI summary for {url[:60]}...")
                         return {
@@ -158,16 +161,19 @@ class ArticleSummarizer:
                         }
 
                 except Exception as e:
-                    error_str = str(e).lower()
+                    error_str = str(e)
+                    error_lower = error_str.lower()
                     is_quota = (
-                        "429" in error_str
-                        or "quota" in error_str
-                        or "exhausted" in error_str
+                        "429" in error_lower
+                        or "quota" in error_lower
+                        or "exhausted" in error_lower
                     )
                     print(f"⚠️ Summary attempt {attempt+1}/{max_attempts} failed: {e}")
 
                     if is_quota and self.key_rotator and attempt < max_attempts - 1:
-                        self.key_rotator.mark_key_exhausted()
+                        # Parse retry delay and use cooldown instead of burning the key
+                        retry_delay = APIKeyRotator.parse_retry_delay(error_str)
+                        self.key_rotator.mark_key_rate_limited(retry_delay)
                         self._init_client()
                         print(f"🔄 Rotated key, retrying summary...")
                         continue

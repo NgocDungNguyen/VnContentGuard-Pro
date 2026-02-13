@@ -932,12 +932,15 @@ def _batch_gemini_analyze(
         try:
             return _try_batch_gemini(comments, article_summary, api_key, learning_ctx)
         except Exception as e:
-            error_str = str(e).lower()
-            if "429" in error_str or "quota" in error_str:
+            error_str = str(e)
+            error_lower = error_str.lower()
+            if "429" in error_lower or "quota" in error_lower:
+                from src.models.gemini_llm import APIKeyRotator
+                retry_delay = APIKeyRotator.parse_retry_delay(error_str)
                 print(
-                    f"⚠️ [v4] Batch attempt {attempt+1}/{max_batch_attempts} got 429, rotating key..."
+                    f"⚠️ [v4] Batch attempt {attempt+1}/{max_batch_attempts} got 429, cooldown {retry_delay:.0f}s..."
                 )
-                batch_key_rotator.mark_key_exhausted()
+                batch_key_rotator.mark_key_rate_limited(retry_delay)
                 continue
             else:
                 print(f"⚠️ [v4] Batch analysis failed: {e}")

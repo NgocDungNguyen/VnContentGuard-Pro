@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v4 - Advanced Multi-Layer Toxicity Detection
+VnContentGuard Pro v3 - Advanced Multi-Layer Toxicity Detection
 ================================================================
 Implements 4-layer defense-in-depth toxicity detection:
 1. Regex patterns (500+ Vietnamese patterns) - Fast, offline
@@ -22,7 +22,7 @@ from .toxicity import ToxicityAnalyzer as ToxicityV2
 load_dotenv()
 
 
-class ToxicityAnalyzerV4:
+class ToxicityAnalyzerV3:
     """
     Advanced Multi-Layer Toxicity Detection System
 
@@ -36,7 +36,7 @@ class ToxicityAnalyzerV4:
     """
 
     def __init__(self, use_detoxify: bool = False):
-        print("⏳ Initializing Advanced Toxicity Detection v4...")
+        print("⏳ Initializing Advanced Toxicity Detection v3...")
 
         # Layer 1: v2 Regex patterns (fallback)
         try:
@@ -76,7 +76,7 @@ class ToxicityAnalyzerV4:
                 "⚠️ Layer 4: Gemini AI disabled (enable with USE_GEMINI_TOXICITY=true)"
             )
 
-        print("✅ Toxicity Analyzer v4 Ready!")
+        print("✅ Toxicity Analyzer v3 Ready!")
 
     def analyze(self, text: str) -> Dict:
         """
@@ -185,8 +185,8 @@ class ToxicityAnalyzerV4:
         also triggers Gemini AI calls, burning API quota per comment.
         
         NEWS CONTEXT DETECTION: If the text appears to be a news article (contains
-        journalistic indicators), we skip regex matching for violence/gore categories
-        because words like "chết", "cháy", "thi thể" are normal in news reporting.
+        journalistic indicators), we skip regex matching because words like
+        "chết", "cháy", "thi thể" are normal in news reporting, not toxic content.
         """
         if not self.regex_analyzer:
             return None
@@ -197,19 +197,27 @@ class ToxicityAnalyzerV4:
             lower_text = text.lower()
             
             # ----- NEWS CONTEXT DETECTION -----
+            # News articles naturally contain "violent" words (chết, cháy, thi thể, etc.)
+            # but they are NOT toxic — they are factual reporting.
+            # Only flag text that is clearly user-generated toxic content (insults, slurs, threats)
             news_indicators = [
-                r'(theo|nguồn|tin từ|phóng viên|báo cáo|thông tin từ|trả lời phỏng vấn)',
-                r'(công an|cảnh sát|csgt|chính quyền|ubnd|chủ tịch|thủ tướng|bộ trưởng)',
-                r'(bệnh viện|cấp cứu|nạn nhân|thiệt hại|hiện trường|nguyên nhân)',
-                r'(ngày \d|tháng \d|\d+/\d+|\d+ giờ|sáng nay|tối qua|rạng sáng)',
-                r'(quận|huyện|phường|xã|tỉnh|thành phố|tp\.|đường|phố)',
-                r'(vụ việc|sự cố|sự kiện|vụ án|vụ cháy|vụ tai nạn|vụ va chạm)',
+                r'(theo|nguồn|tin từ|phóng viên|báo cáo|thông tin từ|trả lời phỏng vấn)',  # Source attribution
+                r'(công an|cảnh sát|csgt|chính quyền|ubnd|chủ tịch|thủ tướng|bộ trưởng)',  # Government/police
+                r'(bệnh viện|cấp cứu|nạn nhân|thiệt hại|hiện trường|nguyên nhân)',  # Incident reporting
+                r'(ngày \d|tháng \d|\d+/\d+|\d+ giờ|sáng nay|tối qua|rạng sáng)',  # Dates/times
+                r'(quận|huyện|phường|xã|tỉnh|thành phố|tp\.|đường|phố)',  # Locations
+                r'(vụ việc|sự cố|sự kiện|vụ án|vụ cháy|vụ tai nạn|vụ va chạm)',  # Incident terms
             ]
             
-            news_score = sum(1 for p in news_indicators if _re.search(p, lower_text))
+            news_score = 0
+            for pattern in news_indicators:
+                if _re.search(pattern, lower_text):
+                    news_score += 1
+            
+            # If text has 3+ news indicators, it's likely a news article → skip Violence/Gore regex
             is_news_context = news_score >= 3
             
-            # Categories safe to skip for news articles
+            # Categories to skip for news articles (these match normal journalism words)
             news_safe_categories = {
                 "Violence: Murder/Torture",
                 "Violence: Torture",
@@ -223,6 +231,7 @@ class ToxicityAnalyzerV4:
             matched_keyword = None
 
             for pattern, label in self.regex_analyzer.blacklist_patterns:
+                # Skip violence/gore categories for news articles
                 if is_news_context and label in news_safe_categories:
                     continue
                     
@@ -394,13 +403,13 @@ class ToxicityAnalyzerV4:
 # Convenience function
 def analyze_toxicity(text: str) -> Dict:
     """Quick toxicity analysis"""
-    analyzer = ToxicityAnalyzerV4()
+    analyzer = ToxicityAnalyzerV3()
     return analyzer.analyze(text)
 
 
 if __name__ == "__main__":
     # Quick test
-    analyzer = ToxicityAnalyzerV4()
+    analyzer = ToxicityAnalyzerV3()
 
     test_cases = [
         "Bài viết rất hay và hữu ích!",  # Clean
@@ -409,7 +418,7 @@ if __name__ == "__main__":
         "Thông tin rất bổ ích, cảm ơn bạn",  # Clean
     ]
 
-    print("\n🧪 Testing Toxicity Analyzer v4:")
+    print("\n🧪 Testing Toxicity Analyzer v3:")
     for text in test_cases:
         result = analyzer.analyze(text)
         print(f"\nText: {text}")

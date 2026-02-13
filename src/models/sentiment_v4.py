@@ -241,12 +241,29 @@ class SentimentAnalyzerV4:
         # Fallback to keyword-based v2
         try:
             v2_result = self.fallback.analyze(text)
-            confidence = abs(v2_result.get("score", 0.5))
+            raw_score = v2_result.get("score", 0.0)
             label = v2_result.get("label", "Neutral")
+
+            # For keyword-based analysis:
+            # - If no keywords found (score=0.0, label=Neutral), this means the text has 
+            #   no strong sentiment indicators → it IS neutral with reasonable confidence
+            # - Don't show 0% confidence for neutral news articles — that's misleading
+            if label == "Neutral" and raw_score == 0.0:
+                # Neutral by absence of sentiment words → moderate confidence
+                confidence = 0.55
+            elif label == "Neutral" and raw_score == 0.3:
+                # Only 1 keyword found → low confidence
+                confidence = 0.35
+            elif label == "Neutral" and raw_score == 0.5:
+                # Equal positive/negative → genuinely mixed
+                confidence = 0.45
+            else:
+                # Positive or Negative with actual keyword matches
+                confidence = max(0.4, abs(raw_score))
 
             return {
                 "overall": label,
-                "confidence": confidence,
+                "confidence": round(confidence, 2),
                 "intensity": self._get_intensity(confidence),
                 "emotions": self._analyze_emotions(text, label, confidence),
                 "method": "keyword",

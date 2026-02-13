@@ -48,11 +48,12 @@ class ToxicityAnalyzer:
             print(f"⚠️ Failed to initialize toxicity client: {e}")
             return False
 
-    def _rotate_key_and_retry(self) -> bool:
-        """Rotate to next API key"""
-        if self.key_rotator.mark_key_exhausted():
-            return self._initialize_client()
-        return False
+    def _rotate_key_and_retry(self, error_msg: str = "") -> bool:
+        """Rotate to next API key using cooldown instead of permanent exhaustion."""
+        from src.models.gemini_llm import APIKeyRotator
+        retry_delay = APIKeyRotator.parse_retry_delay(error_msg)
+        self.key_rotator.mark_key_rate_limited(retry_delay)
+        return self._initialize_client()
 
     def _init_regex_patterns(self):
         """Initialize regex patterns for toxicity detection"""
@@ -324,20 +325,21 @@ Return ONLY valid JSON (no markdown):
                         pass  # Keep regex result if JSON fails
 
                 except Exception as e:
-                    error_str = str(e).lower()
+                    error_str = str(e)
+                    error_lower = error_str.lower()
 
                     # Handle quota errors with key rotation
                     if (
-                        "429" in error_str
-                        or "quota" in error_str
-                        or "resourceexhausted" in error_str
+                        "429" in error_lower
+                        or "quota" in error_lower
+                        or "resourceexhausted" in error_lower
                     ):
-                        if self._rotate_key_and_retry():
+                        if self._rotate_key_and_retry(error_str):
                             # Retry with new key (but only once per comment to avoid loops)
                             pass
 
                     # If safety filters block it, it's definitely toxic
-                    if "block" in error_str or "safety" in error_str:
+                    if "block" in error_lower or "safety" in error_lower:
                         is_toxic = True
                         score = 1.0
                         category = "BLOCKED: Safety Violation (Severe)"
