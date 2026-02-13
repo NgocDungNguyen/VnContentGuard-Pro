@@ -53,7 +53,7 @@ class SentimentAnalyzerV4:
         """Load PhoBERT model for Vietnamese sentiment analysis."""
         try:
             import torch
-            from transformers import AutoModelForSequenceClassification, Autoeokenizer
+            from transformers import Autoeokenizer, AutoModelForSequenceClassification
 
             model_name = "wonrax/phobert-base-vietnamese-sentiment"
 
