@@ -96,8 +96,8 @@ class ArticleSummarizer:
                         "Bạn là chuyên gia tóm tắt tin tức tiếng Việt.\n"
                         "Hãy viết MỘT ĐOẠN VĂN tóm tắt bài báo dưới đây.\n\n"
                         "QUY TẮC BẮT BUỘC:\n"
-                        "1. Đoạn tóm tắt PHẢI có TỐI THIỂU 5-7 câu đầy đủ\n"
-                        "2. Đoạn tóm tắt PHẢI dài TỐI THIỂU 400 ký tự (khoảng 80-100 từ)\n"
+                        "1. Đoạn tóm tắt BẮT BUỘC PHẢI có TỐI THIỂU 4-5 câu đầy đủ\n"
+                        "2. Đoạn tóm tắt PHẢI dài TỐI THIỂU 500 ký tự (khoảng 100-200 từ)\n"
                         "3. Câu 1: Nêu chủ đề chính, ai/cái gì đang xảy ra\n"
                         "4. Câu 2: Nêu con số, dữ liệu, giá cả cụ thể quan trọng nhất\n"
                         "5. Câu 3: Giải thích nguyên nhân hoặc bối cảnh sự việc\n"
@@ -107,7 +107,7 @@ class ArticleSummarizer:
                         "9. Viết liền mạch, KHÔNG xuống dòng, KHÔNG đánh số\n"
                         "10. Chỉ trả về đoạn tóm tắt, không thêm tiêu đề\n\n"
                         f"BÀI BÁO:\n{truncated}\n\n"
-                        "ĐOẠN TÓM TẮT (5-7 câu, tối thiểu 400 ký tự):"
+                        "ĐOẠN TÓM TẮT (4-5 câu, tối thiểu 500 ký tự):"
                     )
 
                     response = self.client.models.generate_content(
@@ -126,11 +126,11 @@ class ArticleSummarizer:
                         retry_prompt = (
                             f"Đoạn tóm tắt sau đây quá ngắn ({len(summary)} ký tự):\n"
                             f'"{summary}"\n\n'
-                            "Hãy VIẾT LẠI đoạn tóm tắt DÀI HƠN NHIỀU với ít nhất 5-7 câu đầy đủ "
-                            "và tối thiểu 400 ký tự. Thêm chi tiết về con số, "
+                            "Hãy VIẾT LẠI đoạn tóm tắt DÀI HƠN NHIỀU với ít nhất 4-5 câu đầy đủ "
+                            "và tối thiểu 500 ký tự. Thêm chi tiết về con số, "
                             "nguyên nhân, so sánh, phản ứng, và tác động.\n\n"
                             f"BÀI BÁO GỐC:\n{truncated[:2000]}\n\n"
-                            "ĐOẠN TÓM TẮT MỚI (5-7 câu, 400+ ký tự):"
+                            "ĐOẠN TÓM TẮT MỚI (4-5 câu, 500+ ký tự):"
                         )
                         retry_resp = self.client.models.generate_content(
                             model=self.model_name,
