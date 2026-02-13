@@ -1300,8 +1300,8 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function exportReport(data, url) {
-    const isV3 = data.version === "3.0" || data.version === "3.1" || data.sentiment_v3;
-    if (!isV3) return;
+    const isV3Plus = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.sentiment_v3;
+    if (!isV3Plus) return;
 
     const sentiment = data.sentiment_v3 || {};
     const toxicity = data.toxicity_v3 || {};
@@ -1327,85 +1327,152 @@ function exportReport(data, url) {
     <meta charset="utf-8">
     <title>Báo cáo VnContentGuard Pro — ${domain}</title>
     <style>
-        body { font-family: 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
-        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
-        h2 { color: #2c3e50; margin-top: 25px; }
-        .risk-badge { display: inline-block; padding: 8px 24px; border-radius: 8px; color: white; font-size: 24px; font-weight: bold; }
-        .card { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #3498db; }
-        .toxic { border-left-color: #e74c3c; background: #fff5f5; }
-        .safe { border-left-color: #27ae60; background: #f0fff0; }
-        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
-        th, td { padding: 8px 12px; border: 1px solid #ddd; text-align: left; }
-        th { background: #f0f0f0; }
-        .footer { margin-top: 30px; padding-top: 15px; border-top: 2px solid #eee; color: #999; font-size: 12px; text-align: center; }
-        @media print { body { margin: 0; } }
+        @page { size: A4; margin: 15mm; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif; max-width: 800px; margin: 0 auto; padding: 30px 40px; color: #2c3e50; line-height: 1.6; background: #fff; }
+        
+        /* Header */
+        .report-header { text-align: center; padding: 25px 0; border-bottom: 3px solid #3498db; margin-bottom: 30px; }
+        .report-header h1 { font-size: 28px; color: #2c3e50; margin: 0 0 5px 0; }
+        .report-header .subtitle { font-size: 13px; color: #7f8c8d; }
+        .report-meta { display: flex; justify-content: space-between; font-size: 12px; color: #555; margin-top: 15px; padding: 10px 15px; background: #f8f9fa; border-radius: 6px; }
+        .report-meta a { color: #3498db; text-decoration: none; word-break: break-all; }
+        
+        /* Risk Score Hero */
+        .risk-hero { text-align: center; padding: 30px; margin: 25px 0; border-radius: 12px; color: white; position: relative; }
+        .risk-hero .score { font-size: 56px; font-weight: 800; letter-spacing: -2px; }
+        .risk-hero .label { font-size: 20px; font-weight: 600; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        .risk-hero .max { font-size: 16px; opacity: 0.8; }
+        
+        /* Section */
+        h2 { font-size: 16px; color: #2c3e50; margin: 28px 0 12px 0; padding-bottom: 8px; border-bottom: 2px solid #ecf0f1; display: flex; align-items: center; gap: 8px; }
+        
+        /* Cards */
+        .card { padding: 16px 20px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #3498db; background: #f8f9fa; }
+        .card.toxic { border-left-color: #e74c3c; background: #fdf2f2; }
+        .card.safe { border-left-color: #27ae60; background: #f0faf4; }
+        .card.warning { border-left-color: #f39c12; background: #fffbf0; }
+        .card p { margin: 4px 0; font-size: 14px; }
+        .card .label { font-size: 12px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card .value { font-size: 18px; font-weight: 700; color: #2c3e50; }
+        
+        /* Breakdown Table */
+        table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 12px 0; border-radius: 8px; overflow: hidden; border: 1px solid #e0e0e0; }
+        th { background: #2c3e50; color: white; padding: 10px 15px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
+        td { padding: 10px 15px; font-size: 13px; border-bottom: 1px solid #eee; }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) td { background: #fafbfc; }
+        
+        /* Comment List */
+        .comment-item { padding: 10px 14px; margin: 6px 0; background: #fdf2f2; border-radius: 6px; border-left: 3px solid #e74c3c; font-size: 13px; }
+        .comment-item .meta { font-size: 11px; color: #e74c3c; font-weight: 600; margin-bottom: 4px; }
+        .comment-item .text { color: #444; }
+        .comment-item .reason { font-size: 11px; color: #7f8c8d; margin-top: 4px; font-style: italic; }
+        
+        /* Summary Box */
+        .summary-box { padding: 18px 22px; background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); border-radius: 8px; border-left: 4px solid #4CAF50; margin: 12px 0; font-size: 14px; line-height: 1.8; }
+        
+        /* Recommendations */
+        .rec-list { padding-left: 0; list-style: none; }
+        .rec-list li { padding: 8px 12px; margin: 4px 0; background: #f8f9fa; border-radius: 6px; font-size: 13px; border-left: 3px solid #3498db; }
+        
+        /* Footer */
+        .footer { margin-top: 40px; padding-top: 20px; border-top: 2px solid #ecf0f1; text-align: center; color: #95a5a6; font-size: 11px; }
+        .footer p { margin: 4px 0; }
+        
+        /* Print */
+        @media print {
+            body { padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .risk-hero { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none; }
+        }
+        
+        /* PDF Button */
+        .pdf-btn { display: block; width: 100%; padding: 14px; background: #e74c3c; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin: 20px 0; letter-spacing: 0.5px; }
+        .pdf-btn:hover { background: #c0392b; }
     </style>
 </head>
 <body>
-    <h1>🛡️ VnContentGuard Pro — Báo cáo phân tích</h1>
-    <p><strong>URL:</strong> <a href="${url || '#'}">${url || 'N/A'}</a></p>
-    <p><strong>Ngày quét:</strong> ${dateStr}</p>
-    <p><strong>Phiên bản:</strong> v4.0</p>
-
-    <h2>📊 Điểm Rủi Ro Tổng Thể</h2>
-    <div style="text-align: center; margin: 15px 0;">
-        <span class="risk-badge" style="background: ${riskColor};">${riskValue.toFixed(1)}/100</span>
-        <p style="font-size: 18px; color: ${riskColor}; font-weight: bold;">${riskLevelVi[riskScore.risk_level] || riskScore.risk_level || 'N/A'}</p>
+    <div class="report-header">
+        <h1>🛡️ VnContentGuard Pro</h1>
+        <div class="subtitle">BÁO CÁO PHÂN TÍCH NỘI DUNG</div>
+        <div class="report-meta">
+            <div><strong>URL:</strong> <a href="${url || '#'}">${url || 'N/A'}</a></div>
+            <div><strong>Ngày:</strong> ${dateStr}</div>
+            <div><strong>v4.0</strong></div>
+        </div>
     </div>
-    ${riskScore.breakdown ? `
-    <table>
-        <tr><th>Thành phần</th><th>Điểm</th></tr>
-        <tr><td>Tin giả</td><td>${(riskScore.breakdown.fake_news_component || 0).toFixed(1)}</td></tr>
-        <tr><td>Độc hại</td><td>${(riskScore.breakdown.toxicity_component || 0).toFixed(1)}</td></tr>
-        <tr><td>Cảm xúc</td><td>${(riskScore.breakdown.sentiment_component || 0).toFixed(1)}</td></tr>
-        <tr><td>Nguồn</td><td>${(riskScore.breakdown.source_component || 0).toFixed(1)}</td></tr>
-        <tr><td>Thao túng</td><td>${(riskScore.breakdown.manipulation_component || 0).toFixed(1)}</td></tr>
-    </table>` : ''}
 
-    ${summary.summary ? `
+    <button class="pdf-btn no-print" onclick="window.print()">📄 In / Lưu thành PDF</button>
+
+    <div class="risk-hero" style="background: linear-gradient(135deg, ${riskColor} 0%, ${riskValue < 25 ? '#2ecc71' : riskValue < 50 ? '#e67e22' : riskValue < 75 ? '#c0392b' : '#8e0000'} 100%);">
+        <div class="score">${riskValue.toFixed(1)}</div>
+        <div class="max">/ 100</div>
+        <div class="label">${riskLevelVi[riskScore.risk_level] || riskScore.risk_level || 'N/A'}</div>
+    </div>
+
+    ${riskScore.breakdown ? \`
+    <h2>📊 Phân tích chi tiết rủi ro</h2>
+    <table>
+        <tr><th>Thành phần</th><th>Điểm</th><th>Mô tả</th></tr>
+        <tr><td>🔍 Tin giả</td><td><strong>${(riskScore.breakdown.fake_news_component || 0).toFixed(1)}</strong></td><td>Mức độ khả nghi về thông tin sai lệch</td></tr>
+        <tr><td>☣️ Độc hại</td><td><strong>${(riskScore.breakdown.toxicity_component || 0).toFixed(1)}</strong></td><td>Ngôn ngữ xúc phạm, thù hận</td></tr>
+        <tr><td>🎭 Cảm xúc</td><td><strong>${(riskScore.breakdown.sentiment_component || 0).toFixed(1)}</strong></td><td>Thiên lệch cảm xúc tiêu cực</td></tr>
+        <tr><td>🌐 Nguồn</td><td><strong>${(riskScore.breakdown.source_component || 0).toFixed(1)}</strong></td><td>Độ tin cậy của nguồn tin</td></tr>
+        <tr><td>🎯 Thao túng</td><td><strong>${(riskScore.breakdown.manipulation_component || 0).toFixed(1)}</strong></td><td>Kỹ thuật thao túng tâm lý</td></tr>
+    </table>\` : ''}
+
+    ${summary.summary ? \`
     <h2>📰 Tóm tắt bài viết</h2>
-    <div class="card">${summary.summary}</div>` : ''}
+    <div class="summary-box">${summary.summary}</div>\` : ''}
 
     <h2>🎭 Phân tích cảm xúc</h2>
     <div class="card">
-        <strong>${sentLabelVi[sentiment.overall] || sentiment.overall || 'N/A'}</strong>
-        (Độ tin cậy: ${((sentiment.confidence || 0) * 100).toFixed(0)}%)
+        <div class="label">Xu hướng cảm xúc</div>
+        <div class="value">${sentLabelVi[sentiment.overall] || sentiment.overall || 'N/A'}</div>
+        <p>Độ tin cậy: <strong>${((sentiment.confidence || 0) * 100).toFixed(0)}%</strong> — Cường độ: ${sentiment.intensity || 'N/A'}</p>
     </div>
 
     <h2>🛡️ Phát hiện nội dung độc hại</h2>
     <div class="card ${toxicity.is_toxic ? 'toxic' : 'safe'}">
-        <strong>${toxicity.is_toxic ? '⚠️ ĐỘC HẠI' : '✅ AN TOÀN'}</strong>
-        — Mức độ: ${severityVi[toxicity.severity] || toxicity.severity || 'N/A'}
-        (${((toxicity.overall_score || 0) * 100).toFixed(0)}%)
+        <div class="label">Kết quả</div>
+        <div class="value">${toxicity.is_toxic ? '⚠️ PHÁT HIỆN ĐỘC HẠI' : '✅ AN TOÀN'}</div>
+        <p>Mức độ: <strong>${severityVi[toxicity.severity] || toxicity.severity || 'N/A'}</strong> — Điểm: ${((toxicity.overall_score || 0) * 100).toFixed(0)}%</p>
     </div>
 
     <h2>📰 Kiểm tra thực tế</h2>
-    <div class="card">
-        <strong>${factCheck.verdict || 'N/A'}</strong> — Độ tin cậy: ${factCheck.score || 50}/100
+    <div class="card ${factCheck.score < 40 ? 'toxic' : factCheck.score < 60 ? 'warning' : 'safe'}">
+        <div class="label">Phán định</div>
+        <div class="value">${factCheck.verdict || 'N/A'}</div>
+        <p>Độ tin cậy: <strong>${factCheck.score || 50}/100</strong></p>
     </div>
 
     <h2>💬 Phân tích bình luận</h2>
     <div class="card">
-        <p>Tổng bình luận: ${comments.total || 0} | Độc hại: ${comments.toxic_count || 0} (${comments.toxic_percentage || 0}%)</p>
+        <div style="display: flex; justify-content: space-between;">
+            <div><div class="label">Tổng bình luận</div><div class="value">${comments.total || 0}</div></div>
+            <div><div class="label">Độc hại</div><div class="value" style="color: ${(comments.toxic_count || 0) > 0 ? '#e74c3c' : '#27ae60'};">${comments.toxic_count || 0} (${comments.toxic_percentage || 0}%)</div></div>
+            <div><div class="label">API tiết kiệm</div><div class="value" style="color: #27ae60;">${comments.api_calls_saved || 0}</div></div>
+        </div>
     </div>
-    ${(comments.toxic_comments || []).length > 0 ? `
-    <table>
-        <tr><th>Bình luận</th><th>Mức độ</th><th>Lý do</th></tr>
-        ${(comments.toxic_comments || []).slice(0, 10).map(tc => `
-        <tr>
-            <td>${(tc.comment || '').substring(0, 80)}${(tc.comment || '').length > 80 ? '...' : ''}</td>
-            <td>${severityVi[tc.severity] || tc.severity || 'N/A'}</td>
-            <td>${tc.reason || ''}</td>
-        </tr>`).join('')}
-    </table>` : ''}
+    ${(comments.toxic_comments || []).length > 0 ? \`
+    <h2>⚠️ Bình luận độc hại</h2>
+    ${(comments.toxic_comments || []).slice(0, 15).map(tc => \`
+    <div class="comment-item">
+        <div class="meta">${severityVi[tc.severity] || tc.severity || 'N/A'} — ${tc.method || 'N/A'}</div>
+        <div class="text">${(tc.comment || '').substring(0, 120)}${(tc.comment || '').length > 120 ? '...' : ''}</div>
+        <div class="reason">💡 ${tc.reason || ''}</div>
+    </div>\`).join('')}\` : \`
+    <div class="card safe"><p>✅ Không phát hiện bình luận độc hại!</p></div>\`}
 
-    ${(riskScore.recommendations || []).length > 0 ? `
+    ${(riskScore.recommendations || []).length > 0 ? \`
     <h2>💡 Khuyến nghị</h2>
-    <ul>${riskScore.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
+    <ul class="rec-list">${riskScore.recommendations.map(r => \`<li>${r}</li>\`).join('')}</ul>\` : ''}
 
     <div class="footer">
-        <p>Báo cáo được tạo bởi VnContentGuard Pro v4.0</p>
+        <p><strong>VnContentGuard Pro v4.0</strong> — Powered by Gemini AI</p>
         <p>⚠️ Kết quả phân tích mang tính tham khảo. Hãy luôn kiểm chứng thông tin từ nhiều nguồn.</p>
+        <p>© ${now.getFullYear()} VnContentGuard Pro</p>
     </div>
 </body>
 </html>`;

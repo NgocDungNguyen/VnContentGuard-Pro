@@ -86,15 +86,20 @@ class ArticleSummarizer:
         if self.client:
             for attempt in range(max_attempts):
                 try:
-                    # Truncate to save tokens (first 2000 chars is enough for a summary)
-                    truncated = article_text[:2000]
+                    # Truncate to save tokens (first 4000 chars for better context)
+                    truncated = article_text[:4000]
 
                     prompt = (
-                        "Tóm tắt bài báo tiếng Việt này trong 2-3 câu ngắn gọn.\n"
-                        "Tập trung vào: chủ đề chính, sự kiện quan trọng, ý nghĩa.\n"
-                        "Chỉ trả về phần tóm tắt, không thêm gì khác.\n\n"
-                        f"Bài báo:\n{truncated}\n\n"
-                        "Tóm tắt (2-3 câu):"
+                        "Bạn là chuyên gia tóm tắt tin tức tiếng Việt.\n"
+                        "Hãy tóm tắt bài báo dưới đây thành 3-5 câu hoàn chỉnh, đầy đủ ý chính.\n"
+                        "Yêu cầu:\n"
+                        "- Nêu rõ chủ đề chính của bài viết\n"
+                        "- Đề cập các con số, sự kiện quan trọng\n"
+                        "- Giữ nguyên tên riêng, số liệu cụ thể\n"
+                        "- Viết mạch lạc, dễ hiểu\n"
+                        "- Chỉ trả về đoạn tóm tắt, không thêm gì khác\n\n"
+                        f"BÀI BÁO:\n{truncated}\n\n"
+                        "TÓM TẮT:"
                     )
 
                     response = self.client.models.generate_content(
@@ -102,7 +107,7 @@ class ArticleSummarizer:
                         contents=prompt,
                         config=types.GenerateContentConfig(
                             temperature=0.3,
-                            max_output_tokens=200,
+                            max_output_tokens=500,
                         ),
                     )
 
