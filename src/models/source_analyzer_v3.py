@@ -188,7 +188,11 @@ class SourceAnalyzer:
 
             if creation_date:
                 # Handle both naive and aware datetimes
-                now = datetime.now(creation_date.tzinfo) if creation_date.tzinfo else datetime.now()
+                now = (
+                    datetime.now(creation_date.tzinfo)
+                    if creation_date.tzinfo
+                    else datetime.now()
+                )
                 age = now - creation_date
                 return {
                     "age_days": age.days,

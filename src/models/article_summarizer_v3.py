@@ -94,29 +94,54 @@ class ArticleSummarizer:
 
                     prompt = (
                         "Bạn là chuyên gia tóm tắt tin tức tiếng Việt.\n"
-                        "Hãy tóm tắt bài báo dưới đây thành MỘT ĐOẠN VĂN gồm 3-5 câu hoàn chỉnh.\n"
-                        "QUAN TRỌNG: Đoạn tóm tắt PHẢI dài ít nhất 150 ký tự và có ít nhất 3 câu.\n"
-                        "Yêu cầu:\n"
-                        "- Câu 1: Nêu chủ đề chính của bài viết\n"
-                        "- Câu 2-3: Đề cập các con số, sự kiện, nhân vật quan trọng\n"
-                        "- Câu 4-5: Nêu ý nghĩa, tác động hoặc bối cảnh\n"
-                        "- Giữ nguyên tên riêng, số liệu cụ thể\n"
-                        "- Viết liền mạch thành một đoạn văn, không xuống dòng\n"
-                        "- Chỉ trả về đoạn tóm tắt, không thêm tiêu đề hay ghi chú\n\n"
+                        "Hãy viết MỘT ĐOẠN VĂN tóm tắt bài báo dưới đây.\n\n"
+                        "QUY TẮC BẮT BUỘC:\n"
+                        "1. Đoạn tóm tắt PHẢI có TỐI THIỂU 4 câu đầy đủ\n"
+                        "2. Đoạn tóm tắt PHẢI dài TỐI THIỂU 250 ký tự\n"
+                        "3. Câu 1: Nêu chủ đề chính, ai/cái gì đang xảy ra\n"
+                        "4. Câu 2: Nêu con số, dữ liệu, giá cả cụ thể\n"
+                        "5. Câu 3: Nêu nguyên nhân hoặc bối cảnh\n"
+                        "6. Câu 4: Nêu tác động, ý nghĩa hoặc dự báo\n"
+                        "7. Giữ nguyên tên riêng và số liệu cụ thể\n"
+                        "8. Viết liền mạch, KHÔNG xuống dòng, KHÔNG đánh số\n"
+                        "9. Chỉ trả về đoạn tóm tắt, không thêm tiêu đề\n\n"
                         f"BÀI BÁO:\n{truncated}\n\n"
-                        "ĐOẠN TÓM TẮT (3-5 câu, ít nhất 150 ký tự):"
+                        "ĐOẠN TÓM TẮT (tối thiểu 4 câu, 250+ ký tự):"
                     )
 
                     response = self.client.models.generate_content(
                         model=self.model_name,
                         contents=prompt,
                         config=types.GenerateContentConfig(
-                            temperature=0.3,
-                            max_output_tokens=500,
+                            temperature=0.4,
+                            max_output_tokens=1024,
                         ),
                     )
 
                     summary = response.text.strip()
+
+                    # If summary is too short, retry with stronger prompt
+                    if summary and len(summary) < 150:
+                        retry_prompt = (
+                            f"Đoạn tóm tắt sau đây quá ngắn ({len(summary)} ký tự):\n"
+                            f'"{summary}"\n\n'
+                            "Hãy VIẾT LẠI đoạn tóm tắt DÀI HƠN với ít nhất 4 câu đầy đủ "
+                            "và tối thiểu 250 ký tự. Thêm chi tiết về con số, "
+                            "nguyên nhân, và tác động.\n\n"
+                            f"BÀI BÁO GỐC:\n{truncated[:2000]}\n\n"
+                            "ĐOẠN TÓM TẮT MỚI (4+ câu, 250+ ký tự):"
+                        )
+                        retry_resp = self.client.models.generate_content(
+                            model=self.model_name,
+                            contents=retry_prompt,
+                            config=types.GenerateContentConfig(
+                                temperature=0.5,
+                                max_output_tokens=1024,
+                            ),
+                        )
+                        retry_text = retry_resp.text.strip()
+                        if retry_text and len(retry_text) > len(summary):
+                            summary = retry_text
                     if summary:
                         self.cache.set(cache_key, summary)
                         print(f"✅ Generated AI summary for {url[:60]}...")
