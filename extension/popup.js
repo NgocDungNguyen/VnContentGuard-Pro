@@ -1,9 +1,16 @@
 /**
- * VnContentGuard Pro - Simple Popup Script with Persistent Storage & Warnings
+ * VnContentGuard Pro v4.0 — Popup Script
+ * ========================================
+ * - Delegates API calls to background.js (survives popup close)
+ * - Resumes scan state on popup reopen
+ * - Scan history support
+ * - Dark mode support
+ * - Export report support
  */
 
 let currentResultsData = null;
 let currentTabUrl = null;
+let scanPollInterval = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -19,8 +26,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('scanBtn').disabled = false;
         document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
         document.getElementById('status').textContent = 'Sẵn sàng quét';
+
+        // Apply saved dark mode preference
+        chrome.storage.sync.get(['darkMode'], (result) => {
+            if (result.darkMode) {
+                document.body.classList.add('dark-mode');
+                const dmBtn = document.getElementById('darkModeBtn');
+                if (dmBtn) dmBtn.textContent = '☀️';
+            }
+        });
+
+        // CHECK 1: Is a scan currently in progress? (Resume after popup close/reopen)
+        const scanStatus = await chrome.runtime.sendMessage({ type: 'GET_SCAN_STATUS', url: tab.url });
         
-        // Check for cached results for THIS specific URL
+        if (scanStatus && scanStatus.status === 'scanning') {
+            // Scan is in progress — show loading state and poll for completion
+            showScanInProgress(scanStatus);
+            startPollingForResults(tab.url);
+            return;
+        }
+        
+        if (scanStatus && scanStatus.status === 'completed' && scanStatus.results) {
+            // Scan just completed — show results
+            console.log("📂 Loading completed scan results for:", tab.url);
+            currentResultsData = scanStatus.results;
+            renderResults(scanStatus.results);
+            return;
+        }
+
+        if (scanStatus && scanStatus.status === 'error') {
+            // Scan failed — show error
+            showError(scanStatus.error || 'Phân tích thất bại');
+            return;
+        }
+
+        // CHECK 2: Any cached results for this URL?
         chrome.storage.local.get([tab.url], (result) => {
             if (result[tab.url]) {
                 console.log("📂 Loading cached results for:", tab.url);
@@ -30,11 +70,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // Dark mode toggle
+    const darkModeBtn = document.getElementById('darkModeBtn');
+    if (darkModeBtn) {
+        darkModeBtn.addEventListener('click', () => {
+            const isDark = document.body.classList.toggle('dark-mode');
+            darkModeBtn.textContent = isDark ? '☀️' : '🌙';
+            chrome.storage.sync.set({ darkMode: isDark });
+        });
+    }
+
     // Clear cache button handler
     if (document.getElementById('clearCache')) {
         document.getElementById('clearCache').addEventListener('click', async () => {
             if (currentTabUrl) {
-                chrome.storage.local.remove([currentTabUrl], () => {
+                chrome.storage.local.remove([currentTabUrl, `scan_${currentTabUrl}`], () => {
                     console.log("🗑️ Cleared cache for:", currentTabUrl);
                     currentResultsData = null;
                     document.getElementById('results').classList.add('hidden');
@@ -43,11 +93,87 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('scanBtn').disabled = false;
                     document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
                     document.getElementById('status').textContent = 'Đã xóa bộ nhớ đệm — Sẵn sàng quét';
+                    chrome.action.setBadgeText({ text: '' });
                 });
             }
         });
     }
+
+    // History button handler
+    const historyBtn = document.getElementById('historyBtn');
+    if (historyBtn) {
+        historyBtn.addEventListener('click', toggleHistory);
+    }
+
+    // Export report button handler
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', () => {
+            if (currentResultsData) {
+                exportReport(currentResultsData, currentTabUrl);
+            }
+        });
+    }
 });
+
+// ============================================================================
+// SCAN IN PROGRESS — Resume state after popup reopen
+// ============================================================================
+
+function showScanInProgress(scanStatus) {
+    document.getElementById('results').classList.add('hidden');
+    document.getElementById('confirmation').classList.add('hidden');
+    document.getElementById('errorBox').classList.add('hidden');
+    document.getElementById('scanBtn').disabled = true;
+    document.getElementById('scanBtn').textContent = '⏳ Đang phân tích...';
+    document.getElementById('status').textContent = scanStatus.progress || 'Đang phân tích... (có thể mất 1-2 phút)';
+}
+
+function startPollingForResults(url) {
+    // Poll every 2 seconds to check if background scan completed
+    if (scanPollInterval) clearInterval(scanPollInterval);
+    
+    scanPollInterval = setInterval(async () => {
+        const status = await chrome.runtime.sendMessage({ type: 'GET_SCAN_STATUS', url: url });
+        
+        if (!status || status.status === 'completed') {
+            clearInterval(scanPollInterval);
+            scanPollInterval = null;
+
+            if (status && status.results) {
+                currentResultsData = status.results;
+                
+                // Save to URL cache too
+                chrome.storage.local.set({
+                    [url]: { ...status.results, timestamp: new Date().toISOString(), url: url }
+                });
+
+                document.getElementById('scanBtn').disabled = false;
+                document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
+                document.getElementById('status').textContent = 'Phân tích hoàn tất';
+                renderResults(status.results, url);
+            } else {
+                // Check URL cache
+                chrome.storage.local.get([url], (result) => {
+                    if (result[url]) {
+                        currentResultsData = result[url];
+                        document.getElementById('scanBtn').disabled = false;
+                        document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
+                        renderResults(result[url], url);
+                    }
+                });
+            }
+        } else if (status.status === 'error') {
+            clearInterval(scanPollInterval);
+            scanPollInterval = null;
+            document.getElementById('scanBtn').disabled = false;
+            document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
+            showError(status.error || 'Phân tích thất bại');
+        } else if (status.status === 'scanning') {
+            document.getElementById('status').textContent = status.progress || 'Đang phân tích...';
+        }
+    }, 2000);
+}
 
 // ============================================================================
 // SCAN BUTTON HANDLER WITH CONFIRMATION
@@ -132,72 +258,33 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
 
     const btn = document.getElementById('confirmYes');
     btn.disabled = true;
-    btn.textContent = '⏳ Đang phân tích... (có thể mất 1-2 phút)';
+    btn.textContent = '⏳ Đang gửi...';
 
     try {
-        // AUTO-DETECT: Try localhost first (for local testing), fallback to cloud
-        const API_ENDPOINTS = [
-            "http://127.0.0.1:8000/analyze/v3",     // Local server v3 (try first)
-            "https://vncontentguard-pro.onrender.com/analyze/v3"  // Cloud v3 (fallback)
-        ];
-
-        let response = null;
-        let lastError = null;
-        
-        for (const endpoint of API_ENDPOINTS) {
-            try {
-                console.log(`🔄 Trying: ${endpoint}`);
-                const controller = new AbortController();
-                // Local analysis needs 2 min (14 comments × Gemini API calls + rate-limit retries)
-                const isLocal = endpoint.includes('127.0.0.1') || endpoint.includes('localhost');
-                const timeoutMs = isLocal ? 120000 : 30000;
-                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-                
-                response = await fetch(endpoint, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        url: currentTabUrl,
-                        article_text: scannedDataCache.text,
-                        comments: scannedDataCache.comments
-                    }),
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                if (response.ok) {
-                    console.log(`✅ Connected to: ${endpoint}`);
-                    break; // Success! Stop trying other endpoints
-                }
-            } catch (err) {
-                console.log(`❌ Failed: ${endpoint} (${err.message})`);
-                lastError = err;
-                response = null;
-                // Continue to next endpoint
+        // Delegate to background service worker (survives popup close!)
+        const response = await chrome.runtime.sendMessage({
+            type: 'START_SCAN',
+            data: {
+                url: currentTabUrl,
+                article_text: scannedDataCache.text,
+                comments: scannedDataCache.comments
             }
-        }
-
-        if (!response || !response.ok) {
-            throw new Error(lastError?.message || "All API endpoints failed");
-        }
-
-        const data = await response.json();
-        console.log("✅ Got results");
-
-        // 💾 SAVE TO PERSISTENT STORAGE with timestamp
-        currentResultsData = data;
-        const cacheData = {
-            ...data,
-            timestamp: new Date().toISOString(),
-            url: currentTabUrl
-        };
-        chrome.storage.local.set({ [currentTabUrl]: cacheData }, () => {
-            console.log("💾 Cached results for:", currentTabUrl);
         });
 
-        // Render results (which will check for warnings first)
-        renderResults(data, currentTabUrl);
+        if (response && response.status === 'started') {
+            console.log("✅ Scan delegated to background service worker");
+
+            // Show in-progress state
+            document.getElementById('confirmation').classList.add('hidden');
+            document.getElementById('scanBtn').disabled = true;
+            document.getElementById('scanBtn').textContent = '⏳ Đang phân tích...';
+            document.getElementById('status').textContent = 'Đang phân tích... (có thể mất 1-2 phút — bạn có thể đóng popup)';
+
+            // Start polling for results
+            startPollingForResults(currentTabUrl);
+        } else {
+            throw new Error("Failed to start background scan");
+        }
 
     } catch (err) {
         console.error("Error:", err.message);
@@ -1108,5 +1195,236 @@ function showWarningModal(fake, sentiment, toxicity) {
             }
         }
         warningModal.classList.add('hidden');
+    });
+}
+
+// ============================================================================
+// SCAN HISTORY — Feature 1.1
+// ============================================================================
+
+async function toggleHistory() {
+    const historyPanel = document.getElementById('historyPanel');
+    if (!historyPanel) return;
+
+    if (historyPanel.classList.contains('hidden')) {
+        // Show history
+        await renderHistory();
+        historyPanel.classList.remove('hidden');
+        document.getElementById('results').classList.add('hidden');
+        document.getElementById('confirmation').classList.add('hidden');
+    } else {
+        // Hide history, show results if available
+        historyPanel.classList.add('hidden');
+        if (currentResultsData) {
+            document.getElementById('results').classList.remove('hidden');
+        }
+    }
+}
+
+async function renderHistory() {
+    const historyList = document.getElementById('historyList');
+    if (!historyList) return;
+
+    const data = await chrome.storage.local.get(['scanHistory']);
+    const history = data.scanHistory || [];
+
+    if (history.length === 0) {
+        historyList.innerHTML = '<div style="text-align: center; color: #999; padding: 20px;">Chưa có lịch sử quét</div>';
+        return;
+    }
+
+    const riskLevelVi = { 'Low': 'Thấp', 'Medium': 'Trung bình', 'High': 'Cao', 'Critical': 'Nguy hiểm' };
+    const riskColors = { 'Low': '#27ae60', 'Medium': '#f39c12', 'High': '#e74c3c', 'Critical': '#c0392b' };
+
+    let html = '';
+    history.forEach((entry, idx) => {
+        const timeAgo = getTimeAgo(entry.timestamp);
+        const riskColor = riskColors[entry.riskLevel] || '#3498db';
+        const riskLabel = riskLevelVi[entry.riskLevel] || entry.riskLevel;
+
+        html += `
+            <div class="history-card" data-url="${entry.url}" onclick="loadHistoryEntry('${entry.url.replace(/'/g, "\\'")}')">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="flex: 1; overflow: hidden;">
+                        <div style="font-size: 12px; font-weight: bold; color: var(--text-primary, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${entry.title || 'Unknown'}
+                        </div>
+                        <div style="font-size: 10px; color: var(--text-secondary, #999); margin-top: 2px;">${timeAgo}</div>
+                    </div>
+                    <div style="text-align: right; margin-left: 8px;">
+                        <div style="font-size: 16px; font-weight: bold; color: ${riskColor};">${Math.round(entry.riskScore)}</div>
+                        <div style="font-size: 9px; color: ${riskColor};">${riskLabel}</div>
+                    </div>
+                </div>
+                ${entry.toxicCount > 0 ? `<div style="font-size: 10px; color: #e74c3c; margin-top: 4px;">⚠️ ${entry.toxicCount} bình luận độc hại</div>` : ''}
+            </div>
+        `;
+    });
+
+    historyList.innerHTML = html;
+}
+
+// Make loadHistoryEntry available globally
+window.loadHistoryEntry = async function(url) {
+    const data = await chrome.storage.local.get([url]);
+    if (data[url]) {
+        currentResultsData = data[url];
+        document.getElementById('historyPanel').classList.add('hidden');
+        renderResults(data[url], url);
+    }
+};
+
+function getTimeAgo(timestamp) {
+    const now = new Date();
+    const then = new Date(timestamp);
+    const diffMs = now - then;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Vừa xong';
+    if (diffMins < 60) return `${diffMins} phút trước`;
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    if (diffDays < 7) return `${diffDays} ngày trước`;
+    return then.toLocaleDateString('vi-VN');
+}
+
+// Clear history handler
+document.addEventListener('DOMContentLoaded', () => {
+    const clearHistoryBtn = document.getElementById('clearHistoryBtn');
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', async () => {
+            await chrome.storage.local.remove(['scanHistory']);
+            renderHistory();
+        });
+    }
+});
+
+// ============================================================================
+// EXPORT REPORT — Feature 1.2
+// ============================================================================
+
+function exportReport(data, url) {
+    const isV3 = data.version === "3.0" || data.version === "3.1" || data.sentiment_v3;
+    if (!isV3) return;
+
+    const sentiment = data.sentiment_v3 || {};
+    const toxicity = data.toxicity_v3 || {};
+    const factCheck = data.fact_check_v3 || {};
+    const riskScore = data.risk_score_v3 || {};
+    const comments = data.comments_analysis || {};
+    const summary = data.article_summary || {};
+
+    const riskLevelVi = { 'Low': 'Thấp', 'Medium': 'Trung bình', 'High': 'Cao', 'Critical': 'Nguy hiểm' };
+    const sentLabelVi = { 'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập' };
+    const severityVi = { 'None': 'Không', 'Low': 'Thấp', 'Medium': 'Trung bình', 'High': 'Cao', 'Critical': 'Nguy hiểm' };
+
+    const riskValue = riskScore.risk_score || 0;
+    const riskColor = riskValue < 25 ? '#27ae60' : riskValue < 50 ? '#f39c12' : riskValue < 75 ? '#e74c3c' : '#c0392b';
+
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const domain = url ? new URL(url).hostname.replace('www.', '') : 'unknown';
+
+    const htmlReport = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+    <title>Báo cáo VnContentGuard Pro — ${domain}</title>
+    <style>
+        body { font-family: 'Segoe UI', Roboto, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
+        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2c3e50; margin-top: 25px; }
+        .risk-badge { display: inline-block; padding: 8px 24px; border-radius: 8px; color: white; font-size: 24px; font-weight: bold; }
+        .card { background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #3498db; }
+        .toxic { border-left-color: #e74c3c; background: #fff5f5; }
+        .safe { border-left-color: #27ae60; background: #f0fff0; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { padding: 8px 12px; border: 1px solid #ddd; text-align: left; }
+        th { background: #f0f0f0; }
+        .footer { margin-top: 30px; padding-top: 15px; border-top: 2px solid #eee; color: #999; font-size: 12px; text-align: center; }
+        @media print { body { margin: 0; } }
+    </style>
+</head>
+<body>
+    <h1>🛡️ VnContentGuard Pro — Báo cáo phân tích</h1>
+    <p><strong>URL:</strong> <a href="${url || '#'}">${url || 'N/A'}</a></p>
+    <p><strong>Ngày quét:</strong> ${dateStr}</p>
+    <p><strong>Phiên bản:</strong> v4.0</p>
+
+    <h2>📊 Điểm Rủi Ro Tổng Thể</h2>
+    <div style="text-align: center; margin: 15px 0;">
+        <span class="risk-badge" style="background: ${riskColor};">${riskValue.toFixed(1)}/100</span>
+        <p style="font-size: 18px; color: ${riskColor}; font-weight: bold;">${riskLevelVi[riskScore.risk_level] || riskScore.risk_level || 'N/A'}</p>
+    </div>
+    ${riskScore.breakdown ? `
+    <table>
+        <tr><th>Thành phần</th><th>Điểm</th></tr>
+        <tr><td>Tin giả</td><td>${(riskScore.breakdown.fake_news_component || 0).toFixed(1)}</td></tr>
+        <tr><td>Độc hại</td><td>${(riskScore.breakdown.toxicity_component || 0).toFixed(1)}</td></tr>
+        <tr><td>Cảm xúc</td><td>${(riskScore.breakdown.sentiment_component || 0).toFixed(1)}</td></tr>
+        <tr><td>Nguồn</td><td>${(riskScore.breakdown.source_component || 0).toFixed(1)}</td></tr>
+        <tr><td>Thao túng</td><td>${(riskScore.breakdown.manipulation_component || 0).toFixed(1)}</td></tr>
+    </table>` : ''}
+
+    ${summary.summary ? `
+    <h2>📰 Tóm tắt bài viết</h2>
+    <div class="card">${summary.summary}</div>` : ''}
+
+    <h2>🎭 Phân tích cảm xúc</h2>
+    <div class="card">
+        <strong>${sentLabelVi[sentiment.overall] || sentiment.overall || 'N/A'}</strong>
+        (Độ tin cậy: ${((sentiment.confidence || 0) * 100).toFixed(0)}%)
+    </div>
+
+    <h2>🛡️ Phát hiện nội dung độc hại</h2>
+    <div class="card ${toxicity.is_toxic ? 'toxic' : 'safe'}">
+        <strong>${toxicity.is_toxic ? '⚠️ ĐỘC HẠI' : '✅ AN TOÀN'}</strong>
+        — Mức độ: ${severityVi[toxicity.severity] || toxicity.severity || 'N/A'}
+        (${((toxicity.overall_score || 0) * 100).toFixed(0)}%)
+    </div>
+
+    <h2>📰 Kiểm tra thực tế</h2>
+    <div class="card">
+        <strong>${factCheck.verdict || 'N/A'}</strong> — Độ tin cậy: ${factCheck.score || 50}/100
+    </div>
+
+    <h2>💬 Phân tích bình luận</h2>
+    <div class="card">
+        <p>Tổng bình luận: ${comments.total || 0} | Độc hại: ${comments.toxic_count || 0} (${comments.toxic_percentage || 0}%)</p>
+    </div>
+    ${(comments.toxic_comments || []).length > 0 ? `
+    <table>
+        <tr><th>Bình luận</th><th>Mức độ</th><th>Lý do</th></tr>
+        ${(comments.toxic_comments || []).slice(0, 10).map(tc => `
+        <tr>
+            <td>${(tc.comment || '').substring(0, 80)}${(tc.comment || '').length > 80 ? '...' : ''}</td>
+            <td>${severityVi[tc.severity] || tc.severity || 'N/A'}</td>
+            <td>${tc.reason || ''}</td>
+        </tr>`).join('')}
+    </table>` : ''}
+
+    ${(riskScore.recommendations || []).length > 0 ? `
+    <h2>💡 Khuyến nghị</h2>
+    <ul>${riskScore.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
+
+    <div class="footer">
+        <p>Báo cáo được tạo bởi VnContentGuard Pro v4.0</p>
+        <p>⚠️ Kết quả phân tích mang tính tham khảo. Hãy luôn kiểm chứng thông tin từ nhiều nguồn.</p>
+    </div>
+</body>
+</html>`;
+
+    // Download as HTML file
+    const blob = new Blob([htmlReport], { type: 'text/html;charset=utf-8' });
+    const downloadUrl = URL.createObjectURL(blob);
+    const dateFile = now.toISOString().slice(0, 10);
+    
+    chrome.downloads.download({
+        url: downloadUrl,
+        filename: `VnCG-Report-${domain}-${dateFile}.html`,
+        saveAs: true
+    }, () => {
+        URL.revokeObjectURL(downloadUrl);
     });
 }

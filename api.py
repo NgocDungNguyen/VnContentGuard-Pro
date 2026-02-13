@@ -24,7 +24,7 @@ from src.models.toxicity_v3 import ToxicityAnalyzerV3
 from src.utils.cache_manager import CacheManager
 from src.utils.comment_filter import CommentFilter
 
-app = FastAPI(title="VnContentGuard Pro API", version="3.1")
+app = FastAPI(title="VnContentGuard Pro API", version="4.0")
 
 # Enable CORS for Chrome Extension
 app.add_middleware(
@@ -108,6 +108,27 @@ class FullScanResponse(BaseModel):
 def health_check():
     """Check if the server is running."""
     return {"status": "🟢 VnContentGuard Pro Server is Running"}
+
+
+@app.get("/api/stats")
+def api_stats():
+    """v4.0 — API usage statistics and model status."""
+    try:
+        gemini_status = gemini_agent.get_status()
+        return {
+            "version": "4.0.0",
+            "model": gemini_status.get("model", "unknown"),
+            "using_fallback": gemini_status.get("using_fallback", False),
+            "api_keys": {
+                "total": gemini_status.get("total_keys", 0),
+                "available": gemini_status.get("available_count", 0),
+                "exhausted": gemini_status.get("exhausted_count", 0),
+                "current": gemini_status.get("current_key", 0),
+            },
+            "status": "🟢 Online",
+        }
+    except Exception as e:
+        return {"version": "4.0.0", "status": "🔴 Error", "error": str(e)}
 
 
 # ============================================================================
@@ -371,7 +392,7 @@ def analyze_content_v3(req: ScanRequest):
 
         # ========== 6. COMPILE v3.1 RESPONSE ==========
         response = {
-            "version": "3.1",
+            "version": "4.0",
             "article_summary": article_summary,
             "sentiment_v3": sentiment_v3,
             "toxicity_v3": toxicity_v3,

@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "VnContentGuard Pro v3.1",
-  "version": "3.1.0",
+  "name": "VnContentGuard Pro v4.0",
+  "version": "4.0.0",
   "description": "Quét an toàn nội dung tiếng Việt bằng AI — phân tích bình luận, phát hiện độc hại, kiểm tra thực tế, chấm điểm rủi ro.",
   "permissions": [
     "activeTab",
     "scripting",
-    "storage"
+    "storage",
+    "downloads"
   ],
   "host_permissions": [
     "http://localhost:8000/*",
@@ -17,6 +18,9 @@
     "https://*.dantri.com.vn/*",
     "https://*.tuoitre.vn/*"
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_title": "VnContentGuard Pro - Quét an toàn nội dung",

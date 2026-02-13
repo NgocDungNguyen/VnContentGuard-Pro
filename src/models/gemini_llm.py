@@ -54,8 +54,9 @@ if not API_KEY_POOL:
 
     API_KEY_POOL = [os.getenv("GEMINI_API_KEY", "")]
 
-# Model configuration
-MODEL_NAME = "gemini-2.5-flash-lite"  # Optimized model (20 RPD limit, 10 RPM)
+# Model configuration — v4.0 upgrade to Gemini 2.5 Flash (auto-fallback to Lite)
+MODEL_NAME = "gemini-2.5-flash"  # Primary model (faster, smarter)
+MODEL_NAME_FALLBACK = "gemini-2.5-flash-lite"  # Fallback if primary quota exceeded
 
 
 class APIKeyRotator:
@@ -158,6 +159,8 @@ class GeminiAgent:
         self.key_rotator = key_rotator or APIKeyRotator(API_KEY_POOL)
         self.client: Optional[genai.Client] = None
         self.model_name = MODEL_NAME
+        self.fallback_model_name = MODEL_NAME_FALLBACK
+        self.using_fallback_model = False
 
         # Initialize with first key
         self._initialize_client()
@@ -198,11 +201,25 @@ class GeminiAgent:
         ]
         return any(indicator in error_str for indicator in quota_indicators)
 
+    def _try_fallback_model(self) -> bool:
+        """Switch to fallback model if primary model fails"""
+        if not self.using_fallback_model:
+            print(f"⚠️ Primary model {self.model_name} failing, switching to fallback: {self.fallback_model_name}")
+            self.model_name = self.fallback_model_name
+            self.using_fallback_model = True
+            # Reset key rotator to try all keys with fallback model
+            self.key_rotator.exhausted_keys.clear()
+            self.key_rotator.current_index = 0
+            self._initialize_client()
+            return True
+        return False
+
     def _rotate_key_and_retry(self) -> bool:
         """Rotate to next API key and reinitialize client"""
         if self.key_rotator.mark_key_exhausted():
             return self._initialize_client()
-        return False
+        # All keys exhausted for current model — try fallback model
+        return self._try_fallback_model()
 
     def check_fake_news(self, article_text: str) -> str:
         """
@@ -319,7 +336,10 @@ Return ONLY a JSON object (no markdown):
 
     def get_status(self) -> Dict:
         """Get current status of API key rotation"""
-        return self.key_rotator.get_status()
+        status = self.key_rotator.get_status()
+        status["model"] = self.model_name
+        status["using_fallback"] = self.using_fallback_model
+        return status
 
 
 # Test function
