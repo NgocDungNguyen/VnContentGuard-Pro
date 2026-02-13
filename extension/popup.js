@@ -1415,10 +1415,18 @@ function exportReport(data, url) {
         th, td { padding: 8px 12px; border: 1px solid #ddd; text-align: left; }
         th { background: #f0f0f0; }
         .footer { margin-top: 30px; padding-top: 15px; border-top: 2px solid #eee; color: #999; font-size: 12px; text-align: center; }
-        @media print { body { margin: 0; } }
+        @media print {
+            body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .risk-badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            a { color: #333; text-decoration: none; }
+        }
+        @page { margin: 15mm 12mm; size: A4; }
+        .print-hint { text-align: center; margin: 15px 0; padding: 10px; background: #e8f4fd; border-radius: 8px; font-size: 13px; color: #2980b9; }
     </style>
 </head>
 <body>
+    <div class="print-hint no-print">💡 Chọn <strong>"Save as PDF"</strong> / <strong>"Lưu dưới dạng PDF"</strong> trong hộp thoại in để tải báo cáo PDF</div>
     <h1>🛡️ VnContentGuard Pro — Báo cáo phân tích</h1>
     <p><strong>URL:</strong> <a href="${url || '#'}">${url || 'N/A'}</a></p>
     <p><strong>Ngày quét:</strong> ${dateStr}</p>
@@ -1487,17 +1495,24 @@ function exportReport(data, url) {
 </body>
 </html>`;
 
-    // Download as HTML file
+    // Open report in new tab and auto-trigger print-to-PDF
     const blob = new Blob([htmlReport], { type: 'text/html;charset=utf-8' });
-    const downloadUrl = URL.createObjectURL(blob);
-    const dateFile = now.toISOString().slice(0, 10);
-    
-    chrome.downloads.download({
-        url: downloadUrl,
-        filename: `VnCG-Report-${domain}-${dateFile}.html`,
-        saveAs: true
-    }, () => {
-        URL.revokeObjectURL(downloadUrl);
+    const reportDataUrl = URL.createObjectURL(blob);
+
+    chrome.tabs.create({ url: reportDataUrl, active: true }, (tab) => {
+        // Inject auto-print script after page loads
+        setTimeout(() => {
+            chrome.scripting.executeScript({
+                target: { tabId: tab.id },
+                func: () => { window.print(); }
+            }).catch(() => {
+                // If scripting fails, user can manually Ctrl+P
+                console.log('Auto-print failed — user can press Ctrl+P');
+            });
+        }, 800);
+
+        // Clean up blob URL after a delay
+        setTimeout(() => URL.revokeObjectURL(reportDataUrl), 10000);
     });
 }
 

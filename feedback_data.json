@@ -1,8 +1,16 @@
 {
-  "feedbacks": [],
+  "feedbacks": [
+    {
+      "url": "https://vnexpress.net/tinh-canh-nguoi-cuba-giua-vong-kiem-toa-nang-luong-cua-my-5040019.html",
+      "rating": "positive",
+      "correction": "",
+      "modules": {},
+      "timestamp": "2026-02-13T14:31:35.126226"
+    }
+  ],
   "stats": {
-    "total": 0,
-    "positive": 0,
+    "total": 1,
+    "positive": 1,
     "negative": 0
   }
 }
