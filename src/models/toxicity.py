@@ -152,9 +152,17 @@ class ToxicityAnalyzer:
                 "Sexual: Criminal Acts",
             ),
             # 11. EXPLICIT & VULGAR (Teencode Included)
+            # NOTE: Removed standalone common words (chim=bird, bướm=butterfly, cu=name,
+            #       sò=clam, khe=gap, lỗ=loss) to prevent false positives on normal text.
+            #       These are only flagged in compound sexual phrases below.
             (
-                r"\b(lồn|cặc|buồi|chim|bướm|cu|dái|vú|ngực|mông|đít|sò|khe|lỗ|thủ dâm|quay tay|thẩm du|bú cu|vét máng|chịch|xoạc|nện|đụ|dit|phang)\b",
+                r"\b(lồn|cặc|buồi|dái|thủ dâm|quay tay|thẩm du|bú cu|vét máng|chịch|xoạc|nện|đụ|dit|phang)\b",
                 "Sexual: Explicit/Vulgar",
+            ),
+            # Common words that are ONLY sexual in compound phrases
+            (
+                r"\b(cái lồn|cái lỗ|con cu|cái cu|bú chim|cặp vú|hai vú|bóp vú|sờ ngực|sờ mông|sờ đít|cái sò|cái khe)\b",
+                "Sexual: Explicit Context",
             ),
             (
                 r"\b(l.ồ.n|c.ặ.c|b.u.ồ.i|s.e.x|c.l.i.p|lộ clip|clip nóng|link ngon|full hd|không che|uncen|show hàng|khoe hàng|bán quạt|onlyfans)\b",

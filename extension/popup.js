@@ -1264,14 +1264,9 @@ async function renderHistory() {
     historyList.innerHTML = html;
 }
 
-// Make loadHistoryEntry available globally
-window.loadHistoryEntry = async function(url) {
-    const data = await chrome.storage.local.get([url]);
-    if (data[url]) {
-        currentResultsData = data[url];
-        document.getElementById('historyPanel').classList.add('hidden');
-        renderResults(data[url], url);
-    }
+// Make loadHistoryEntry available globally — opens URL in a new browser tab
+window.loadHistoryEntry = function(url) {
+    chrome.tabs.create({ url: url, active: true });
 };
 
 function getTimeAgo(timestamp) {

@@ -178,20 +178,44 @@ class ToxicityAnalyzerV3:
             return None
 
     def _analyze_regex(self, text: str) -> Optional[Dict]:
-        """Analyze using v2 regex patterns"""
+        """Analyze using ONLY v2 regex patterns (no Gemini AI calls).
+
+        IMPORTANT: We directly scan against the regex blacklist patterns here
+        instead of calling regex_analyzer.analyze_comments() because that method
+        also triggers Gemini AI calls, burning API quota per comment.
+        """
         if not self.regex_analyzer:
             return None
 
         try:
-            # v2 analyzer's analyze_comments takes a list and returns (results, count)
-            results, toxic_count = self.regex_analyzer.analyze_comments([text])
+            import re as _re
 
-            is_toxic = toxic_count > 0
+            lower_text = text.lower()
+            is_toxic = False
+            matched_category = None
+            matched_keyword = None
+
+            for pattern, label in self.regex_analyzer.blacklist_patterns:
+                match = _re.search(pattern, lower_text)
+                if match:
+                    is_toxic = True
+                    matched_category = label
+                    matched_keyword = match.group(0)
+                    break
 
             return {
                 "is_toxic": is_toxic,
-                "toxic_count": toxic_count,
-                "patterns_matched": results[:5] if results else [],  # First 5 matches
+                "toxic_count": 1 if is_toxic else 0,
+                "patterns_matched": (
+                    [
+                        {
+                            "category": matched_category,
+                            "keyword": matched_keyword,
+                        }
+                    ]
+                    if is_toxic
+                    else []
+                ),
                 "method": "regex",
             }
         except Exception as e:

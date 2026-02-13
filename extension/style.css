@@ -31,23 +31,23 @@
 /* ============================================================================ */
 
 body.dark-mode {
-    --bg-primary: #1a1a2e;
-    --bg-card: #16213e;
-    --bg-card-hover: #1a2744;
-    --text-primary: #e0e0e0;
-    --text-secondary: #a0a0a0;
-    --text-muted: #777777;
-    --border-color: #2a3a5c;
-    --shadow-color: rgba(0, 0, 0, 0.3);
-    --header-bg: #0f3460;
-    --footer-bg: #16213e;
-    --scrollbar-thumb: #444444;
-    --scrollbar-hover: #666666;
-    --input-bg: #1a2744;
-    --summary-bg: linear-gradient(135deg, #1b3a1e 0%, #1e3520 100%);
-    --findings-bg: #2e2a1a;
-    --api-savings-bg: #1b3a1e;
-    --api-savings-border: #2a5c2e;
+    --bg-primary: #1e1e2e;
+    --bg-card: #2a2a3d;
+    --bg-card-hover: #333350;
+    --text-primary: #e8e8f0;
+    --text-secondary: #b0b0c0;
+    --text-muted: #8888a0;
+    --border-color: #3d3d55;
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --header-bg: #252540;
+    --footer-bg: #252540;
+    --scrollbar-thumb: #555570;
+    --scrollbar-hover: #7777a0;
+    --input-bg: #333350;
+    --summary-bg: linear-gradient(135deg, #1e3a28 0%, #253530 100%);
+    --findings-bg: #3a3520;
+    --api-savings-bg: #1e3a28;
+    --api-savings-border: #2e5535;
 }
 
 * {
@@ -532,25 +532,80 @@ h3 {
 /* ============================================================================ */
 
 body.dark-mode .btn-secondary {
-    background: #2a3a5c;
-    color: #ccc;
-    border-color: #3a4a6c;
+    background: #3d3d55;
+    color: #e0e0f0;
+    border: 1px solid #555570;
 }
 
 body.dark-mode .btn-secondary:hover {
-    background: #3a4a6c;
+    background: #50506a;
+}
+
+body.dark-mode .btn-primary {
+    background: #4a7ddb;
+}
+
+body.dark-mode .btn-primary:hover {
+    background: #5a8dec;
 }
 
 body.dark-mode .summary-text {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.08);
 }
 
 body.dark-mode .warning-content h4 {
-    background: #2e2a1a;
-    color: #f39c12;
+    background: #3a3520;
+    color: #f5c842;
+}
+
+body.dark-mode .warning-box {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+body.dark-mode .warning-content {
+    color: var(--text-primary);
 }
 
 body.dark-mode .warning-buttons .btn-secondary {
     background: #c0392b;
     color: white;
+}
+
+body.dark-mode .status-badge {
+    color: #4ecb71;
+}
+
+body.dark-mode .finding-category {
+    color: #ff6b6b;
+}
+
+body.dark-mode .error-title {
+    color: #ff6b6b;
+}
+
+/* Risk score gradient card stays the same in dark mode */
+body.dark-mode .card[style*="linear-gradient"] h3,
+body.dark-mode .card[style*="linear-gradient"] .card-content {
+    color: white !important;
+}
+
+/* Confirmation card dark mode */
+body.dark-mode #confirmUrl {
+    color: var(--text-secondary) !important;
+}
+
+body.dark-mode #confirmPreview {
+    background: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+}
+
+/* History panel in dark mode */
+body.dark-mode .history-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+}
+
+body.dark-mode .history-card:hover {
+    background: var(--bg-card-hover);
 }
