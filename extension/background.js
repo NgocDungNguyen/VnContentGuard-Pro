@@ -148,7 +148,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // ============================================================================
 
 async function handleScan(data) {
-    const { url, article_text, comments } = data;
+    const { url, article_text, comments, pageTitle } = data;
     const storageKey = `scan_${url}`;
 
     try {
@@ -244,7 +244,7 @@ async function handleScan(data) {
         updateBadge(riskScore, riskLevel);
 
         // 6. Add to scan history
-        await addToScanHistory(url, results);
+        await addToScanHistory(url, results, pageTitle);
 
         console.log(`[BG] Scan completed for: ${url}`);
 
@@ -310,17 +310,23 @@ function updateBadge(riskScore, riskLevel) {
 // SCAN HISTORY
 // ============================================================================
 
-async function addToScanHistory(url, results) {
+async function addToScanHistory(url, results, pageTitle = '') {
     const MAX_HISTORY = 20;
 
     try {
         const data = await chrome.storage.local.get(['scanHistory']);
         let history = data.scanHistory || [];
 
+        // Determine best article title: pageTitle > article_summary > domain fallback
+        const summaryTitle = results.article_summary?.summary?.substring(0, 80) || '';
+        const articleTitle = pageTitle || summaryTitle || '';
+        const domain = extractDomain(url);
+
         // Build history entry
         const entry = {
             url: url,
-            title: extractDomain(url),
+            title: articleTitle || domain,
+            domain: domain,
             riskScore: results.risk_score_v4?.risk_score || 0,
             riskLevel: results.risk_score_v4?.risk_level || 'Low',
             toxicPercent: results.comments_analysis?.toxic_percentage || 0,
@@ -367,7 +373,7 @@ function extractDomain(url) {
 // ============================================================================
 
 async function handleStreamScan(data) {
-    const { url, article_text, comments } = data;
+    const { url, article_text, comments, pageTitle } = data;
     const storageKey = `scan_${url}`;
 
     try {
@@ -481,7 +487,7 @@ async function handleStreamScan(data) {
         const riskScore = results.risk_score_v4?.risk_score || 0;
         const riskLevel = results.risk_score_v4?.risk_level || 'Low';
         updateBadge(riskScore, riskLevel);
-        await addToScanHistory(url, results);
+        await addToScanHistory(url, results, pageTitle);
         sendRiskNotification(url, riskScore, riskLevel);
 
         console.log(`[BG] Stream scan completed for: ${url}`);

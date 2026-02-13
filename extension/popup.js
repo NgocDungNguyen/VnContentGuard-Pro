@@ -360,12 +360,17 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
 
     try {
         // Delegate to background service worker (SSE streaming mode v4.9!)
+        // Get tab title for history display
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const pageTitle = activeTab?.title || '';
+
         const response = await chrome.runtime.sendMessage({
             type: 'START_SCAN_STREAM',
             data: {
                 url: currentTabUrl,
                 article_text: scannedDataCache.text,
-                comments: scannedDataCache.comments
+                comments: scannedDataCache.comments,
+                pageTitle: pageTitle
             }
         });
 
@@ -1383,15 +1388,18 @@ async function renderHistory() {
         const timeAgo = getTimeAgo(entry.timestamp);
         const riskColor = riskColors[entry.riskLevel] || '#3498db';
         const riskLabel = riskLevelVi[entry.riskLevel] || entry.riskLevel;
+        const domain = entry.domain || getDomain(entry.url);
+        const articleTitle = entry.title && entry.title !== domain ? entry.title : '';
+        const displayTitle = articleTitle || domain;
 
         html += `
             <div class="history-card" data-url="${entry.url}">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="flex: 1; overflow: hidden;">
-                        <div style="font-size: 12px; font-weight: bold; color: var(--text-primary, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                            ${entry.title || 'Unknown'}
+                        <div style="font-size: 12px; font-weight: bold; color: var(--text-primary, #333); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${displayTitle.replace(/"/g, '&quot;')}">
+                            ${displayTitle}
                         </div>
-                        <div style="font-size: 10px; color: var(--text-secondary, #999); margin-top: 2px;">${timeAgo}</div>
+                        <div style="font-size: 10px; color: var(--text-secondary, #999); margin-top: 2px;">${domain} · ${timeAgo}</div>
                     </div>
                     <div style="text-align: right; margin-left: 8px;">
                         <div style="font-size: 16px; font-weight: bold; color: ${riskColor};">${Math.round(entry.riskScore)}</div>
@@ -1695,10 +1703,13 @@ async function populateCompareSelects() {
     select2.innerHTML = '<option value="">— Chọn trang 2 —</option>';
 
     history.forEach((entry, idx) => {
-        const domain = entry.title || entry.url;
+        const domain = entry.domain || getDomain(entry.url);
+        const articleTitle = entry.title && entry.title !== domain ? entry.title : domain;
+        const shortTitle = articleTitle.length > 50 ? articleTitle.substring(0, 50) + '...' : articleTitle;
         const risk = Math.round(entry.riskScore);
-        const opt1 = new Option(`${domain} (Rủi ro: ${risk})`, entry.url);
-        const opt2 = new Option(`${domain} (Rủi ro: ${risk})`, entry.url);
+        const label = `${shortTitle} [${domain}] (Rủi ro: ${risk})`;
+        const opt1 = new Option(label, entry.url);
+        const opt2 = new Option(label, entry.url);
         select1.add(opt1);
         select2.add(opt2);
     });
@@ -1728,10 +1739,10 @@ async function runComparison() {
         return;
     }
 
-    renderComparison(data1, data2, url1, url2);
+    await renderComparison(data1, data2, url1, url2);
 }
 
-function renderComparison(data1, data2, url1, url2) {
+async function renderComparison(data1, data2, url1, url2) {
     const risk1 = data1.risk_score_v4?.risk_score || 0;
     const risk2 = data2.risk_score_v4?.risk_score || 0;
     const level1 = data1.risk_score_v4?.risk_level || 'Low';
@@ -1752,14 +1763,26 @@ function renderComparison(data1, data2, url1, url2) {
     const domain1 = getDomain(url1);
     const domain2 = getDomain(url2);
 
+    // Get article titles from history for display
+    const historyData = await chrome.storage.local.get(['scanHistory']);
+    const historyList = historyData.scanHistory || [];
+    const entry1 = historyList.find(h => h.url === url1);
+    const entry2 = historyList.find(h => h.url === url2);
+    const title1 = (entry1?.title && entry1.title !== domain1) ? entry1.title : domain1;
+    const title2 = (entry2?.title && entry2.title !== domain2) ? entry2.title : domain2;
+    const shortTitle1 = title1.length > 35 ? title1.substring(0, 35) + '...' : title1;
+    const shortTitle2 = title2.length > 35 ? title2.substring(0, 35) + '...' : title2;
+    const header1 = `${shortTitle1}<br/><span style="font-size:9px;color:var(--text-secondary,#999);">${domain1}</span>`;
+    const header2 = `${shortTitle2}<br/><span style="font-size:9px;color:var(--text-secondary,#999);">${domain2}</span>`;
+
     const riskColor = (r) => r < 25 ? '#27ae60' : r < 50 ? '#f39c12' : r < 75 ? '#e74c3c' : '#c0392b';
     const sentColor = (s) => s === 'Positive' ? '#27ae60' : s === 'Negative' ? '#e74c3c' : '#3498db';
     const riskLabelVi = { 'Low': 'Thấp', 'Medium': 'TB', 'High': 'Cao', 'Critical': 'Nguy hiểm' };
     const sentLabelVi = { 'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập' };
 
     // Which is more reliable?
-    const moreReliable = fact1 > fact2 ? domain1 : fact2 > fact1 ? domain2 : 'Ngang nhau';
-    const lowerRisk = risk1 < risk2 ? domain1 : risk2 < risk1 ? domain2 : 'Ngang nhau';
+    const moreReliable = fact1 > fact2 ? shortTitle1 : fact2 > fact1 ? shortTitle2 : 'Ngang nhau';
+    const lowerRisk = risk1 < risk2 ? shortTitle1 : risk2 < risk1 ? shortTitle2 : 'Ngang nhau';
 
     const html = `
         <div style="margin-top: 8px;">
@@ -1767,8 +1790,8 @@ function renderComparison(data1, data2, url1, url2) {
                 <thead>
                     <tr style="background: var(--bg-card-hover); border-bottom: 2px solid var(--border-color);">
                         <th style="padding: 6px; text-align: left;">Tiêu chí</th>
-                        <th style="padding: 6px; text-align: center; max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${domain1}</th>
-                        <th style="padding: 6px; text-align: center; max-width: 120px; overflow: hidden; text-overflow: ellipsis;">${domain2}</th>
+                        <th style="padding: 6px; text-align: center; max-width: 140px; overflow: hidden; text-overflow: ellipsis; font-size: 10px;">${header1}</th>
+                        <th style="padding: 6px; text-align: center; max-width: 140px; overflow: hidden; text-overflow: ellipsis; font-size: 10px;">${header2}</th>
                     </tr>
                 </thead>
                 <tbody>
