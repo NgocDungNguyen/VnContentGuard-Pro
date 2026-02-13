@@ -1829,12 +1829,12 @@ function getDomain(url) {
 // ============================================================================
 
 const MODULE_NAMES = {
-    summary: '📰 Tóm tắt',
-    sentiment: '🎭 Cảm xúc',
-    toxicity: '🛡️ Độc hại',
-    fact_check: '📰 Kiểm tra TT',
-    risk_score: '📊 Rủi ro',
-    comments: '💬 Bình luận'
+    article_summary: '📰 Tóm tắt',
+    sentiment_v3: '🎭 Cảm xúc',
+    toxicity_v3: '🛡️ Độc hại',
+    fact_check_v3: '📰 Kiểm tra TT',
+    risk_score_v3: '📊 Rủi ro',
+    comments_analysis: '💬 Bình luận'
 };
 
 function updateStreamProgress(count, modules) {

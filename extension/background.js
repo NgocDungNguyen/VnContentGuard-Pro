@@ -419,6 +419,7 @@ async function handleStreamScan(data) {
         let buffer = '';
         const streamModules = {};
         let finalResult = null;
+        let currentEventType = ''; // Track SSE event type
 
         while (true) {
             const { done, value } = await reader.read();
@@ -430,13 +431,13 @@ async function handleStreamScan(data) {
 
             for (const line of lines) {
                 if (line.startsWith('event: ')) {
-                    // We'll handle this with the data line
+                    currentEventType = line.substring(7).trim();
                 } else if (line.startsWith('data: ')) {
                     try {
                         const jsonStr = line.substring(6);
                         const evt = JSON.parse(jsonStr);
 
-                        if (evt.type === 'module') {
+                        if (currentEventType === 'module') {
                             streamModules[evt.module] = evt.data;
                             // Save progressive update
                             await chrome.storage.local.set({
@@ -449,14 +450,15 @@ async function handleStreamScan(data) {
                                     completed_count: Object.keys(streamModules).length
                                 }
                             });
-                        } else if (evt.type === 'complete') {
-                            finalResult = evt.data;
-                        } else if (evt.type === 'error') {
+                        } else if (currentEventType === 'complete') {
+                            finalResult = evt;
+                        } else if (currentEventType === 'error') {
                             console.error(`[BG] Stream error: ${evt.message}`);
                         }
                     } catch (parseErr) {
-                        // Skip malformed lines
+                        console.warn(`[BG] SSE parse error:`, parseErr.message);
                     }
+                    currentEventType = ''; // Reset after processing
                 }
             }
         }
@@ -493,12 +495,13 @@ async function handleStreamScan(data) {
 
 function buildResultFromModules(modules) {
     return {
-        article_summary_v3: modules.summary || {},
-        sentiment_v3: modules.sentiment || {},
-        toxicity_v3: modules.toxicity || {},
-        fact_check_v3: modules.fact_check || {},
-        risk_score_v3: modules.risk_score || {},
-        comments_analysis: modules.comments || {}
+        version: '4.9',
+        article_summary: modules.article_summary || {},
+        sentiment_v3: modules.sentiment_v3 || {},
+        toxicity_v3: modules.toxicity_v3 || {},
+        fact_check_v3: modules.fact_check_v3 || {},
+        risk_score_v3: modules.risk_score_v3 || {},
+        comments_analysis: modules.comments_analysis || {}
     };
 }
 

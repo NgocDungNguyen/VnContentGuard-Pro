@@ -28,10 +28,10 @@ from src.models.sentiment import SentimentAnalyzer
 from src.models.sentiment_v3 import SentimentAnalyzerV3
 from src.models.toxicity import ToxicityAnalyzer
 from src.models.toxicity_v3 import ToxicityAnalyzerV3
+from src.utils.blocklist import CommunityBlocklist
 from src.utils.cache_manager import CacheManager
 from src.utils.comment_filter import CommentFilter
 from src.utils.feedback_store import FeedbackStore
-from src.utils.blocklist import CommunityBlocklist
 
 app = FastAPI(title="VnContentGuard Pro API", version="4.9")
 
@@ -267,20 +267,33 @@ def analyze_content_v3_stream(req: ScanRequest):
             learning_ctx = feedback_store.get_learning_context(req.url)
 
             # Module 1: Article Summary
-            yield _sse_event("progress", {"module": "summary", "status": "running", "step": "1/6"})
+            yield _sse_event(
+                "progress", {"module": "summary", "status": "running", "step": "1/6"}
+            )
             article_summary = {"summary": "", "method": "none", "cached": False}
             summary_text = ""
             if len(req.article_text) > 30:
                 try:
-                    article_summary = article_summarizer.summarize(req.article_text, req.url)
+                    article_summary = article_summarizer.summarize(
+                        req.article_text, req.url
+                    )
                     summary_text = article_summary.get("summary", "")
                 except Exception as e:
                     print(f"⚠️ [SSE] Summary failed: {e}")
-            yield _sse_event("module", {"module": "article_summary", "data": article_summary})
+            yield _sse_event(
+                "module", {"module": "article_summary", "data": article_summary}
+            )
 
             # Module 2: Sentiment
-            yield _sse_event("progress", {"module": "sentiment", "status": "running", "step": "2/6"})
-            sentiment_v3 = {"label": "Neutral", "confidence": 0.0, "intensity": "Weak", "method": "none"}
+            yield _sse_event(
+                "progress", {"module": "sentiment", "status": "running", "step": "2/6"}
+            )
+            sentiment_v3 = {
+                "label": "Neutral",
+                "confidence": 0.0,
+                "intensity": "Weak",
+                "method": "none",
+            }
             if len(req.article_text) > 5:
                 try:
                     sentiment_v3 = sentiment_v3_engine.analyze(req.article_text[:512])
@@ -289,8 +302,16 @@ def analyze_content_v3_stream(req: ScanRequest):
             yield _sse_event("module", {"module": "sentiment_v3", "data": sentiment_v3})
 
             # Module 3: Toxicity
-            yield _sse_event("progress", {"module": "toxicity", "status": "running", "step": "3/6"})
-            toxicity_v3 = {"is_toxic": False, "overall_score": 0.0, "severity": "Low", "categories": {}, "detection_layers": []}
+            yield _sse_event(
+                "progress", {"module": "toxicity", "status": "running", "step": "3/6"}
+            )
+            toxicity_v3 = {
+                "is_toxic": False,
+                "overall_score": 0.0,
+                "severity": "Low",
+                "categories": {},
+                "detection_layers": [],
+            }
             if len(req.article_text) > 5:
                 try:
                     toxicity_v3 = toxicity_v3_engine.analyze(req.article_text[:1000])
@@ -299,31 +320,69 @@ def analyze_content_v3_stream(req: ScanRequest):
             yield _sse_event("module", {"module": "toxicity_v3", "data": toxicity_v3})
 
             # Module 4: Fact Check
-            yield _sse_event("progress", {"module": "fact_check", "status": "running", "step": "4/6"})
-            fact_check_v3 = {"score": 50, "verdict": "Unverifiable", "confidence": "Low", "evidence": [], "verification_methods": []}
+            yield _sse_event(
+                "progress", {"module": "fact_check", "status": "running", "step": "4/6"}
+            )
+            fact_check_v3 = {
+                "score": 50,
+                "verdict": "Unverifiable",
+                "confidence": "Low",
+                "evidence": [],
+                "verification_methods": [],
+            }
             if len(req.article_text) > 20:
                 try:
-                    fact_check_v3 = fact_checker_v3_engine.check(req.article_text, req.url)
+                    fact_check_v3 = fact_checker_v3_engine.check(
+                        req.article_text, req.url
+                    )
                 except Exception as e:
                     print(f"⚠️ [SSE] Fact check failed: {e}")
-            yield _sse_event("module", {"module": "fact_check_v3", "data": fact_check_v3})
+            yield _sse_event(
+                "module", {"module": "fact_check_v3", "data": fact_check_v3}
+            )
 
             # Module 5: Risk Score
-            yield _sse_event("progress", {"module": "risk_score", "status": "running", "step": "5/6"})
-            risk_score_v3 = {"risk_score": 0.0, "risk_level": "Low", "confidence": 0.0, "risk_breakdown": {}, "warnings": [], "recommendations": []}
+            yield _sse_event(
+                "progress", {"module": "risk_score", "status": "running", "step": "5/6"}
+            )
+            risk_score_v3 = {
+                "risk_score": 0.0,
+                "risk_level": "Low",
+                "confidence": 0.0,
+                "risk_breakdown": {},
+                "warnings": [],
+                "recommendations": [],
+            }
             if len(req.article_text) > 20:
                 try:
-                    risk_score_v3 = risk_scorer_v3_engine.score(req.article_text, req.url)
+                    risk_score_v3 = risk_scorer_v3_engine.score(
+                        req.article_text, req.url
+                    )
                 except Exception as e:
                     print(f"⚠️ [SSE] Risk score failed: {e}")
-            yield _sse_event("module", {"module": "risk_score_v3", "data": risk_score_v3})
+            yield _sse_event(
+                "module", {"module": "risk_score_v3", "data": risk_score_v3}
+            )
 
             # Module 6: Comments
-            yield _sse_event("progress", {"module": "comments", "status": "running", "step": "6/6"})
-            comments_analysis = {"total": 0, "toxic_count": 0, "toxic_percentage": 0.0, "toxic_comments": [], "filter_stats": {}, "api_calls_saved": 0}
+            yield _sse_event(
+                "progress", {"module": "comments", "status": "running", "step": "6/6"}
+            )
+            comments_analysis = {
+                "total": 0,
+                "toxic_count": 0,
+                "toxic_percentage": 0.0,
+                "toxic_comments": [],
+                "filter_stats": {},
+                "api_calls_saved": 0,
+            }
             if req.comments:
-                comments_analysis = _analyze_comments_v31(req.comments[:50], summary_text, req.url, learning_ctx)
-            yield _sse_event("module", {"module": "comments_analysis", "data": comments_analysis})
+                comments_analysis = _analyze_comments_v31(
+                    req.comments[:50], summary_text, req.url, learning_ctx
+                )
+            yield _sse_event(
+                "module", {"module": "comments_analysis", "data": comments_analysis}
+            )
 
             # Check blocklist
             blocklist_info = {
@@ -666,7 +725,9 @@ def analyze_content_v3(req: ScanRequest):
         raise HTTPException(status_code=500, detail=f"v3.1 analysis error: {str(e)}")
 
 
-def _analyze_comments_v31(comments: List[str], article_summary: str, url: str, learning_ctx: str = "") -> dict:
+def _analyze_comments_v31(
+    comments: List[str], article_summary: str, url: str, learning_ctx: str = ""
+) -> dict:
     """
     Context-aware batch comment analysis.
 
@@ -803,7 +864,9 @@ def _analyze_comments_v31(comments: List[str], article_summary: str, url: str, l
                         f"⚡ Batch {chunk_num}/{total_chunks}: Analyzing {len(chunk)} comments..."
                     )
 
-                chunk_results = _batch_gemini_analyze(chunk, article_summary, learning_ctx)
+                chunk_results = _batch_gemini_analyze(
+                    chunk, article_summary, learning_ctx
+                )
                 all_batch_results.extend(chunk_results)
 
                 # Rate limit protection: sleep between chunks (10 RPM = ~6s between calls)
@@ -836,7 +899,9 @@ def _analyze_comments_v31(comments: List[str], article_summary: str, url: str, l
     }
 
 
-def _batch_gemini_analyze(comments: List[str], article_summary: str, learning_ctx: str = "") -> List[dict]:
+def _batch_gemini_analyze(
+    comments: List[str], article_summary: str, learning_ctx: str = ""
+) -> List[dict]:
     """
     Send multiple comments in ONE Gemini API call with article context.
     Returns list of analysis dicts.
@@ -915,8 +980,8 @@ Quy tắc:
 - Chỉ đánh dấu toxic nếu có ngôn ngữ xúc phạm, đe dọa, hoặc kích động thù hận
 - Trả lời CHỈ JSON array, không thêm gì khác"""
 
-    # Scale tokens based on batch size (~80 tokens per comment result)
-    max_tokens = min(4000, max(800, len(comments) * 100))
+    # Scale tokens based on batch size (~150 tokens per comment result with Vietnamese text)
+    max_tokens = min(8000, max(1500, len(comments) * 200))
 
     response = client.models.generate_content(
         model=MODEL_NAME,
@@ -941,14 +1006,44 @@ Quy tắc:
     try:
         parsed = json.loads(raw)
     except json.JSONDecodeError:
-        # Try to salvage partial JSON
+        # Try to salvage partial/truncated JSON
         import re as _re
 
+        parsed = None
+        # First: try to extract a complete JSON array
         match = _re.search(r"\[.*\]", raw, _re.DOTALL)
         if match:
-            parsed = json.loads(match.group())
-        else:
-            raise
+            try:
+                parsed = json.loads(match.group())
+            except json.JSONDecodeError:
+                # Array found but still malformed — try repair
+                try:
+                    repaired = _repair_truncated_json(match.group())
+                    parsed = json.loads(repaired)
+                    print(f"✅ [v3.1] Repaired truncated JSON ({len(parsed)} items)")
+                except json.JSONDecodeError:
+                    pass
+
+        if parsed is None:
+            # Try adding missing closing brackets to the whole response
+            try:
+                repaired = _repair_truncated_json(raw)
+                parsed = json.loads(repaired)
+                print(f"✅ [v3.1] Repaired raw JSON ({len(parsed)} items)")
+            except json.JSONDecodeError:
+                # Last resort: extract individual complete JSON objects
+                objects = _re.findall(r'\{[^{}]*\}', raw)
+                if objects:
+                    parsed = []
+                    for obj_str in objects:
+                        try:
+                            parsed.append(json.loads(obj_str))
+                        except json.JSONDecodeError:
+                            continue
+                    print(f"✅ [v3.1] Extracted {len(parsed)} objects from malformed JSON")
+                else:
+                    print(f"⚠️ [v3.1] Could not parse Gemini response, using fallback")
+                    return _fallback_results(comments)
 
     results = []
     for item in parsed:
@@ -986,6 +1081,39 @@ Quy tắc:
 
     print(f"✅ [v3.1] Batch analyzed {len(comments)} comments (1 API call)")
     return results
+
+
+def _repair_truncated_json(raw: str) -> str:
+    """
+    Attempt to repair truncated JSON from Gemini (e.g. unterminated strings, missing brackets).
+    Common issue: Gemini hits max_output_tokens mid-string.
+    """
+    import re as _re
+
+    s = raw.strip()
+
+    # Remove trailing incomplete object/entry (after last complete },)
+    # Find last complete JSON object ending with }
+    last_complete = s.rfind('},')
+    if last_complete > 0:
+        s = s[:last_complete + 1]  # Keep up to the }
+
+    # If we're inside an unterminated string, close it
+    # Count unescaped quotes
+    in_string = False
+    for ch in s:
+        if ch == '"' and (not in_string or s[max(0, s.index(ch) - 1)] != '\\'):
+            in_string = not in_string
+    if in_string:
+        s += '"'
+
+    # Close any open braces/brackets
+    open_braces = s.count('{') - s.count('}')
+    open_brackets = s.count('[') - s.count(']')
+    s += '}' * max(0, open_braces)
+    s += ']' * max(0, open_brackets)
+
+    return s
 
 
 def _fallback_results(comments: List[str]) -> List[dict]:

@@ -75,11 +75,13 @@ class CommunityBlocklist:
                     data["blocklist"].append(domain)
                     data["stats"]["blocked_domains"] += 1
                     newly_blocked = True
-                    print(f"🚫 Domain blocklisted: {domain} ({data['domain_counts'][domain]} reports)")
+                    print(
+                        f"🚫 Domain blocklisted: {domain} ({data['domain_counts'][domain]} reports)"
+                    )
 
                 # Cap reports
                 if len(data["reports"]) > self.MAX_REPORTS:
-                    data["reports"] = data["reports"][-self.MAX_REPORTS:]
+                    data["reports"] = data["reports"][-self.MAX_REPORTS :]
 
                 self._write(data)
 
@@ -88,8 +90,11 @@ class CommunityBlocklist:
                     "domain": domain,
                     "report_count": data["domain_counts"][domain],
                     "newly_blocked": newly_blocked,
-                    "message": "Cảm ơn báo cáo của bạn! 🙏" if not newly_blocked
-                    else f"🚫 {domain} đã bị chặn bởi cộng đồng!",
+                    "message": (
+                        "Cảm ơn báo cáo của bạn! 🙏"
+                        if not newly_blocked
+                        else f"🚫 {domain} đã bị chặn bởi cộng đồng!"
+                    ),
                 }
             except Exception as e:
                 print(f"⚠️ Blocklist error: {e}")

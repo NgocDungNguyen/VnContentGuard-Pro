@@ -1,0 +1,10 @@
+{
+  "reports": [],
+  "domain_counts": {},
+  "blocklist": [],
+  "whitelist": [],
+  "stats": {
+    "total_reports": 0,
+    "blocked_domains": 0
+  }
+}
