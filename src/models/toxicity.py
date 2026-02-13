@@ -51,6 +51,7 @@ class ToxicityAnalyzer:
     def _rotate_key_and_retry(self, error_msg: str = "") -> bool:
         """Rotate to next API key using cooldown instead of permanent exhaustion."""
         from src.models.gemini_llm import APIKeyRotator
+
         retry_delay = APIKeyRotator.parse_retry_delay(error_msg)
         self.key_rotator.mark_key_rate_limited(retry_delay)
         return self._initialize_client()

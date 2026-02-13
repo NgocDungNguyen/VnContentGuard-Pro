@@ -245,7 +245,7 @@ class SentimentAnalyzerV4:
             label = v2_result.get("label", "Neutral")
 
             # For keyword-based analysis:
-            # - If no keywords found (score=0.0, label=Neutral), this means the text has 
+            # - If no keywords found (score=0.0, label=Neutral), this means the text has
             #   no strong sentiment indicators → it IS neutral with reasonable confidence
             # - Don't show 0% confidence for neutral news articles — that's misleading
             if label == "Neutral" and raw_score == 0.0:

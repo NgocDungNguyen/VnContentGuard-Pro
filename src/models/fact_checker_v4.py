@@ -267,9 +267,11 @@ Trả lời ngắn gọn, khách quan, bằng tiếng Việt."""
                     or "exhausted" in error_lower
                 ) and self.key_rotator:
                     from src.models.gemini_llm import APIKeyRotator
+
                     retry_delay = APIKeyRotator.parse_retry_delay(error_str)
                     self.key_rotator.mark_key_rate_limited(retry_delay)
                     from google import genai
+
                     api_key = self.key_rotator.get_current_key()
                     if api_key:
                         self.gemini_client = genai.Client(api_key=api_key)

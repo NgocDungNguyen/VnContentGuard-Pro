@@ -183,7 +183,7 @@ class ToxicityAnalyzerV4:
         IMPORTANT: We directly scan against the regex blacklist patterns here
         instead of calling regex_analyzer.analyze_comments() because that method
         also triggers Gemini AI calls, burning API quota per comment.
-        
+
         NEWS CONTEXT DETECTION: If the text appears to be a news article (contains
         journalistic indicators), we skip regex matching for violence/gore categories
         because words like "chết", "cháy", "thi thể" are normal in news reporting.
@@ -195,20 +195,20 @@ class ToxicityAnalyzerV4:
             import re as _re
 
             lower_text = text.lower()
-            
+
             # ----- NEWS CONTEXT DETECTION -----
             news_indicators = [
-                r'(theo|nguồn|tin từ|phóng viên|báo cáo|thông tin từ|trả lời phỏng vấn)',
-                r'(công an|cảnh sát|csgt|chính quyền|ubnd|chủ tịch|thủ tướng|bộ trưởng)',
-                r'(bệnh viện|cấp cứu|nạn nhân|thiệt hại|hiện trường|nguyên nhân)',
-                r'(ngày \d|tháng \d|\d+/\d+|\d+ giờ|sáng nay|tối qua|rạng sáng)',
-                r'(quận|huyện|phường|xã|tỉnh|thành phố|tp\.|đường|phố)',
-                r'(vụ việc|sự cố|sự kiện|vụ án|vụ cháy|vụ tai nạn|vụ va chạm)',
+                r"(theo|nguồn|tin từ|phóng viên|báo cáo|thông tin từ|trả lời phỏng vấn)",
+                r"(công an|cảnh sát|csgt|chính quyền|ubnd|chủ tịch|thủ tướng|bộ trưởng)",
+                r"(bệnh viện|cấp cứu|nạn nhân|thiệt hại|hiện trường|nguyên nhân)",
+                r"(ngày \d|tháng \d|\d+/\d+|\d+ giờ|sáng nay|tối qua|rạng sáng)",
+                r"(quận|huyện|phường|xã|tỉnh|thành phố|tp\.|đường|phố)",
+                r"(vụ việc|sự cố|sự kiện|vụ án|vụ cháy|vụ tai nạn|vụ va chạm)",
             ]
-            
+
             news_score = sum(1 for p in news_indicators if _re.search(p, lower_text))
             is_news_context = news_score >= 3
-            
+
             # Categories safe to skip for news articles
             news_safe_categories = {
                 "Violence: Murder/Torture",
@@ -217,7 +217,7 @@ class ToxicityAnalyzerV4:
                 "Self-Harm/Suicide",
                 "Self-Harm: Slang/Evasion",
             }
-            
+
             is_toxic = False
             matched_category = None
             matched_keyword = None
@@ -225,7 +225,7 @@ class ToxicityAnalyzerV4:
             for pattern, label in self.regex_analyzer.blacklist_patterns:
                 if is_news_context and label in news_safe_categories:
                     continue
-                    
+
                 match = _re.search(pattern, lower_text)
                 if match:
                     is_toxic = True

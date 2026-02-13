@@ -183,7 +183,7 @@ class ToxicityAnalyzerV3:
         IMPORTANT: We directly scan against the regex blacklist patterns here
         instead of calling regex_analyzer.analyze_comments() because that method
         also triggers Gemini AI calls, burning API quota per comment.
-        
+
         NEWS CONTEXT DETECTION: If the text appears to be a news article (contains
         journalistic indicators), we skip regex matching because words like
         "chết", "cháy", "thi thể" are normal in news reporting, not toxic content.
@@ -195,28 +195,28 @@ class ToxicityAnalyzerV3:
             import re as _re
 
             lower_text = text.lower()
-            
+
             # ----- NEWS CONTEXT DETECTION -----
             # News articles naturally contain "violent" words (chết, cháy, thi thể, etc.)
             # but they are NOT toxic — they are factual reporting.
             # Only flag text that is clearly user-generated toxic content (insults, slurs, threats)
             news_indicators = [
-                r'(theo|nguồn|tin từ|phóng viên|báo cáo|thông tin từ|trả lời phỏng vấn)',  # Source attribution
-                r'(công an|cảnh sát|csgt|chính quyền|ubnd|chủ tịch|thủ tướng|bộ trưởng)',  # Government/police
-                r'(bệnh viện|cấp cứu|nạn nhân|thiệt hại|hiện trường|nguyên nhân)',  # Incident reporting
-                r'(ngày \d|tháng \d|\d+/\d+|\d+ giờ|sáng nay|tối qua|rạng sáng)',  # Dates/times
-                r'(quận|huyện|phường|xã|tỉnh|thành phố|tp\.|đường|phố)',  # Locations
-                r'(vụ việc|sự cố|sự kiện|vụ án|vụ cháy|vụ tai nạn|vụ va chạm)',  # Incident terms
+                r"(theo|nguồn|tin từ|phóng viên|báo cáo|thông tin từ|trả lời phỏng vấn)",  # Source attribution
+                r"(công an|cảnh sát|csgt|chính quyền|ubnd|chủ tịch|thủ tướng|bộ trưởng)",  # Government/police
+                r"(bệnh viện|cấp cứu|nạn nhân|thiệt hại|hiện trường|nguyên nhân)",  # Incident reporting
+                r"(ngày \d|tháng \d|\d+/\d+|\d+ giờ|sáng nay|tối qua|rạng sáng)",  # Dates/times
+                r"(quận|huyện|phường|xã|tỉnh|thành phố|tp\.|đường|phố)",  # Locations
+                r"(vụ việc|sự cố|sự kiện|vụ án|vụ cháy|vụ tai nạn|vụ va chạm)",  # Incident terms
             ]
-            
+
             news_score = 0
             for pattern in news_indicators:
                 if _re.search(pattern, lower_text):
                     news_score += 1
-            
+
             # If text has 3+ news indicators, it's likely a news article → skip Violence/Gore regex
             is_news_context = news_score >= 3
-            
+
             # Categories to skip for news articles (these match normal journalism words)
             news_safe_categories = {
                 "Violence: Murder/Torture",
@@ -225,7 +225,7 @@ class ToxicityAnalyzerV3:
                 "Self-Harm/Suicide",
                 "Self-Harm: Slang/Evasion",
             }
-            
+
             is_toxic = False
             matched_category = None
             matched_keyword = None
@@ -234,7 +234,7 @@ class ToxicityAnalyzerV3:
                 # Skip violence/gore categories for news articles
                 if is_news_context and label in news_safe_categories:
                     continue
-                    
+
                 match = _re.search(pattern, lower_text)
                 if match:
                     is_toxic = True

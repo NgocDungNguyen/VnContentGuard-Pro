@@ -168,6 +168,7 @@ class ArticleSummarizer:
 
                     if is_quota and self.key_rotator and attempt < max_attempts - 1:
                         from src.models.gemini_llm import APIKeyRotator
+
                         retry_delay = APIKeyRotator.parse_retry_delay(error_str)
                         self.key_rotator.mark_key_rate_limited(retry_delay)
                         self._init_client()

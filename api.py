@@ -936,6 +936,7 @@ def _batch_gemini_analyze(
             error_lower = error_str.lower()
             if "429" in error_lower or "quota" in error_lower:
                 from src.models.gemini_llm import APIKeyRotator
+
                 retry_delay = APIKeyRotator.parse_retry_delay(error_str)
                 print(
                     f"⚠️ [v4] Batch attempt {attempt+1}/{max_batch_attempts} got 429, cooldown {retry_delay:.0f}s..."
