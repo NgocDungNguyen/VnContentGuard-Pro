@@ -1,7 +1,12 @@
 import asyncio
 import json
 import platform
+import sys
 from typing import List, Optional
+
+# Fix CP1258 encoding issues on Windows (emoji in print statements)
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
