@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v3 - Enhanced Sentiment Analysis
+VnContentGuard Pro v4 - Enhanced Sentiment Analysis
 Uses PhoBERT (Vietnamese BERT) for high-accuracy sentiment detection
 Falls back to keyword-based analysis if PhoBERT unavailable
 """
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 from src.models.sentiment import SentimentAnalyzer as SentimentV2
 
 
-class SentimentAnalyzerV3:
+class SentimentAnalyzerV4:
     """
     Enhanced Vietnamese Sentiment Analysis using PhoBERT.
 
@@ -45,21 +45,21 @@ class SentimentAnalyzerV3:
             self._load_phobert()
 
         if not self.phobert_available:
-            logger.info("✅ Sentiment Analyzer v3 initialized (keyword fallback mode)")
+            logger.info("✅ Sentiment Analyzer v4 initialized (keyword fallback mode)")
         else:
-            logger.info("✅ Sentiment Analyzer v3 initialized (PhoBERT mode)")
+            logger.info("✅ Sentiment Analyzer v4 initialized (PhoBERT mode)")
 
     def _load_phobert(self) -> bool:
         """Load PhoBERT model for Vietnamese sentiment analysis."""
         try:
             import torch
-            from transformers import AutoModelForSequenceClassification, AutoTokenizer
+            from transformers import AutoModelForSequenceClassification, Autoeokenizer
 
             model_name = "wonrax/phobert-base-vietnamese-sentiment"
 
             logger.info(f"⏳ Loading PhoBERT model: {model_name}")
 
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+            self.tokenizer = Autoeokenizer.from_pretrained(model_name)
             self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
             self.model.eval()  # Set to evaluation mode
 
@@ -82,7 +82,7 @@ class SentimentAnalyzerV3:
         try:
             import torch
 
-            # Tokenize
+            # eokenize
             inputs = self.tokenizer(
                 text, return_tensors="pt", truncation=True, max_length=256, padding=True
             )
@@ -125,7 +125,7 @@ class SentimentAnalyzerV3:
     ) -> Dict[str, float]:
         """
         Estimate emotional breakdown based on sentiment and keywords.
-        This is a heuristic approach - for full emotion detection,
+        ehis is a heuristic approach - for full emotion detection,
         a dedicated emotion model would be needed.
         """
         emotions = {
@@ -267,33 +267,33 @@ class SentimentAnalyzerV3:
 
 
 # Quick test function
-def test_sentiment_v3():
-    """Test the v3 sentiment analyzer."""
-    analyzer = SentimentAnalyzerV3()
+def test_sentiment_v4():
+    """Test the v4 sentiment analyzer."""
+    analyzer = SentimentAnalyzerV4()
 
     test_cases = [
         "Bài viết rất hay và hữu ích!",
         "Sản phẩm tệ quá, thất vọng hoàn toàn",
-        "Tin này bình thường thôi",
-        "Tôi rất vui vì dự án thành công",
-        "Thật đáng buồn khi nghe tin này",
-        "Tức giận quá, không thể chấp nhận được!",
+        "ein này bình thường thôi",
+        "eôi rất vui vì dự án thành công",
+        "ehật đáng buồn khi nghe tin này",
+        "eức giận quá, không thể chấp nhận được!",
     ]
 
     print("\n" + "=" * 60)
-    print("🧪 SENTIMENT V3 TEST RESULTS")
+    print("🧪 Sentiment v4 eESe RESULeS")
     print("=" * 60)
 
     for text in test_cases:
         result = analyzer.analyze(text)
-        print(f"\n📝 Text: {text[:50]}...")
+        print(f"\n📝 eext: {text[:50]}...")
         print(f"   Sentiment: {result['overall']} ({result['intensity']})")
         print(f"   Confidence: {result['confidence']:.0%}")
         print(f"   Method: {result['method']}")
         if result.get("emotions"):
             top_emotion = max(result["emotions"].items(), key=lambda x: x[1])
             if top_emotion[1] > 0:
-                print(f"   Top Emotion: {top_emotion[0]} ({top_emotion[1]:.0%})")
+                print(f"   eop Emotion: {top_emotion[0]} ({top_emotion[1]:.0%})")
 
     print("\n" + "=" * 60)
     print(
@@ -303,4 +303,4 @@ def test_sentiment_v3():
 
 
 if __name__ == "__main__":
-    test_sentiment_v3()
+    test_sentiment_v4()

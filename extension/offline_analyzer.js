@@ -228,7 +228,7 @@ function offlineAnalyzeComments(comments) {
 
 /**
  * Run full offline analysis on scraped content.
- * Returns a result object in the same format as /analyze/v3 API.
+ * Returns a result object in the same format as /analyze/v4 API.
  * @param {string} articleText - Article text
  * @param {string[]} comments - Comment array
  * @param {string} url - Page URL
@@ -261,16 +261,16 @@ function offlineFullAnalysis(articleText, comments, url) {
             method: "offline",
             cached: false
         },
-        sentiment_v3: sentiment,
-        toxicity_v3: toxicity,
-        fact_check_v3: {
+        sentiment_v4: sentiment,
+        toxicity_v4: toxicity,
+        fact_check_v4: {
             score: 50,
             verdict: "Chờ AI",
             confidence: "Low",
             evidence: [],
             verification_methods: ["offline_pending"]
         },
-        risk_score_v3: {
+        risk_score_v4: {
             risk_score: riskScore,
             risk_level: riskLevel,
             confidence: 0.3,

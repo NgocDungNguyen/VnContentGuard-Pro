@@ -1,7 +1,7 @@
 """
-VnContentGuard Pro v3 - Objective Risk Scoring System
+VnContentGuard Pro v4 - Objective Risk Scoring System
 =====================================================
-Comprehensive risk assessment integrating all v3 detection modules:
+Comprehensive risk assessment integrating all v4 detection modules:
 - 40% Fake News Score (fact-checking credibility)
 - 25% Toxicity Score (harmful content detection)
 - 15% Sentiment Score (emotional manipulation detection)
@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class RiskScorerV3:
+class RiskScorerV4:
     """
     Objective Risk Scoring System
 
@@ -38,11 +38,13 @@ class RiskScorerV3:
     All scores normalized to 0-100 scale
     """
 
-    def __init__(self, sentiment_analyzer=None, toxicity_analyzer=None, fact_checker=None):
-        print("⏳ Initializing Risk Scorer v3...")
+    def __init__(
+        self, sentiment_analyzer=None, toxicity_analyzer=None, fact_checker=None
+    ):
+        print("⏳ Initializing Risk Scorer v4...")
 
         # Feature flags
-        self.use_v3 = os.getenv("USE_V3", "true").lower() == "true"
+        self.USE_V4 = os.getenv("USE_V4", "true").lower() == "true"
         self.use_fact_checking = (
             os.getenv("USE_FACT_CHECKING", "true").lower() == "true"
         )
@@ -54,29 +56,32 @@ class RiskScorerV3:
 
         if not self.sentiment_analyzer:
             try:
-                from .sentiment_v3 import SentimentAnalyzerV3
-                self.sentiment_analyzer = SentimentAnalyzerV3(use_phobert=False)
-                print("✅ Sentiment v3 loaded")
+                from .sentiment_v4 import SentimentAnalyzerV4
+
+                self.sentiment_analyzer = SentimentAnalyzerV4(use_phobert=False)
+                print("✅ Sentiment v4 loaded")
             except Exception as e:
-                print(f"⚠️ Sentiment v3 unavailable: {e}")
+                print(f"⚠️ Sentiment v4 unavailable: {e}")
 
         if not self.toxicity_analyzer:
             try:
-                from .toxicity_v3 import ToxicityAnalyzerV3
-                self.toxicity_analyzer = ToxicityAnalyzerV3(use_detoxify=False)
-                print("✅ Toxicity v3 loaded")
+                from .toxicity_v4 import ToxicityAnalyzerV4
+
+                self.toxicity_analyzer = ToxicityAnalyzerV4(use_detoxify=False)
+                print("✅ Toxicity v4 loaded")
             except Exception as e:
-                print(f"⚠️ Toxicity v3 unavailable: {e}")
+                print(f"⚠️ Toxicity v4 unavailable: {e}")
 
         if not self.fact_checker:
             try:
-                from .fact_checker_v3 import FactCheckerV3
-                self.fact_checker = FactCheckerV3()
-                print("✅ Fact-Checker v3 loaded")
-            except Exception as e:
-                print(f"⚠️ Fact-Checker v3 unavailable: {e}")
+                from .fact_checker_v4 import FactCheckerV4
 
-        print("✅ Risk Scorer v3 Ready!")
+                self.fact_checker = FactCheckerV4()
+                print("✅ Fact-Checker v4 loaded")
+            except Exception as e:
+                print(f"⚠️ Fact-Checker v4 unavailable: {e}")
+
+        print("✅ Risk Scorer v4 Ready!")
 
     def score(self, text: str, url: Optional[str] = None) -> Dict:
         """
@@ -121,14 +126,14 @@ class RiskScorerV3:
             sentiment_risk = self._calculate_sentiment_risk(sentiment_result)
             results["breakdown"]["sentiment_component"] = sentiment_risk * 0.15
 
-            # Get sentiment label (handle both v2 'sentiment' and v3 'label')
+            # Get sentiment label (handle both v2 'sentiment' and v4 'label')
             sentiment_label = sentiment_result.get("sentiment") or sentiment_result.get(
                 "label", "Unknown"
             )
 
             results["evidence"].append(
                 {
-                    "module": "Phân tích cảm xúc v3",
+                    "module": "Phân tích cảm xúc v4",
                     "finding": f"{sentiment_label} (độ tin cậy {sentiment_result.get('confidence', 0)*100:.0f}%)",
                     "risk_contribution": f"{sentiment_risk}/100",
                 }
@@ -145,7 +150,7 @@ class RiskScorerV3:
 
             results["evidence"].append(
                 {
-                    "module": "Phát hiện độc hại v3",
+                    "module": "Phát hiện độc hại v4",
                     "finding": f"Mức độ: {toxicity_result['severity']} (Điểm: {toxicity_result['overall_score']:.2f})",
                     "risk_contribution": f"{toxicity_risk}/100",
                 }
@@ -167,7 +172,7 @@ class RiskScorerV3:
 
             results["evidence"].append(
                 {
-                    "module": "Kiểm tra thực tế v3",
+                    "module": "Kiểm tra thực tế v4",
                     "finding": f"{fact_result['verdict']} (độ tin cậy {fact_result['confidence']})",
                     "risk_contribution": f"{credibility_risk}/100",
                 }
@@ -190,7 +195,7 @@ class RiskScorerV3:
 
                 results["evidence"].append(
                     {
-                        "module": "Phân tích nguồn v3",
+                        "module": "Phân tích nguồn v4",
                         "finding": f"{source_result['verdict']} (Điểm: {source_result['reputation_score']}/100)",
                         "risk_contribution": f"{source_risk}/100",
                     }
@@ -252,7 +257,7 @@ class RiskScorerV3:
         Convert sentiment to risk score
         Extreme emotions (very positive/negative) indicate potential manipulation
         """
-        # Handle both 'sentiment' (v2) and 'label' (v3) keys
+        # Handle both 'sentiment' (v2) and 'label' (v4) keys
         sentiment = sentiment_result.get("sentiment") or sentiment_result.get(
             "label", "Neutral"
         )
@@ -323,23 +328,29 @@ class RiskScorerV3:
             results["raw_scores"]["sentiment"] = sentiment_result
             sentiment_risk = self._calculate_sentiment_risk(sentiment_result)
             results["breakdown"]["sentiment_component"] = sentiment_risk * 0.15
-            sentiment_label = sentiment_result.get("sentiment") or sentiment_result.get("label", "Unknown")
-            results["evidence"].append({
-                "module": "Phân tích cảm xúc v3",
-                "finding": f"{sentiment_label} (độ tin cậy {sentiment_result.get('confidence', 0)*100:.0f}%)",
-                "risk_contribution": f"{sentiment_risk}/100",
-            })
+            sentiment_label = sentiment_result.get("sentiment") or sentiment_result.get(
+                "label", "Unknown"
+            )
+            results["evidence"].append(
+                {
+                    "module": "Phân tích cảm xúc v4",
+                    "finding": f"{sentiment_label} (độ tin cậy {sentiment_result.get('confidence', 0)*100:.0f}%)",
+                    "risk_contribution": f"{sentiment_risk}/100",
+                }
+            )
 
         # Component 2: Toxicity (25% weight) — use pre-computed
         if toxicity_result:
             results["raw_scores"]["toxicity"] = toxicity_result
             toxicity_risk = self._calculate_toxicity_risk(toxicity_result)
             results["breakdown"]["toxicity_component"] = toxicity_risk * 0.25
-            results["evidence"].append({
-                "module": "Phát hiện độc hại v3",
-                "finding": f"Mức độ: {toxicity_result.get('severity', 'None')} (Điểm: {toxicity_result.get('overall_score', 0):.2f})",
-                "risk_contribution": f"{toxicity_risk}/100",
-            })
+            results["evidence"].append(
+                {
+                    "module": "Phát hiện độc hại v4",
+                    "finding": f"Mức độ: {toxicity_result.get('severity', 'None')} (Điểm: {toxicity_result.get('overall_score', 0):.2f})",
+                    "risk_contribution": f"{toxicity_risk}/100",
+                }
+            )
             if toxicity_result.get("is_toxic"):
                 cats = toxicity_result.get("categories", {})
                 if cats:
@@ -352,11 +363,13 @@ class RiskScorerV3:
             results["raw_scores"]["fact_check"] = fact_check_result
             credibility_risk = 100 - fact_check_result.get("score", 50)
             results["breakdown"]["fake_news_component"] = credibility_risk * 0.40
-            results["evidence"].append({
-                "module": "Kiểm tra thực tế v3",
-                "finding": f"{fact_check_result.get('verdict', 'Unknown')} (độ tin cậy {fact_check_result.get('confidence', 'Low')})",
-                "risk_contribution": f"{credibility_risk}/100",
-            })
+            results["evidence"].append(
+                {
+                    "module": "Kiểm tra thực tế v4",
+                    "finding": f"{fact_check_result.get('verdict', 'Unknown')} (độ tin cậy {fact_check_result.get('confidence', 'Low')})",
+                    "risk_contribution": f"{credibility_risk}/100",
+                }
+            )
             if fact_check_result.get("verdict") in ["False", "Likely False"]:
                 results["recommendations"].append(
                     "⚠️ Phát hiện thông tin đáng ngờ — hãy kiểm chứng từ nhiều nguồn"
@@ -369,11 +382,13 @@ class RiskScorerV3:
                 results["raw_scores"]["source"] = source_result
                 source_risk = 100 - source_result["reputation_score"]
                 results["breakdown"]["source_component"] = source_risk * 0.10
-                results["evidence"].append({
-                    "module": "Phân tích nguồn v3",
-                    "finding": f"{source_result['verdict']} (Điểm: {source_result['reputation_score']}/100)",
-                    "risk_contribution": f"{source_risk}/100",
-                })
+                results["evidence"].append(
+                    {
+                        "module": "Phân tích nguồn v4",
+                        "finding": f"{source_result['verdict']} (Điểm: {source_result['reputation_score']}/100)",
+                        "risk_contribution": f"{source_risk}/100",
+                    }
+                )
                 if source_result.get("risk_factors"):
                     results["recommendations"].append(
                         f"⚠️ Rủi ro nguồn: {', '.join(source_result['risk_factors'])}"
@@ -384,12 +399,16 @@ class RiskScorerV3:
         results["breakdown"]["manipulation_component"] = manipulation_risk * 0.10
         results["raw_scores"]["manipulation"] = manipulation_risk
         if manipulation_risk > 50:
-            results["evidence"].append({
-                "module": "Phát hiện thao túng",
-                "finding": "Phát hiện dấu hiệu thao túng trong nội dung",
-                "risk_contribution": f"{manipulation_risk}/100",
-            })
-            results["recommendations"].append("⚠️ Nội dung có dấu hiệu thao túng (giật tít, giật gân)")
+            results["evidence"].append(
+                {
+                    "module": "Phát hiện thao túng",
+                    "finding": "Phát hiện dấu hiệu thao túng trong nội dung",
+                    "risk_contribution": f"{manipulation_risk}/100",
+                }
+            )
+            results["recommendations"].append(
+                "⚠️ Nội dung có dấu hiệu thao túng (giật tít, giật gân)"
+            )
 
         # Final score
         results["risk_score"] = max(0, min(100, sum(results["breakdown"].values())))
@@ -402,7 +421,10 @@ class RiskScorerV3:
             "Medium": "⚠️ RỦI RO VỮA: Cẩn thận và kiểm chứng thông tin",
         }
         results["recommendations"].insert(
-            0, level_recs.get(results["risk_level"], "✅ AN TOÀN: Nội dung tương đối đáng tin cậy")
+            0,
+            level_recs.get(
+                results["risk_level"], "✅ AN TOÀN: Nội dung tương đối đáng tin cậy"
+            ),
         )
 
         return results
@@ -518,13 +540,13 @@ class RiskScorerV3:
 # Convenience function
 def calculate_risk(text: str, url: Optional[str] = None) -> Dict:
     """Quick risk calculation"""
-    scorer = RiskScorerV3()
+    scorer = RiskScorerV4()
     return scorer.score(text, url)
 
 
 if __name__ == "__main__":
     # Quick test
-    scorer = RiskScorerV3()
+    scorer = RiskScorerV4()
 
     test_cases = [
         ("You won't believe this SHOCKING news! Click here NOW!!!", None),
@@ -533,7 +555,7 @@ if __name__ == "__main__":
         ("This is a neutral informative article about science.", "https://bbc.com"),
     ]
 
-    print("\n🧪 Testing Risk Scorer v3:")
+    print("\n🧪 Testing Risk Scorer v4:")
     for text, url in test_cases:
         result = scorer.score(text, url)
         print(f"\nText: {text[:60]}...")

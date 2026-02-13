@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v3 - Article Summarizer
+VnContentGuard Pro v4 - Article Summarizer
 ============================================
 Generates concise 2-3 sentence summaries of Vietnamese news articles
 using Gemini AI. Results are cached per URL to avoid redundant API calls.
@@ -184,16 +184,16 @@ class ArticleSummarizer:
 
         # Common Vietnamese meta-prefixes Gemini adds
         meta_patterns = [
-            r'^Dưới đây là[^.,:]*[.,:]\s*',
-            r'^Đây là[^.,:]*[.,:]\s*',
-            r'^Tóm tắt[^.,:]*[.,:]\s*',
-            r'^Đoạn tóm tắt[^.,:]*[.,:]\s*',
-            r'^Theo yêu cầu[^.,:]*[.,:]\s*',
-            r'^Bài viết[^.,:]*[.,:]\s*',
+            r"^Dưới đây là[^.,:]*[.,:]\s*",
+            r"^Đây là[^.,:]*[.,:]\s*",
+            r"^Tóm tắt[^.,:]*[.,:]\s*",
+            r"^Đoạn tóm tắt[^.,:]*[.,:]\s*",
+            r"^Theo yêu cầu[^.,:]*[.,:]\s*",
+            r"^Bài viết[^.,:]*[.,:]\s*",
         ]
         result = text
         for pattern in meta_patterns:
-            result = re.sub(pattern, '', result, count=1, flags=re.IGNORECASE)
+            result = re.sub(pattern, "", result, count=1, flags=re.IGNORECASE)
             if result != text:
                 break  # Only strip one prefix
 

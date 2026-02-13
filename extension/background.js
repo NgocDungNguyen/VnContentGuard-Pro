@@ -19,13 +19,13 @@
 
 // API endpoints (local first, cloud fallback)
 const API_ENDPOINTS = [
-    "http://127.0.0.1:8000/analyze/v3",
-    "https://vncontentguard-pro.onrender.com/analyze/v3"
+    "http://127.0.0.1:8000/analyze/v4",
+    "https://vncontentguard-pro.onrender.com/analyze/v4"
 ];
 
 const STREAM_ENDPOINTS = [
-    "http://127.0.0.1:8000/analyze/v3/stream",
-    "https://vncontentguard-pro.onrender.com/analyze/v3/stream"
+    "http://127.0.0.1:8000/analyze/v4/stream",
+    "https://vncontentguard-pro.onrender.com/analyze/v4/stream"
 ];
 
 // Feedback endpoints
@@ -239,8 +239,8 @@ async function handleScan(data) {
         });
 
         // 5. Update badge with risk score
-        const riskScore = results.risk_score_v3?.risk_score || 0;
-        const riskLevel = results.risk_score_v3?.risk_level || 'Low';
+        const riskScore = results.risk_score_v4?.risk_score || 0;
+        const riskLevel = results.risk_score_v4?.risk_level || 'Low';
         updateBadge(riskScore, riskLevel);
 
         // 6. Add to scan history
@@ -321,13 +321,13 @@ async function addToScanHistory(url, results) {
         const entry = {
             url: url,
             title: extractDomain(url),
-            riskScore: results.risk_score_v3?.risk_score || 0,
-            riskLevel: results.risk_score_v3?.risk_level || 'Low',
+            riskScore: results.risk_score_v4?.risk_score || 0,
+            riskLevel: results.risk_score_v4?.risk_level || 'Low',
             toxicPercent: results.comments_analysis?.toxic_percentage || 0,
             toxicCount: results.comments_analysis?.toxic_count || 0,
             totalComments: results.comments_analysis?.total || 0,
-            verdict: results.fact_check_v3?.verdict || 'Chưa rõ',
-            sentiment: results.sentiment_v3?.overall || 'Neutral',
+            verdict: results.fact_check_v4?.verdict || 'Chưa rõ',
+            sentiment: results.sentiment_v4?.overall || 'Neutral',
             timestamp: new Date().toISOString(),
             resultsKey: url // Key to load full results
         };
@@ -478,8 +478,8 @@ async function handleStreamScan(data) {
             [url]: { ...results, timestamp: new Date().toISOString(), url: url }
         });
 
-        const riskScore = results.risk_score_v3?.risk_score || 0;
-        const riskLevel = results.risk_score_v3?.risk_level || 'Low';
+        const riskScore = results.risk_score_v4?.risk_score || 0;
+        const riskLevel = results.risk_score_v4?.risk_level || 'Low';
         updateBadge(riskScore, riskLevel);
         await addToScanHistory(url, results);
         sendRiskNotification(url, riskScore, riskLevel);
@@ -497,10 +497,10 @@ function buildResultFromModules(modules) {
     return {
         version: '4.9',
         article_summary: modules.article_summary || {},
-        sentiment_v3: modules.sentiment_v3 || {},
-        toxicity_v3: modules.toxicity_v3 || {},
-        fact_check_v3: modules.fact_check_v3 || {},
-        risk_score_v3: modules.risk_score_v3 || {},
+        sentiment_v4: modules.sentiment_v4 || {},
+        toxicity_v4: modules.toxicity_v4 || {},
+        fact_check_v4: modules.fact_check_v4 || {},
+        risk_score_v4: modules.risk_score_v4 || {},
         comments_analysis: modules.comments_analysis || {}
     };
 }
@@ -680,7 +680,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
             const cached = scanData[url];
 
             if (cached) {
-                const risk = cached.risk_score_v3?.risk_score || 0;
+                const risk = cached.risk_score_v4?.risk_score || 0;
                 if (risk >= threshold) {
                     const blockUrl = chrome.runtime.getURL('block.html') +
                         `?url=${encodeURIComponent(url)}&risk=${risk >= 70 ? 'Cao' : 'Trung bình'}`;

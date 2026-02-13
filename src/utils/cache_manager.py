@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v3 - Cache Manager
+VnContentGuard Pro v4 - Cache Manager
 ======================================
 In-memory TTL cache for API results.
 Reduces redundant API calls for:

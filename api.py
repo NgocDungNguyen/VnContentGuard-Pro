@@ -18,16 +18,16 @@ from pydantic import BaseModel
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from src.models.article_summarizer_v3 import ArticleSummarizer
-from src.models.fact_checker_v3 import FactCheckerV3
+from src.models.article_summarizer_v4 import ArticleSummarizer
+from src.models.fact_checker_v4 import FactCheckerV4
 from src.models.gemini_llm import API_KEY_POOL, MODEL_NAME, APIKeyRotator, GeminiAgent
-from src.models.risk_scorer_v3 import RiskScorerV3
+from src.models.risk_scorer_v4 import RiskScorerV4
 from src.models.sentiment import SentimentAnalyzer
 
-# v3 Enhanced Components
-from src.models.sentiment_v3 import SentimentAnalyzerV3
+# v4 Enhanced Components
+from src.models.sentiment_v4 import SentimentAnalyzerV4
 from src.models.toxicity import ToxicityAnalyzer
-from src.models.toxicity_v3 import ToxicityAnalyzerV3
+from src.models.toxicity_v4 import ToxicityAnalyzerV4
 from src.utils.blocklist import CommunityBlocklist
 from src.utils.cache_manager import CacheManager
 from src.utils.comment_filter import CommentFilter
@@ -54,17 +54,17 @@ try:
     gemini_agent = GeminiAgent(key_rotator=shared_key_rotator)
     sentiment_engine = SentimentAnalyzer()
 
-    # v3 Enhanced Engines (use fallback mode for faster startup)
-    sentiment_v3_engine = SentimentAnalyzerV3(use_phobert=False)
-    toxicity_v3_engine = ToxicityAnalyzerV3(use_detoxify=False)
-    fact_checker_v3_engine = FactCheckerV3(key_rotator=shared_key_rotator)
-    risk_scorer_v3_engine = RiskScorerV3(
-        sentiment_analyzer=sentiment_v3_engine,
-        toxicity_analyzer=toxicity_v3_engine,
-        fact_checker=fact_checker_v3_engine,
+    # v4 Enhanced Engines (use fallback mode for faster startup)
+    sentiment_v4_engine = SentimentAnalyzerV4(use_phobert=False)
+    toxicity_v4_engine = ToxicityAnalyzerV4(use_detoxify=False)
+    fact_checker_v4_engine = FactCheckerV4(key_rotator=shared_key_rotator)
+    risk_scorer_v4_engine = RiskScorerV4(
+        sentiment_analyzer=sentiment_v4_engine,
+        toxicity_analyzer=toxicity_v4_engine,
+        fact_checker=fact_checker_v4_engine,
     )
 
-    # v3.1 New Components
+    # v4 New Components
     cache_manager = CacheManager(ttl_seconds=86400)  # 24-hour cache
     comment_filter = CommentFilter()
     article_summarizer = ArticleSummarizer(
@@ -80,7 +80,7 @@ try:
     # Reuse same shared key rotator for batch comment analysis
     batch_key_rotator = shared_key_rotator
 
-    print("✅ AI Server Ready! (v3.1 with Summary + Batch Analysis)")
+    print("✅ AI Server Ready! (v4 with Summary + Batch Analysis)")
 except Exception as e:
     print(f"❌ Error during initialization: {e}")
     raise
@@ -254,8 +254,8 @@ def get_domain_feedback(url: str):
 # ============================================================================
 
 
-@app.post("/analyze/v3/stream")
-def analyze_content_v3_stream(req: ScanRequest):
+@app.post("/analyze/v4/stream")
+def analyze_content_v4_stream(req: ScanRequest):
     """
     v4.9 — Streaming analysis endpoint using Server-Sent Events.
     Yields each module result as it completes so the frontend can render progressively.
@@ -288,7 +288,7 @@ def analyze_content_v3_stream(req: ScanRequest):
             yield _sse_event(
                 "progress", {"module": "sentiment", "status": "running", "step": "2/6"}
             )
-            sentiment_v3 = {
+            sentiment_v4 = {
                 "label": "Neutral",
                 "confidence": 0.0,
                 "intensity": "Weak",
@@ -296,16 +296,16 @@ def analyze_content_v3_stream(req: ScanRequest):
             }
             if len(req.article_text) > 5:
                 try:
-                    sentiment_v3 = sentiment_v3_engine.analyze(req.article_text[:512])
+                    sentiment_v4 = sentiment_v4_engine.analyze(req.article_text[:512])
                 except Exception as e:
                     print(f"⚠️ [SSE] Sentiment failed: {e}")
-            yield _sse_event("module", {"module": "sentiment_v3", "data": sentiment_v3})
+            yield _sse_event("module", {"module": "sentiment_v4", "data": sentiment_v4})
 
             # Module 3: Toxicity
             yield _sse_event(
                 "progress", {"module": "toxicity", "status": "running", "step": "3/6"}
             )
-            toxicity_v3 = {
+            toxicity_v4 = {
                 "is_toxic": False,
                 "overall_score": 0.0,
                 "severity": "Low",
@@ -314,16 +314,16 @@ def analyze_content_v3_stream(req: ScanRequest):
             }
             if len(req.article_text) > 5:
                 try:
-                    toxicity_v3 = toxicity_v3_engine.analyze(req.article_text[:1000])
+                    toxicity_v4 = toxicity_v4_engine.analyze(req.article_text[:1000])
                 except Exception as e:
                     print(f"⚠️ [SSE] Toxicity failed: {e}")
-            yield _sse_event("module", {"module": "toxicity_v3", "data": toxicity_v3})
+            yield _sse_event("module", {"module": "toxicity_v4", "data": toxicity_v4})
 
             # Module 4: Fact Check
             yield _sse_event(
                 "progress", {"module": "fact_check", "status": "running", "step": "4/6"}
             )
-            fact_check_v3 = {
+            fact_check_v4 = {
                 "score": 50,
                 "verdict": "Unverifiable",
                 "confidence": "Low",
@@ -332,20 +332,20 @@ def analyze_content_v3_stream(req: ScanRequest):
             }
             if len(req.article_text) > 20:
                 try:
-                    fact_check_v3 = fact_checker_v3_engine.check(
+                    fact_check_v4 = fact_checker_v4_engine.check(
                         req.article_text, req.url
                     )
                 except Exception as e:
                     print(f"⚠️ [SSE] Fact check failed: {e}")
             yield _sse_event(
-                "module", {"module": "fact_check_v3", "data": fact_check_v3}
+                "module", {"module": "fact_check_v4", "data": fact_check_v4}
             )
 
             # Module 5: Risk Score — use pre-computed modules to avoid contradictions
             yield _sse_event(
                 "progress", {"module": "risk_score", "status": "running", "step": "5/6"}
             )
-            risk_score_v3 = {
+            risk_score_v4 = {
                 "risk_score": 0.0,
                 "risk_level": "Low",
                 "confidence": 0.0,
@@ -355,17 +355,17 @@ def analyze_content_v3_stream(req: ScanRequest):
             }
             if len(req.article_text) > 20:
                 try:
-                    risk_score_v3 = risk_scorer_v3_engine.score_from_results(
+                    risk_score_v4 = risk_scorer_v4_engine.score_from_results(
                         req.article_text,
                         req.url,
-                        sentiment_result=sentiment_v3,
-                        toxicity_result=toxicity_v3,
-                        fact_check_result=fact_check_v3,
+                        sentiment_result=sentiment_v4,
+                        toxicity_result=toxicity_v4,
+                        fact_check_result=fact_check_v4,
                     )
                 except Exception as e:
                     print(f"⚠️ [SSE] Risk score failed: {e}")
             yield _sse_event(
-                "module", {"module": "risk_score_v3", "data": risk_score_v3}
+                "module", {"module": "risk_score_v4", "data": risk_score_v4}
             )
 
             # Module 6: Comments
@@ -381,7 +381,7 @@ def analyze_content_v3_stream(req: ScanRequest):
                 "api_calls_saved": 0,
             }
             if req.comments:
-                comments_analysis = _analyze_comments_v31(
+                comments_analysis = _analyze_comments_v4(
                     req.comments[:50], summary_text, req.url, learning_ctx
                 )
             yield _sse_event(
@@ -401,10 +401,10 @@ def analyze_content_v3_stream(req: ScanRequest):
             final = {
                 "version": "4.9",
                 "article_summary": article_summary,
-                "sentiment_v3": sentiment_v3,
-                "toxicity_v3": toxicity_v3,
-                "fact_check_v3": fact_check_v3,
-                "risk_score_v3": risk_score_v3,
+                "sentiment_v4": sentiment_v4,
+                "toxicity_v4": toxicity_v4,
+                "fact_check_v4": fact_check_v4,
+                "risk_score_v4": risk_score_v4,
                 "comments_analysis": comments_analysis,
                 "url": req.url,
                 "cache_stats": cache_manager.get_stats(),
@@ -549,14 +549,14 @@ def analyze_content(req: ScanRequest):
 
 
 # ============================================================================
-# v3 Enhanced Analysis Endpoint
+# v4 Enhanced Analysis Endpoint
 # ============================================================================
 
 
-@app.post("/analyze/v3", response_model=dict)
-def analyze_content_v3(req: ScanRequest):
+@app.post("/analyze/v4", response_model=dict)
+def analyze_content_v4(req: ScanRequest):
     """
-    v3.1 Enhanced full content scan endpoint.
+    v4 Enhanced full content scan endpoint.
 
     New features:
     - Article summary (AI-generated, cached per URL)
@@ -564,7 +564,7 @@ def analyze_content_v3(req: ScanRequest):
     - Smart comment filtering (skip obvious toxic/clean/spam)
     - API usage optimization (70-80% fewer Gemini calls)
     """
-    print(f"📥 [v3.1] Received Scan Request for: {req.url}")
+    print(f"📥 [v4] Received Scan Request for: {req.url}")
     try:
         # ========== LEARNING CONTEXT (v4.9) ==========
         learning_ctx = feedback_store.get_learning_context(req.url)
@@ -582,13 +582,13 @@ def analyze_content_v3(req: ScanRequest):
                 )
                 summary_text = article_summary.get("summary", "")
                 print(
-                    f"✅ [v3.1] Summary: {article_summary['method']} ({len(summary_text)} chars)"
+                    f"✅ [v4] Summary: {article_summary['method']} ({len(summary_text)} chars)"
                 )
             except Exception as e:
-                print(f"⚠️  [v3.1] Summary failed: {e}")
+                print(f"⚠️  [v4] Summary failed: {e}")
 
-        # ========== 1. SENTIMENT ANALYSIS v3 (PhoBERT) ==========
-        sentiment_v3 = {
+        # ========== 1. SENTIMENT ANALYSIS v4 (PhoBERT) ==========
+        sentiment_v4 = {
             "label": "Neutral",
             "confidence": 0.0,
             "intensity": "Weak",
@@ -597,13 +597,13 @@ def analyze_content_v3(req: ScanRequest):
 
         if len(req.article_text) > 5:
             try:
-                sentiment_v3 = sentiment_v3_engine.analyze(req.article_text[:512])
+                sentiment_v4 = sentiment_v4_engine.analyze(req.article_text[:512])
                 print(
-                    f"✅ [v3.1] Sentiment: {sentiment_v3['overall']} (confidence: {sentiment_v3['confidence']:.2f})"
+                    f"✅ [v4] Sentiment: {sentiment_v4['overall']} (confidence: {sentiment_v4['confidence']:.2f})"
                 )
             except Exception as e:
-                print(f"⚠️  [v3.1] Sentiment analysis failed: {e}")
-                sentiment_v3 = {
+                print(f"⚠️  [v4] Sentiment analysis failed: {e}")
+                sentiment_v4 = {
                     "label": "Neutral",
                     "confidence": 0.0,
                     "intensity": "Weak",
@@ -611,11 +611,11 @@ def analyze_content_v3(req: ScanRequest):
                 }
         else:
             print(
-                f"⚠️  [v3.1] Article too short for sentiment ({len(req.article_text)} chars)"
+                f"⚠️  [v4] Article too short for sentiment ({len(req.article_text)} chars)"
             )
 
-        # ========== 2. TOXICITY DETECTION v3 (4-layer, article body) ==========
-        toxicity_v3 = {
+        # ========== 2. Toxicity Detection v4 (4-layer, article body) ==========
+        toxicity_v4 = {
             "is_toxic": False,
             "overall_score": 0.0,
             "severity": "Low",
@@ -625,15 +625,15 @@ def analyze_content_v3(req: ScanRequest):
 
         if len(req.article_text) > 5:
             try:
-                toxicity_v3 = toxicity_v3_engine.analyze(req.article_text[:1000])
+                toxicity_v4 = toxicity_v4_engine.analyze(req.article_text[:1000])
                 print(
-                    f"✅ [v3.1] Toxicity: {toxicity_v3['severity']} (score: {toxicity_v3['overall_score']:.2f})"
+                    f"✅ [v4] Toxicity: {toxicity_v4['severity']} (score: {toxicity_v4['overall_score']:.2f})"
                 )
             except Exception as e:
-                print(f"⚠️  [v3.1] Toxicity detection failed: {e}")
+                print(f"⚠️  [v4] Toxicity detection failed: {e}")
 
-        # ========== 3. FACT-CHECKING v3 (Multi-source) ==========
-        fact_check_v3 = {
+        # ========== 3. FACT-CHECKING v4 (Multi-source) ==========
+        fact_check_v4 = {
             "score": 50,
             "verdict": "Unverifiable",
             "confidence": "Low",
@@ -643,20 +643,20 @@ def analyze_content_v3(req: ScanRequest):
 
         if len(req.article_text) > 20:
             try:
-                fact_check_v3 = fact_checker_v3_engine.check(req.article_text, req.url)
+                fact_check_v4 = fact_checker_v4_engine.check(req.article_text, req.url)
                 print(
-                    f"✅ [v3.1] Fact Check: {fact_check_v3['verdict']} (credibility: {fact_check_v3['score']})"
+                    f"✅ [v4] Fact Check: {fact_check_v4['verdict']} (credibility: {fact_check_v4['score']})"
                 )
             except Exception as e:
-                print(f"⚠️  [v3.1] Fact-checking failed: {e}")
+                print(f"⚠️  [v4] Fact-checking failed: {e}")
                 error_msg = str(e).lower()
                 if "429" in str(e) or "quota" in error_msg:
-                    fact_check_v3["verdict"] = "Quota Exceeded"
+                    fact_check_v4["verdict"] = "Quota Exceeded"
                 else:
-                    fact_check_v3["verdict"] = "Service Unavailable"
+                    fact_check_v4["verdict"] = "Service Unavailable"
 
-        # ========== 4. RISK SCORING v3 (Comprehensive) ==========
-        risk_score_v3 = {
+        # ========== 4. RISK SCORING v4 (Comprehensive) ==========
+        risk_score_v4 = {
             "risk_score": 0.0,
             "risk_level": "Low",
             "confidence": 0.0,
@@ -667,14 +667,14 @@ def analyze_content_v3(req: ScanRequest):
 
         if len(req.article_text) > 20:
             try:
-                risk_score_v3 = risk_scorer_v3_engine.score(req.article_text, req.url)
+                risk_score_v4 = risk_scorer_v4_engine.score(req.article_text, req.url)
                 print(
-                    f"✅ [v3.1] Risk Score: {risk_score_v3['risk_score']:.1f}/100 ({risk_score_v3['risk_level']})"
+                    f"✅ [v4] Risk Score: {risk_score_v4['risk_score']:.1f}/100 ({risk_score_v4['risk_level']})"
                 )
             except Exception as e:
-                print(f"⚠️  [v3.1] Risk scoring failed: {e}")
+                print(f"⚠️  [v4] Risk scoring failed: {e}")
 
-        # ========== 5. COMMENTS ANALYSIS (v3.1 - Context-Aware Batch) ==========
+        # ========== 5. COMMENTS ANALYSIS (v4 - Context-Aware Batch) ==========
         comments_analysis = {
             "total": 0,
             "toxic_count": 0,
@@ -685,7 +685,7 @@ def analyze_content_v3(req: ScanRequest):
         }
 
         if req.comments:
-            comments_analysis = _analyze_comments_v31(
+            comments_analysis = _analyze_comments_v4(
                 req.comments[:50], summary_text, req.url, learning_ctx
             )
 
@@ -702,10 +702,10 @@ def analyze_content_v3(req: ScanRequest):
         response = {
             "version": "4.9",
             "article_summary": article_summary,
-            "sentiment_v3": sentiment_v3,
-            "toxicity_v3": toxicity_v3,
-            "fact_check_v3": fact_check_v3,
-            "risk_score_v3": risk_score_v3,
+            "sentiment_v4": sentiment_v4,
+            "toxicity_v4": toxicity_v4,
+            "fact_check_v4": fact_check_v4,
+            "risk_score_v4": risk_score_v4,
             "comments_analysis": comments_analysis,
             "url": req.url,
             "cache_stats": cache_manager.get_stats(),
@@ -715,21 +715,21 @@ def analyze_content_v3(req: ScanRequest):
         }
 
         print(
-            f"✅ [v3.1] Analysis complete. Risk: {risk_score_v3['risk_score']:.1f}/100, "
+            f"✅ [v4] Analysis complete. Risk: {risk_score_v4['risk_score']:.1f}/100, "
             f"Toxics: {comments_analysis['toxic_count']}, "
             f"API saved: {comments_analysis.get('api_calls_saved', 0)}"
         )
         return response
 
     except Exception as e:
-        print(f"❌ [v3.1] Critical Error: {e}")
+        print(f"❌ [v4] Critical Error: {e}")
         import traceback
 
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"v3.1 analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"v4 analysis error: {str(e)}")
 
 
-def _analyze_comments_v31(
+def _analyze_comments_v4(
     comments: List[str], article_summary: str, url: str, learning_ctx: str = ""
 ) -> dict:
     """
@@ -753,7 +753,7 @@ def _analyze_comments_v31(
         + len(filtered["spam"])
     )
 
-    print(f"📊 [v3.1] Comment filtering:")
+    print(f"📊 [v4] Comment filtering:")
     print(f"   Total: {total}")
     print(f"   Obvious toxic: {len(filtered['obvious_toxic'])}")
     print(f"   Obvious clean: {len(filtered['obvious_clean'])}")
@@ -818,10 +818,10 @@ def _analyze_comments_v31(
         regex_result = None
         try:
             if (
-                hasattr(toxicity_v3_engine, "regex_analyzer")
-                and toxicity_v3_engine.regex_analyzer
+                hasattr(toxicity_v4_engine, "regex_analyzer")
+                and toxicity_v4_engine.regex_analyzer
             ):
-                regex_result = toxicity_v3_engine._analyze_regex(comment)
+                regex_result = toxicity_v4_engine._analyze_regex(comment)
         except Exception:
             pass
 
@@ -849,7 +849,7 @@ def _analyze_comments_v31(
         cached = cache_manager.get(cache_key)
 
         if cached:
-            print(f"✅ [v3.1] Batch cache hit ({len(still_ambiguous)} comments)")
+            print(f"✅ [v4] Batch cache hit ({len(still_ambiguous)} comments)")
             all_results.extend(cached)
         else:
             # Process in chunks of 25 (safe token limit) with rate limit sleep
@@ -919,14 +919,14 @@ def _batch_gemini_analyze(
     # Circuit breaker: check how many keys are left
     available = len(batch_key_rotator.api_keys) - len(batch_key_rotator.exhausted_keys)
     if available <= 0:
-        print("⚠️ [v3.1] All API keys exhausted — using regex fallback for batch")
+        print("⚠️ [v4] All API keys exhausted — using regex fallback for batch")
         return _fallback_results(comments)
 
     max_batch_attempts = min(3, available)  # Try up to 3 different keys
     for attempt in range(max_batch_attempts):
         api_key = batch_key_rotator.get_current_key()
         if not api_key:
-            print("⚠️ [v3.1] No API key available for batch analysis")
+            print("⚠️ [v4] No API key available for batch analysis")
             return _fallback_results(comments)
 
         try:
@@ -935,15 +935,15 @@ def _batch_gemini_analyze(
             error_str = str(e).lower()
             if "429" in error_str or "quota" in error_str:
                 print(
-                    f"⚠️ [v3.1] Batch attempt {attempt+1}/{max_batch_attempts} got 429, rotating key..."
+                    f"⚠️ [v4] Batch attempt {attempt+1}/{max_batch_attempts} got 429, rotating key..."
                 )
                 batch_key_rotator.mark_key_exhausted()
                 continue
             else:
-                print(f"⚠️ [v3.1] Batch analysis failed: {e}")
+                print(f"⚠️ [v4] Batch analysis failed: {e}")
                 return _fallback_results(comments)
 
-    print("⚠️ [v3.1] All batch attempts exhausted — using regex fallback")
+    print("⚠️ [v4] All batch attempts exhausted — using regex fallback")
     return _fallback_results(comments)
 
 
@@ -1024,7 +1024,7 @@ Quy tắc:
                 try:
                     repaired = _repair_truncated_json(match.group())
                     parsed = json.loads(repaired)
-                    print(f"✅ [v3.1] Repaired truncated JSON ({len(parsed)} items)")
+                    print(f"✅ [v4] Repaired truncated JSON ({len(parsed)} items)")
                 except json.JSONDecodeError:
                     pass
 
@@ -1033,7 +1033,7 @@ Quy tắc:
             try:
                 repaired = _repair_truncated_json(raw)
                 parsed = json.loads(repaired)
-                print(f"✅ [v3.1] Repaired raw JSON ({len(parsed)} items)")
+                print(f"✅ [v4] Repaired raw JSON ({len(parsed)} items)")
             except json.JSONDecodeError:
                 # Last resort: extract individual complete JSON objects
                 objects = _re.findall(r"\{[^{}]*\}", raw)
@@ -1045,10 +1045,10 @@ Quy tắc:
                         except json.JSONDecodeError:
                             continue
                     print(
-                        f"✅ [v3.1] Extracted {len(parsed)} objects from malformed JSON"
+                        f"✅ [v4] Extracted {len(parsed)} objects from malformed JSON"
                     )
                 else:
-                    print(f"⚠️ [v3.1] Could not parse Gemini response, using fallback")
+                    print(f"⚠️ [v4] Could not parse Gemini response, using fallback")
                     return _fallback_results(comments)
 
     results = []
@@ -1085,7 +1085,7 @@ Quy tắc:
                 }
             )
 
-    print(f"✅ [v3.1] Batch analyzed {len(comments)} comments (1 API call)")
+    print(f"✅ [v4] Batch analyzed {len(comments)} comments (1 API call)")
     return results
 
 
@@ -1126,17 +1126,17 @@ def _fallback_results(comments: List[str]) -> List[dict]:
     """Fallback: REGEX ONLY (no Perspective/Gemini API calls) when AI is unavailable."""
     results = []
     for c in comments:
-        # Use v2 regex engine DIRECTLY — do NOT call toxicity_v3_engine.analyze()
+        # Use v2 regex engine DIRECTLY — do NOT call toxicity_v4_engine.analyze()
         # because that triggers Perspective API + Gemini calls per comment = API storm
         is_toxic = False
         score = 0.0
         severity = "None"
         try:
             if (
-                hasattr(toxicity_v3_engine, "regex_analyzer")
-                and toxicity_v3_engine.regex_analyzer
+                hasattr(toxicity_v4_engine, "regex_analyzer")
+                and toxicity_v4_engine.regex_analyzer
             ):
-                regex_result = toxicity_v3_engine._analyze_regex(c)
+                regex_result = toxicity_v4_engine._analyze_regex(c)
                 if regex_result and regex_result.get("is_toxic"):
                     is_toxic = True
                     score = 0.8

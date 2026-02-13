@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v3 - Fact-Checking System
+VnContentGuard Pro v4 - Fact-Checking System
 =============================================
 Multi-source fact verification system with:
 1. Google Fact Check Tools API - Known fact-checks from multiple organizations
@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class FactCheckerV3:
+class FactCheckerV4:
     """
     Advanced Multi-Source Fact-Checking System
 
@@ -37,7 +37,7 @@ class FactCheckerV3:
     """
 
     def __init__(self, key_rotator=None):
-        print("⏳ Initializing Fact-Checking System v3...")
+        print("⏳ Initializing Fact-Checking System v4...")
 
         # API Keys
         self.google_factcheck_key = os.getenv("GOOGLE_FACT_CHECK_API_KEY")
@@ -54,7 +54,7 @@ class FactCheckerV3:
 
         # Import source analyzer
         try:
-            from .source_analyzer_v3 import SourceAnalyzer
+            from .source_analyzer_v4 import SourceAnalyzer
 
             self.source_analyzer = SourceAnalyzer()
             print("✅ Source analyzer loaded")
@@ -68,7 +68,9 @@ class FactCheckerV3:
 
             from .gemini_llm import API_KEY_POOL, MODEL_NAME, APIKeyRotator
 
-            self.key_rotator = key_rotator if key_rotator else APIKeyRotator(API_KEY_POOL)
+            self.key_rotator = (
+                key_rotator if key_rotator else APIKeyRotator(API_KEY_POOL)
+            )
             api_key = self.key_rotator.get_current_key()
             self.gemini_client = genai.Client(api_key=api_key) if api_key else None
             self.model_name = MODEL_NAME
@@ -92,7 +94,7 @@ class FactCheckerV3:
         else:
             print("⚠️ NewsData.io API not configured (optional)")
 
-        print("✅ Fact-Checker v3 Ready!")
+        print("✅ Fact-Checker v4 Ready!")
 
     def check(self, text: str, url: Optional[str] = None) -> Dict:
         """
@@ -222,16 +224,31 @@ Trả lời ngắn gọn, khách quan, bằng tiếng Việt."""
                 assessment = "unclear"
                 if any(
                     word in analysis.lower()
-                    for word in ["likely true", "appears true", "verified",
-                                 "có khả năng đúng", "đúng sự thật", "chính xác",
-                                 "khả năng cao là đúng", "tương đối chính xác"]
+                    for word in [
+                        "likely true",
+                        "appears true",
+                        "verified",
+                        "có khả năng đúng",
+                        "đúng sự thật",
+                        "chính xác",
+                        "khả năng cao là đúng",
+                        "tương đối chính xác",
+                    ]
                 ):
                     assessment = "likely_true"
                 elif any(
                     word in analysis.lower()
-                    for word in ["likely false", "appears false", "misleading", "fake",
-                                 "có khả năng sai", "sai sự thật", "gây hiểu lầm",
-                                 "thông tin giả", "không chính xác"]
+                    for word in [
+                        "likely false",
+                        "appears false",
+                        "misleading",
+                        "fake",
+                        "có khả năng sai",
+                        "sai sự thật",
+                        "gây hiểu lầm",
+                        "thông tin giả",
+                        "không chính xác",
+                    ]
                 ):
                     assessment = "likely_false"
 
@@ -243,10 +260,15 @@ Trả lời ngắn gọn, khách quan, bằng tiếng Việt."""
             except Exception as e:
                 error_str = str(e).lower()
                 print(f"⚠️ Gemini verification failed: {e}")
-                if ("429" in error_str or "quota" in error_str or "exhausted" in error_str) and self.key_rotator:
+                if (
+                    "429" in error_str
+                    or "quota" in error_str
+                    or "exhausted" in error_str
+                ) and self.key_rotator:
                     if self.key_rotator.mark_key_exhausted():
                         # Re-init client with new key
                         from google import genai
+
                         api_key = self.key_rotator.get_current_key()
                         if api_key:
                             self.gemini_client = genai.Client(api_key=api_key)
@@ -322,13 +344,13 @@ Trả lời ngắn gọn, khách quan, bằng tiếng Việt."""
 # Convenience function
 def check_fact(text: str, url: Optional[str] = None) -> Dict:
     """Quick fact check"""
-    checker = FactCheckerV3()
+    checker = FactCheckerV4()
     return checker.check(text, url)
 
 
 if __name__ == "__main__":
     # Quick test
-    checker = FactCheckerV3()
+    checker = FactCheckerV4()
 
     test_cases = [
         ("Việt Nam có 54 dân tộc", None),
@@ -336,7 +358,7 @@ if __name__ == "__main__":
         ("COVID-19 vaccine causes autism", None),
     ]
 
-    print("\n🧪 Testing Fact-Checker v3:")
+    print("\n🧪 Testing Fact-Checker v4:")
     for text, url in test_cases:
         result = checker.check(text, url)
         print(f"\nClaim: {text}")

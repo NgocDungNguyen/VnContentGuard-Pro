@@ -73,14 +73,14 @@ C:\Users\LucyS\Tox\
 │   │   ├── __init__.py
 │   │   ├── gemini_llm.py             # APIKeyRotator + GeminiAgent (352 lines)
 │   │   ├── sentiment.py              # v2 keyword-based sentiment (fallback)
-│   │   ├── sentiment_v3.py           # v3 PhoBERT sentiment analysis
+│   │   ├── sentiment_v4.py           # v4 PhoBERT sentiment analysis
 │   │   ├── toxicity.py               # v2 regex toxicity (fallback, used in v3 pipeline)
-│   │   ├── toxicity_v3.py            # v3 4-layer toxicity detection
-│   │   ├── fact_checker_v3.py        # v3 multi-source fact checking
-│   │   ├── source_analyzer_v3.py     # Domain credibility (SSL/WHOIS/reputation)
-│   │   ├── news_aggregator_v3.py     # NewsData.io/GNews cross-reference
-│   │   ├── risk_scorer_v3.py         # v3 evidence-based risk scoring
-│   │   └── article_summarizer_v3.py  # Gemini article summarization + cache
+│   │   ├── toxicity_v4.py            # v4 4-layer toxicity detection
+│   │   ├── fact_checker_v4.py        # v4 multi-source fact checking
+│   │   ├── source_analyzer_v4.py     # Domain credibility (SSL/WHOIS/reputation)
+│   │   ├── news_aggregator_v4.py     # NewsData.io/GNews cross-reference
+│   │   ├── risk_scorer_v4.py         # v4 evidence-based risk scoring
+│   │   └── article_summarizer_v4.py  # Gemini article summarization + cache
 │   └── utils/
 │       ├── __init__.py
 │       ├── cache_manager.py           # In-memory TTL cache (24h default)
@@ -89,10 +89,10 @@ C:\Users\LucyS\Tox\
 │       └── blocklist.py               # Community blocklist manager (v4.9)
 │
 ├── tests/
-│   ├── test_sentiment_v3.py           # 19 tests
-│   ├── test_toxicity_v3.py            # 26 tests
-│   ├── test_fact_checking_v3.py       # 31 tests
-│   └── test_risk_scorer_v3.py         # 20 tests
+│   ├── test_sentiment_v4.py           # 19 tests
+│   ├── test_toxicity_v4.py            # 26 tests
+│   ├── test_fact_checking_v4.py       # 31 tests
+│   └── test_risk_scorer_v4.py         # 20 tests
 │
 └── extension/
     ├── manifest.json                  # Chrome Manifest V3 (v4.9.0)
@@ -128,10 +128,10 @@ Returns system health, API key stats, cache stats, blocklist stats, version info
 - Pipeline (in order):
   1. **Learning Context Load** → `feedback_store.get_learning_context(url)` — loads past user corrections for this domain
   2. **Article Summary** → `ArticleSummarizer.summarize()` (Gemini, cached per URL)
-  3. **Sentiment v3** → `SentimentAnalyzerV3.analyze()` (PhoBERT or keyword fallback)
-  4. **Toxicity v3** → `ToxicityAnalyzerV3.analyze()` (article body only, 4-layer)
-  5. **Fact Check v3** → `FactCheckerV3.check()` (multi-source)
-  6. **Risk Score v3** → `RiskScorerV3.score()` (weighted formula)
+  3. **Sentiment v3** → `SentimentAnalyzerV4.analyze()` (PhoBERT or keyword fallback)
+  4. **Toxicity v3** → `ToxicityAnalyzerV4.analyze()` (article body only, 4-layer)
+  5. **Fact Check v3** → `FactCheckerV4.check()` (multi-source)
+  6. **Risk Score v3** → `RiskScorerV4.score()` (weighted formula)
   7. **Comments Analysis** → `_analyze_comments_v31(learning_ctx)` (filter + regex + batch Gemini WITH learning context)
   8. **Blocklist Check** → `community_blocklist.is_blocked(url)` + report count
   9. **Domain Feedback** → `feedback_store.get_domain_feedback(url)` — accuracy stats
@@ -140,10 +140,10 @@ Returns system health, API key stats, cache stats, blocklist stats, version info
 {
     "version": "4.9",
     "article_summary": { "summary": "...", "method": "gemini|fallback|cache", "cached": true },
-    "sentiment_v3": { "overall": "Positive|Negative|Neutral", "confidence": 0.85, "intensity": "...", "method": "..." },
-    "toxicity_v3": { "is_toxic": false, "overall_score": 0.1, "severity": "Low|Medium|High|Critical", "categories": {}, "detection_layers": [] },
-    "fact_check_v3": { "score": 75, "verdict": "...", "evidence": [] },
-    "risk_score_v3": { "risk_score": 35.0, "risk_level": "Low|Medium|High|Critical", "warnings": [], "recommendations": [] },
+    "sentiment_v4": { "overall": "Positive|Negative|Neutral", "confidence": 0.85, "intensity": "...", "method": "..." },
+    "toxicity_v4": { "is_toxic": false, "overall_score": 0.1, "severity": "Low|Medium|High|Critical", "categories": {}, "detection_layers": [] },
+    "fact_check_v4": { "score": 75, "verdict": "...", "evidence": [] },
+    "risk_score_v4": { "risk_score": 35.0, "risk_level": "Low|Medium|High|Critical", "warnings": [], "recommendations": [] },
     "comments_analysis": { "total": 10, "toxic_count": 2, "toxic_percentage": 20.0, "toxic_comments": [], "filter_stats": {}, "api_calls_saved": 5 },
     "blocklist_info": { "is_blocked": false, "report_count": 0 },
     "domain_feedback": { "domain": "vnexpress.net", "total": 5, "positive": 4, "negative": 1, "accuracy": 80.0, "recent_corrections": [] },
@@ -189,29 +189,29 @@ Returns system health, API key stats, cache stats, blocklist stats, version info
 - Auto-rotates on 429 (quota exceeded)
 - Daily reset at UTC midnight
 - Tracks per-key request counts and exhausted keys
-- **SHARED** — single instance used by: GeminiAgent, ArticleSummarizer, FactCheckerV3, batch comment analysis
+- **SHARED** — single instance used by: GeminiAgent, ArticleSummarizer, FactCheckerV4, batch comment analysis
 
-### 2. ArticleSummarizer (`article_summarizer_v3.py`)
+### 2. ArticleSummarizer (`article_summarizer_v4.py`)
 - Generates Vietnamese summaries via Gemini
 - Caches summaries per URL (24h TTL via CacheManager)
 - Fallback: first 200 chars of article text
 
-### 3. SentimentAnalyzerV3 (`sentiment_v3.py`)
+### 3. SentimentAnalyzerV4 (`sentiment_v4.py`)
 - Gemini-based Vietnamese sentiment analysis
 - Returns: overall sentiment, confidence, intensity
 - Fallback: keyword-based analysis via `sentiment.py`
 
-### 4. ToxicityAnalyzerV3 (`toxicity_v3.py`)
+### 4. ToxicityAnalyzerV4 (`toxicity_v4.py`)
 - 4-layer detection pipeline: Regex → Gemini → Perspective API → Detoxify
 - Vietnamese-optimized regex patterns (500+ toxic phrases)
 - Returns: toxic/safe, severity, categories, detection layers used
 
-### 5. FactCheckerV3 (`fact_checker_v3.py`)
+### 5. FactCheckerV4 (`fact_checker_v4.py`)
 - Multi-source verification: Google Fact Check API, NewsData.io, GNews, Gemini analysis
 - Cross-references claims across sources
 - Returns: credibility score 0-100, verdict, evidence list
 
-### 6. RiskScorerV3 (`risk_scorer_v3.py`)
+### 6. RiskScorerV4 (`risk_scorer_v4.py`)
 - Weighted formula combining all modules
 - Components: fake_news (30%), toxicity (25%), sentiment (15%), source (15%), manipulation (15%)
 - Returns: risk_score 0-100, risk_level, breakdown, warnings, recommendations

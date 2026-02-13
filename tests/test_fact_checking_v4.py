@@ -1,8 +1,8 @@
 """
-Tests for VnContentGuard Pro v3 - Fact-Checking System
+Tests for VnContentGuard Pro v4 - Fact-Checking System
 =======================================================
 Comprehensive tests for:
-- FactCheckerV3
+- FactCheckerV4
 - SourceAnalyzer
 - NewsAggregator
 """
@@ -16,19 +16,19 @@ import pytest
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.models.fact_checker_v3 import FactCheckerV3, check_fact
-from src.models.news_aggregator_v3 import NewsAggregator, search_news
-from src.models.source_analyzer_v3 import SourceAnalyzer, analyze_source
+from src.models.fact_checker_v4 import FactCheckerV4, check_fact
+from src.models.news_aggregator_v4 import NewsAggregator, search_news
+from src.models.source_analyzer_v4 import SourceAnalyzer, analyze_source
 
-# ==================== FactCheckerV3 Tests ====================
+# ==================== FactCheckerV4 Tests ====================
 
 
-class TestFactCheckerV3:
-    """Test suite for FactCheckerV3"""
+class TestFactCheckerV4:
+    """Test suite for FactCheckerV4"""
 
     def setup_method(self):
         """Setup before each test"""
-        self.checker = FactCheckerV3()
+        self.checker = FactCheckerV4()
 
     def test_initialization(self):
         """Test fact checker initializes correctly"""
@@ -36,7 +36,7 @@ class TestFactCheckerV3:
         assert hasattr(self.checker, "check")
         assert hasattr(self.checker, "source_analyzer")
         assert hasattr(self.checker, "gemini_client")
-        print("✅ FactCheckerV3 initialization test passed")
+        print("✅ FactCheckerV4 initialization test passed")
 
     def test_empty_input(self):
         """Test handling of empty input"""
@@ -421,7 +421,7 @@ class TestIntegration:
 
     def test_full_pipeline_with_url(self):
         """Test full fact-checking pipeline with URL"""
-        checker = FactCheckerV3()
+        checker = FactCheckerV4()
 
         result = checker.check(
             text="Technology news update", url="https://vnexpress.net"
@@ -442,7 +442,7 @@ class TestIntegration:
     def test_components_integration(self):
         """Test that all components work together"""
         # Initialize all components
-        checker = FactCheckerV3()
+        checker = FactCheckerV4()
         analyzer = SourceAnalyzer()
         aggregator = NewsAggregator()
 
@@ -460,7 +460,7 @@ class TestIntegration:
 
 if __name__ == "__main__":
     print("\n" + "=" * 60)
-    print("🧪 VnContentGuard Pro v3 - Week 3 Test Suite")
+    print("🧪 VnContentGuard Pro v4 - Fact-Checking Test Suite")
     print("=" * 60 + "\n")
 
     # Run pytest

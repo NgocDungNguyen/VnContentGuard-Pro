@@ -261,16 +261,16 @@ class FeedbackStore:
             return {}
         try:
             return {
-                "verdict": scan_results.get("fact_check_v3", {}).get("verdict", ""),
-                "risk_score": scan_results.get("risk_score_v3", {}).get(
+                "verdict": scan_results.get("fact_check_v4", {}).get("verdict", ""),
+                "risk_score": scan_results.get("risk_score_v4", {}).get(
                     "risk_score", 0
                 ),
-                "risk_level": scan_results.get("risk_score_v3", {}).get(
+                "risk_level": scan_results.get("risk_score_v4", {}).get(
                     "risk_level", ""
                 ),
-                "sentiment": scan_results.get("sentiment_v3", {}).get("overall", ""),
-                "is_toxic": scan_results.get("toxicity_v3", {}).get("is_toxic", False),
-                "severity": scan_results.get("toxicity_v3", {}).get("severity", ""),
+                "sentiment": scan_results.get("sentiment_v4", {}).get("overall", ""),
+                "is_toxic": scan_results.get("toxicity_v4", {}).get("is_toxic", False),
+                "severity": scan_results.get("toxicity_v4", {}).get("severity", ""),
             }
         except Exception:
             return {}

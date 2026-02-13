@@ -772,12 +772,12 @@ function scrapePageContent() {
 }
 
 // ============================================================================
-// RESULT RENDERING WITH WARNING MODAL - v3 Enhanced
+// RESULT RENDERING WITH WARNING MODAL - v4 Enhanced
 // ============================================================================
 
 function renderResults(data, urlInfo) {
-    // Check if v3 or v2 response
-    const isV3 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v3;
+    // Check if v4 or v2 response
+    const isV4 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v4;
     
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
@@ -787,23 +787,23 @@ function renderResults(data, urlInfo) {
     // Show results container
     document.getElementById('results').classList.remove('hidden');
 
-    if (isV3) {
-        renderV3Results(data, urlInfo);
+    if (isV4) {
+        renderV4Results(data, urlInfo);
     } else {
         renderV2Results(data, urlInfo);
     }
 }
 
-function renderV3Results(data, urlInfo) {
-    const sentiment = data.sentiment_v3 || { overall: "Neutral", confidence: 0, intensity: "Weak" };
-    const toxicity = data.toxicity_v3 || { is_toxic: false, overall_score: 0, severity: "Low" };
-    const factCheck = data.fact_check_v3 || { score: 50, verdict: "Unknown" };
-    const riskScore = data.risk_score_v3 || { risk_score: 0, risk_level: "Low" };
+function renderV4Results(data, urlInfo) {
+    const sentiment = data.sentiment_v4 || { overall: "Neutral", confidence: 0, intensity: "Weak" };
+    const toxicity = data.toxicity_v4 || { is_toxic: false, overall_score: 0, severity: "Low" };
+    const factCheck = data.fact_check_v4 || { score: 50, verdict: "Unknown" };
+    const riskScore = data.risk_score_v4 || { risk_score: 0, risk_level: "Low" };
     const comments = data.comments_analysis || { total: 0, toxic_count: 0, toxic_comments: [], details: [] };
     const articleSummary = data.article_summary || null;
     const isOffline = data.offline_mode === true;
 
-    console.log("📊 Rendering v3.1 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
+    console.log("📊 Rendering v4 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
 
     // Hide streaming progress bar
     const streamEl = document.getElementById('streamProgress');
@@ -829,7 +829,7 @@ function renderV3Results(data, urlInfo) {
         blockWarning.classList.add('hidden');
     }
 
-    // ===== 0. ARTICLE SUMMARY (NEW in v3.1) =====
+    // ===== 0. ARTICLE SUMMARY (NEW in v4) =====
     const summaryCard = document.getElementById('summaryCard');
     const summaryContent = articleSummary?.summary || articleSummary?.text || '';
     if (summaryContent) {
@@ -885,7 +885,7 @@ function renderV3Results(data, urlInfo) {
         document.getElementById('riskBreakdown').innerHTML = breakdownHTML;
     }
 
-    // ===== 2. SENTIMENT v3 (PhoBERT) =====
+    // ===== 2. SENTIMENT v4 (PhoBERT) =====
     const sentLabel = sentiment.overall || "Neutral";
     const sentConf = sentiment.confidence || 0;
     const sentIntensity = sentiment.intensity || "Weak";
@@ -916,7 +916,7 @@ function renderV3Results(data, urlInfo) {
         </div>
     `;
 
-    // ===== 3. TOXICITY v3 (4-Layer) =====
+    // ===== 3. TOXICITY v4 (4-Layer) =====
     const isToxic = toxicity.is_toxic || false;
     const toxScore = toxicity.overall_score || 0;
     const toxSeverity = toxicity.severity || "Low";
@@ -953,7 +953,7 @@ function renderV3Results(data, urlInfo) {
     toxDetailsHTML += '</div>';
     document.getElementById('toxicDetails').innerHTML = toxDetailsHTML;
 
-    // ===== 4. FACT CHECK v3 (Multi-Source) =====
+    // ===== 4. FACT CHECK v4 (Multi-Source) =====
     const credScore = factCheck.score || 50;
     const verdict = factCheck.verdict || "Unknown";
     const evidence = factCheck.evidence || [];
@@ -991,7 +991,7 @@ function renderV3Results(data, urlInfo) {
         document.getElementById('fakeEvidence').innerHTML = evidenceHTML;
     }
 
-    // ===== 5. COMMENTS ANALYSIS v3.1 (Enhanced) =====
+    // ===== 5. COMMENTS ANALYSIS v4 (Enhanced) =====
     const totalComments = comments.total || 0;
     const toxicCount = comments.toxic_count || 0;
     const toxicComments = comments.toxic_comments || [];
@@ -1076,7 +1076,7 @@ function renderV3Results(data, urlInfo) {
         document.getElementById('recommendationsCard').style.display = 'none';
     }
 
-    console.log("✅ v3 results rendered");
+    console.log("✅ v4 results rendered");
 
     // ===== v4.9 — SHOW FEEDBACK SECTION (after results) =====
     const feedbackSection = document.getElementById('feedbackSection');
@@ -1092,7 +1092,7 @@ function renderV3Results(data, urlInfo) {
     // ===== SHOW WARNING MODAL if high risk (after delay) =====
     if (riskValue >= 50) {  // Medium-High or higher (0-100 scale)
         setTimeout(() => {
-            showWarningModalV3(riskScore, sentiment, toxicity, factCheck);
+            showWarningModalV4(riskScore, sentiment, toxicity, factCheck);
         }, 12000);
     }
 }
@@ -1102,7 +1102,7 @@ function renderV2Results(data, urlInfo) {
     const sentiment = data.sentiment || { label: "Neutral", score: 0 };
     const toxicity = data.toxicity || { total: 0, toxic_count: 0, results: [] };
 
-    // Clear v3-specific elements
+    // Clear v4-specific elements
     document.getElementById('riskScore').textContent = 'Chế độ v2';
     document.getElementById('riskLevel').textContent = 'Đang dùng API v2';
     document.getElementById('riskBreakdown').innerHTML = '';
@@ -1176,7 +1176,7 @@ function renderV2Results(data, urlInfo) {
     }
 }
 
-function showWarningModalV3(riskScore, sentiment, toxicity, factCheck) {
+function showWarningModalV4(riskScore, sentiment, toxicity, factCheck) {
     const warningModal = document.getElementById('warningModal');
     const warningContent = document.getElementById('warningContent');
 
@@ -1445,13 +1445,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function exportReport(data, url) {
-    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v3;
+    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v4;
     if (!isSupported) return;
 
-    const sentiment = data.sentiment_v3 || {};
-    const toxicity = data.toxicity_v3 || {};
-    const factCheck = data.fact_check_v3 || {};
-    const riskScore = data.risk_score_v3 || {};
+    const sentiment = data.sentiment_v4 || {};
+    const toxicity = data.toxicity_v4 || {};
+    const factCheck = data.fact_check_v4 || {};
+    const riskScore = data.risk_score_v4 || {};
     const comments = data.comments_analysis || {};
     const summary = data.article_summary || {};
 
@@ -1732,18 +1732,18 @@ async function runComparison() {
 }
 
 function renderComparison(data1, data2, url1, url2) {
-    const risk1 = data1.risk_score_v3?.risk_score || 0;
-    const risk2 = data2.risk_score_v3?.risk_score || 0;
-    const level1 = data1.risk_score_v3?.risk_level || 'Low';
-    const level2 = data2.risk_score_v3?.risk_level || 'Low';
-    const sent1 = data1.sentiment_v3?.overall || 'Neutral';
-    const sent2 = data2.sentiment_v3?.overall || 'Neutral';
-    const toxic1 = data1.toxicity_v3?.is_toxic || false;
-    const toxic2 = data2.toxicity_v3?.is_toxic || false;
-    const fact1 = data1.fact_check_v3?.score || 50;
-    const fact2 = data2.fact_check_v3?.score || 50;
-    const verdict1 = data1.fact_check_v3?.verdict || '?';
-    const verdict2 = data2.fact_check_v3?.verdict || '?';
+    const risk1 = data1.risk_score_v4?.risk_score || 0;
+    const risk2 = data2.risk_score_v4?.risk_score || 0;
+    const level1 = data1.risk_score_v4?.risk_level || 'Low';
+    const level2 = data2.risk_score_v4?.risk_level || 'Low';
+    const sent1 = data1.sentiment_v4?.overall || 'Neutral';
+    const sent2 = data2.sentiment_v4?.overall || 'Neutral';
+    const toxic1 = data1.toxicity_v4?.is_toxic || false;
+    const toxic2 = data2.toxicity_v4?.is_toxic || false;
+    const fact1 = data1.fact_check_v4?.score || 50;
+    const fact2 = data2.fact_check_v4?.score || 50;
+    const verdict1 = data1.fact_check_v4?.verdict || '?';
+    const verdict2 = data2.fact_check_v4?.verdict || '?';
     const toxicCount1 = data1.comments_analysis?.toxic_count || 0;
     const toxicCount2 = data2.comments_analysis?.toxic_count || 0;
     const totalComments1 = data1.comments_analysis?.total || 0;
@@ -1820,10 +1820,10 @@ function getDomain(url) {
 
 const MODULE_NAMES = {
     article_summary: '📰 Tóm tắt',
-    sentiment_v3: '🎭 Cảm xúc',
-    toxicity_v3: '🛡️ Độc hại',
-    fact_check_v3: '📰 Kiểm tra TT',
-    risk_score_v3: '📊 Rủi ro',
+    sentiment_v4: '🎭 Cảm xúc',
+    toxicity_v4: '🛡️ Độc hại',
+    fact_check_v4: '📰 Kiểm tra TT',
+    risk_score_v4: '📊 Rủi ro',
     comments_analysis: '💬 Bình luận'
 };
 
@@ -1899,7 +1899,7 @@ async function submitPageReport() {
         return;
     }
 
-    const riskScore = currentResultsData?.risk_score_v3?.risk_score || 50;
+    const riskScore = currentResultsData?.risk_score_v4?.risk_score || 50;
     const btn = document.getElementById('reportSubmitBtn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang gửi...'; }
 

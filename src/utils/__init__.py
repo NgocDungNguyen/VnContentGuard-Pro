@@ -1,1 +1,1 @@
-# VnContentGuard Pro v3 - Utility modules
+# VnContentGuard Pro v4 - Utility modules

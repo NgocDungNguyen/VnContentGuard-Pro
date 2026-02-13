@@ -1,5 +1,5 @@
 """
-Unit Tests for VnContentGuard Pro v3 - Sentiment Analysis
+Unit Tests for VnContentGuard Pro v4 - Sentiment Analysis
 Tests PhoBERT model and keyword fallback
 """
 
@@ -11,16 +11,16 @@ import pytest
 # Add project root to path
 sys.path.insert(0, "c:\\Users\\LucyS\\Tox")
 
-from src.models.sentiment_v3 import SentimentAnalyzerV3
+from src.models.sentiment_v4 import SentimentAnalyzerV4
 
 
-class TestSentimentAnalyzerV3:
-    """Test suite for SentimentAnalyzerV3"""
+class TestSentimentAnalyzerV4:
+    """Test suite for SentimentAnalyzerV4"""
 
     @pytest.fixture
     def analyzer(self):
         """Create analyzer instance for testing"""
-        return SentimentAnalyzerV3()
+        return SentimentAnalyzerV4()
 
     # ==================== Basic Tests ====================
 
@@ -134,7 +134,7 @@ class TestSentimentAnalyzerV3:
     def test_fallback_on_phobert_error(self):
         """Test that keyword fallback works when PhoBERT fails"""
         # Create analyzer with PhoBERT disabled
-        analyzer = SentimentAnalyzerV3(use_phobert=False)
+        analyzer = SentimentAnalyzerV4(use_phobert=False)
 
         text = "Bài viết hay quá!"
         result = analyzer.analyze(text)
@@ -144,7 +144,7 @@ class TestSentimentAnalyzerV3:
 
     def test_fallback_returns_valid_result(self):
         """Test that fallback returns complete result structure"""
-        analyzer = SentimentAnalyzerV3(use_phobert=False)
+        analyzer = SentimentAnalyzerV4(use_phobert=False)
 
         text = "Sản phẩm tệ lắm"
         result = analyzer.analyze(text)
@@ -186,36 +186,36 @@ class TestSentimentAnalyzerV3:
         assert isinstance(result["method"], str)
 
 
-class TestSentimentV3VsV2:
-    """Compare v3 results with v2 baseline"""
+class TestSentimentV4VsV2:
+    """Compare v4 results with v2 baseline"""
 
-    def test_v3_improves_accuracy(self):
-        """Test that v3 provides higher confidence than v2 for clear cases"""
+    def test_v4_improves_accuracy(self):
+        """Test that v4 provides higher confidence than v2 for clear cases"""
         from src.models.sentiment import SentimentAnalyzer as V2
 
         v2 = V2()
-        v3 = SentimentAnalyzerV3()
+        v4 = SentimentAnalyzerV4()
 
         # Clear positive case
         text = "Sản phẩm tuyệt vời, rất hài lòng, chất lượng xuất sắc!"
 
         v2_result = v2.analyze(text)
-        v3_result = v3.analyze(text)
+        v4_result = v4.analyze(text)
 
-        # v3 should have comparable confidence (may differ slightly)
+        # v4 should have comparable confidence (may differ slightly)
         # PhoBERT uses different scoring than keyword count
-        if v3.phobert_available:
-            assert v3_result["confidence"] >= 0.8  # High confidence threshold
+        if v4.phobert_available:
+            assert v4_result["confidence"] >= 0.8  # High confidence threshold
         else:
-            assert v3_result["confidence"] >= v2_result.get("score", 0) * 0.8
+            assert v4_result["confidence"] >= v2_result.get("score", 0) * 0.8
 
 
-    def test_v3_backward_compatible(self):
-        """Test that v3 returns similar labels as v2"""
+    def test_v4_backward_compatible(self):
+        """Test that v4 returns similar labels as v2"""
         from src.models.sentiment import SentimentAnalyzer as V2
 
         v2 = V2()
-        v3 = SentimentAnalyzerV3()
+        v4 = SentimentAnalyzerV4()
 
         test_cases = [
             ("Rất tốt và hay", "Positive"),
@@ -224,13 +224,13 @@ class TestSentimentV3VsV2:
 
         for text, expected in test_cases:
             v2_result = v2.analyze(text)
-            v3_result = v3.analyze(text)
+            v4_result = v4.analyze(text)
             
             # v2 should match expected (keyword-based)
             assert v2_result["label"] == expected
-            # v3 may differ slightly due to PhoBERT's interpretation
+            # v4 may differ slightly due to PhoBERT's interpretation
             # Just ensure it returns a valid sentiment
-            assert v3_result["overall"] in ["Positive", "Negative", "Neutral"]
+            assert v4_result["overall"] in ["Positive", "Negative", "Neutral"]
 
 
 # Run tests

@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v3 - Smart Comment Filter
+VnContentGuard Pro v4 - Smart Comment Filter
 =============================================
 Pre-filters comments into categories to avoid wasting API calls
 on obvious cases. Only ambiguous comments are sent to Gemini.
