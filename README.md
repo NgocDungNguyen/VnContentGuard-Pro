@@ -152,31 +152,39 @@ VnContentGuard-Pro/
 │
 ├── src/
 │   ├── models/
-│   │   ├── sentiment.py           # Keyword-based sentiment (fallback)
-│   │   ├── sentiment_v3.py        # PhoBERT sentiment analysis
-│   │   ├── toxicity.py            # Regex toxicity (fallback)
-│   │   ├── toxicity_v3.py         # 4-layer toxicity detection
-│   │   ├── fact_checker_v3.py     # Multi-source fact checking
-│   │   ├── source_analyzer_v3.py  # Domain credibility analysis
-│   │   ├── news_aggregator_v3.py  # News cross-reference
-│   │   ├── risk_scorer_v3.py      # Risk scoring engine
-│   │   ├── article_summarizer_v3.py # AI article summarization
-│   │   └── gemini_llm.py         # Gemini API key rotator
+│   │   ├── sentiment.py           # Keyword-based sentiment (v2 base)
+│   │   ├── sentiment_v4.py        # Enhanced sentiment analysis
+│   │   ├── toxicity.py            # Regex toxicity (v2 base)
+│   │   ├── toxicity_v4.py         # 4-layer toxicity detection
+│   │   ├── fact_checker_v4.py     # Multi-source fact checking
+│   │   ├── source_analyzer_v4.py  # Domain credibility analysis
+│   │   ├── news_aggregator_v4.py  # NewsData.io/GNews cross-reference
+│   │   ├── risk_scorer_v4.py      # Risk scoring engine
+│   │   ├── article_summarizer_v4.py # AI article summarization
+│   │   └── gemini_llm.py         # Gemini API key rotator (30 keys)
 │   └── utils/
-│       ├── cache_manager.py       # Response caching
-│       └── comment_filter.py      # Comment pre-filtering
+│       ├── cache_manager.py       # Response caching (24h TTL)
+│       ├── comment_filter.py      # Comment pre-filtering
+│       ├── blocklist.py           # Community blocklist
+│       └── feedback_store.py      # User feedback store
 │
 ├── tests/
-│   ├── test_sentiment_v3.py       # 19 tests
-│   ├── test_toxicity_v3.py        # 26 tests
-│   ├── test_fact_checking_v3.py   # 31 tests
-│   └── test_risk_scorer_v3.py     # 20 tests
+│   ├── test_sentiment_v4.py       # Sentiment tests
+│   ├── test_toxicity_v4.py        # Toxicity tests
+│   ├── test_fact_checking_v4.py   # Fact-checking tests
+│   └── test_risk_scorer_v4.py     # Risk scorer tests
 │
 └── extension/
     ├── manifest.json              # Chrome extension manifest v3
     ├── popup.html                 # Popup UI (tiếng Việt)
     ├── popup.js                   # Logic & rendering
-    ├── style.css                  # Styling
+    ├── background.js              # Service worker (SSE, scans)
+    ├── offline_analyzer.js        # Offline regex analysis
+    ├── style.css                  # Styling + dark mode
+    ├── block.html                 # Parental control block page
+    ├── warning.html               # Content warning interstitial
+    ├── report.html                # Weekly safety report
+    ├── report.js                  # Report logic
     └── icons/
         └── icon.png               # Extension icon
 ```
@@ -218,10 +226,10 @@ GNEWS_API_KEY=e3dc0...
 pytest -v
 
 # Module cụ thể
-pytest tests/test_sentiment_v3.py -v
-pytest tests/test_toxicity_v3.py -v
-pytest tests/test_fact_checking_v3.py -v
-pytest tests/test_risk_scorer_v3.py -v
+pytest tests/test_sentiment_v4.py -v
+pytest tests/test_toxicity_v4.py -v
+pytest tests/test_fact_checking_v4.py -v
+pytest tests/test_risk_scorer_v4.py -v
 ```
 
 ---
