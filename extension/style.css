@@ -81,8 +81,81 @@ h2 {
     text-align: center;
     font-size: 12px;
     color: #27ae60;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     font-weight: 600;
+}
+
+/* ============================================================================
+   API USAGE DASHBOARD — Feature 3.4 (v4.9.1)
+   ============================================================================ */
+
+.usage-dashboard {
+    background: var(--bg-card, #f8f9fa);
+    border: 1px solid var(--border-color, #e0e0e0);
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+}
+
+.usage-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.usage-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-primary, #333);
+}
+
+.usage-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: #27ae60;
+    transition: color 0.3s ease;
+}
+
+.usage-bar {
+    height: 6px;
+    background: var(--border-color, #e0e0e0);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.usage-bar-fill {
+    height: 100%;
+    background: #27ae60;
+    border-radius: 3px;
+    transition: width 0.5s ease, background 0.3s ease;
+    min-width: 0;
+}
+
+.usage-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--text-secondary, #999);
+}
+
+.usage-details span {
+    cursor: default;
+}
+
+/* Dark mode for usage dashboard */
+body.dark-mode .usage-dashboard {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .usage-label {
+    color: var(--text-primary);
+}
+
+body.dark-mode .usage-details {
+    color: var(--text-secondary);
 }
 
 .btn-primary {

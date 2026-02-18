@@ -278,7 +278,7 @@
 | **Files** | `api.py`, `popup.js`, `popup.html`, `style.css` |
 | **Effort** | 1 day |
 | **Cost** | $0 |
-| **Status** | ✅ Completed (v4.0) — GET /api/stats endpoint with model info, key availability, exhausted count |
+| **Status** | 🔄 Partial (v4.0→v4.9) — Backend `GET /api/stats` exists but popup UI never implemented. **v4.9.1**: Added daily usage counter, cache stats, uptime to backend. Added compact "🔋 Hệ thống" status bar in popup header with color-coded capacity + auto-refresh on popup open. |
 
 ### 3.5 — Notification System
 

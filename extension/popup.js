@@ -39,6 +39,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Check blocklist for current URL (4.1)
         checkBlocklistStatus(tab.url);
 
+        // Fetch and display system stats (3.4)
+        loadUsageDashboard();
+
         // Apply saved dark mode preference
         chrome.storage.sync.get(['darkMode'], (result) => {
             if (result.darkMode) {
@@ -2082,4 +2085,102 @@ async function saveParentalSettings() {
         statusEl.textContent = enabled ? `🔒 Kiểm soát gia đình: BẬT (ngưỡng ${threshold})` : '🔓 Kiểm soát gia đình: TẮT';
         setTimeout(() => { statusEl.textContent = 'Sẵn sàng quét'; }, 3000);
     }
+}
+
+// ============================================================================
+// API USAGE DASHBOARD — Feature 3.4 (v4.9.1)
+// ============================================================================
+
+async function loadUsageDashboard() {
+    const dashboard = document.getElementById('usageDashboard');
+    if (!dashboard) return;
+
+    try {
+        const stats = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
+
+        if (!stats || stats.error || stats.status === '🔴 Offline' || stats.status === '🔴 Error') {
+            // Server offline
+            updateUsageUI({
+                text: '🔴 Offline',
+                percent: 0,
+                color: '#e74c3c',
+                keys: '--/--',
+                cache: '--',
+                uptime: '--'
+            });
+            return;
+        }
+
+        const usage = stats.usage || {};
+        const keys = stats.api_keys || {};
+        const cache = stats.cache || {};
+
+        const dailyRequests = usage.daily_requests || 0;
+        const dailyLimit = usage.daily_limit || 1;
+        const dailyRemaining = usage.daily_remaining || 0;
+        const usagePercent = usage.usage_percent || 0;
+        const remainPercent = 100 - usagePercent;
+
+        // Color coding: 🟢 >50% remaining, 🟡 20-50%, 🔴 <20%
+        let color, emoji;
+        if (remainPercent > 50) {
+            color = '#27ae60'; emoji = '🟢';
+        } else if (remainPercent > 20) {
+            color = '#f39c12'; emoji = '🟡';
+        } else {
+            color = '#e74c3c'; emoji = '🔴';
+        }
+
+        // Format numbers
+        const formatNum = (n) => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : n;
+
+        // Cache hit rate
+        const hitRate = cache.hit_rate || 'N/A';
+
+        // Uptime format
+        const uptimeSec = stats.uptime_seconds || 0;
+        const uptimeStr = formatUptime(uptimeSec);
+
+        updateUsageUI({
+            text: `${emoji} ${formatNum(dailyRemaining)}/${formatNum(dailyLimit)} lượt còn lại`,
+            percent: remainPercent,
+            color: color,
+            keys: `🔑 ${keys.available || 0}/${keys.total || 0}`,
+            cache: `📀 ${hitRate}`,
+            uptime: `⏱️ ${uptimeStr}`
+        });
+
+    } catch (err) {
+        console.log('[Popup] Stats fetch error:', err.message);
+        updateUsageUI({
+            text: '⚠️ Không kết nối',
+            percent: 0,
+            color: '#95a5a6',
+            keys: '--/--',
+            cache: '--',
+            uptime: '--'
+        });
+    }
+}
+
+function updateUsageUI({ text, percent, color, keys, cache, uptime }) {
+    const textEl = document.getElementById('usageText');
+    const fillEl = document.getElementById('usageBarFill');
+    const keysEl = document.getElementById('usageKeys');
+    const cacheEl = document.getElementById('usageCache');
+    const uptimeEl = document.getElementById('usageUptime');
+
+    if (textEl) { textEl.textContent = text; textEl.style.color = color; }
+    if (fillEl) { fillEl.style.width = `${Math.max(0, Math.min(100, percent))}%`; fillEl.style.background = color; }
+    if (keysEl) keysEl.textContent = keys;
+    if (cacheEl) cacheEl.textContent = cache;
+    if (uptimeEl) uptimeEl.textContent = uptime;
+}
+
+function formatUptime(seconds) {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    return m > 0 ? `${h}h${m}m` : `${h}h`;
 }

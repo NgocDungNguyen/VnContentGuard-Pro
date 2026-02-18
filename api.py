@@ -44,6 +44,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Server boot timestamp for uptime tracking
+SERVER_START_TIME = time.time()
+
 print("⏳ Booting up AI Engine...")
 try:
     # SINGLE shared key rotator for ALL Gemini calls (prevents burning keys)
@@ -129,23 +132,47 @@ def health_check():
 
 @app.get("/api/stats")
 def api_stats():
-    """v4.9 — API usage statistics and model status."""
+    """v4.9 — API usage statistics, daily usage tracking, and system health."""
     try:
         gemini_status = gemini_agent.get_status()
         feedback_stats = feedback_store.get_stats()
         blocklist_stats = community_blocklist.get_stats()
+        cache_stats = cache_manager.get_stats()
+
+        # Calculate daily usage from per-key request counts
+        key_status = shared_key_rotator.get_status()
+        request_counts = key_status.get("request_counts", {})
+        daily_requests = sum(request_counts.values())
+
+        # Gemini free tier: 1,500 requests/day/key → total daily capacity
+        total_keys = len(API_KEY_POOL)
+        daily_limit = total_keys * 1500
+        daily_remaining = max(0, daily_limit - daily_requests)
+
+        # Uptime
+        uptime_seconds = int(time.time() - SERVER_START_TIME)
+
         return {
             "version": "4.9.0",
             "model": gemini_status.get("model", "unknown"),
             "using_fallback": gemini_status.get("using_fallback", False),
             "api_keys": {
-                "total": gemini_status.get("total_keys", 0),
+                "total": total_keys,
                 "available": gemini_status.get("available_count", 0),
                 "exhausted": gemini_status.get("exhausted_count", 0),
+                "cooldown": key_status.get("cooldown_count", 0),
                 "current": gemini_status.get("current_key", 0),
             },
+            "usage": {
+                "daily_requests": daily_requests,
+                "daily_limit": daily_limit,
+                "daily_remaining": daily_remaining,
+                "usage_percent": round(daily_requests / daily_limit * 100, 1) if daily_limit > 0 else 0,
+            },
+            "cache": cache_stats,
             "feedback": feedback_stats,
             "blocklist": blocklist_stats,
+            "uptime_seconds": uptime_seconds,
             "status": "🟢 Online",
         }
     except Exception as e:

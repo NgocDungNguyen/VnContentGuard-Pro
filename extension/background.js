@@ -49,6 +49,11 @@ const BLOCKLIST_CHECK_ENDPOINTS = [
     "https://vncontentguard-pro.onrender.com/api/blocklist/check"
 ];
 
+const STATS_ENDPOINTS = [
+    "http://127.0.0.1:8000/api/stats",
+    "https://vncontentguard-pro.onrender.com/api/stats"
+];
+
 // Cached blocklist (refreshed every 6h)
 let cachedBlocklist = [];
 let blocklistLastFetch = 0;
@@ -139,6 +144,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type === 'CHECK_BLOCKLIST') {
         checkBlocklist(message.url).then(result => sendResponse(result));
+        return true;
+    }
+
+    if (message.type === 'GET_STATS') {
+        fetchSystemStats().then(result => sendResponse(result));
         return true;
     }
 });
@@ -747,6 +757,24 @@ chrome.notifications.onButtonClicked.addListener((notifId, btnIdx) => {
         chrome.tabs.create({ url: chrome.runtime.getURL('report.html') });
     }
 });
+
+// ============================================================================
+// SYSTEM STATS — Feature 3.4 (v4.9.1)
+// ============================================================================
+
+async function fetchSystemStats() {
+    for (const endpoint of STATS_ENDPOINTS) {
+        try {
+            const response = await fetch(endpoint, { method: 'GET', signal: AbortSignal.timeout(5000) });
+            if (response.ok) {
+                const data = await response.json();
+                console.log(`[BG] Stats fetched from: ${endpoint}`);
+                return data;
+            }
+        } catch { /* try next endpoint */ }
+    }
+    return { status: '🔴 Offline', error: 'Không thể kết nối server' };
+}
 
 // ============================================================================
 // FEEDBACK SUBMISSION

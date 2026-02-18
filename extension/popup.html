@@ -21,6 +21,22 @@
         </div>
         <div id="status" class="status-badge">Sẵn sàng quét</div>
 
+        <!-- API USAGE DASHBOARD (3.4) -->
+        <div id="usageDashboard" class="usage-dashboard">
+            <div class="usage-row">
+                <span class="usage-label">🔋 Hệ thống</span>
+                <span id="usageText" class="usage-value">Đang tải...</span>
+            </div>
+            <div class="usage-bar">
+                <div id="usageBarFill" class="usage-bar-fill" style="width: 0%"></div>
+            </div>
+            <div class="usage-details">
+                <span id="usageKeys" title="API keys khả dụng">🔑 --/--</span>
+                <span id="usageCache" title="Cache hit rate">💾 --</span>
+                <span id="usageUptime" title="Thời gian chạy">⏱️ --</span>
+            </div>
+        </div>
+
         <!-- STREAMING PROGRESS BAR (1.5) -->
         <div id="streamProgress" class="hidden">
             <div class="stream-progress-bar">
