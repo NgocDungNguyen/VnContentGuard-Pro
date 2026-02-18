@@ -3,6 +3,8 @@ import json
 import platform
 import sys
 import time
+import threading
+from datetime import datetime
 from typing import List, Optional
 
 # Fix CP1258 encoding issues on Windows (emoji in print statements)
@@ -46,6 +48,35 @@ app.add_middleware(
 
 # Server boot timestamp for uptime tracking
 SERVER_START_TIME = time.time()
+
+
+class RequestTracker:
+    """Thread-safe daily Gemini API call counter.
+    Resets automatically at UTC midnight."""
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._count = 0
+        self._date = datetime.utcnow().date()
+
+    def increment(self, n: int = 1):
+        with self._lock:
+            self._check_reset()
+            self._count += n
+
+    def get_count(self) -> int:
+        with self._lock:
+            self._check_reset()
+            return self._count
+
+    def _check_reset(self):
+        today = datetime.utcnow().date()
+        if today > self._date:
+            self._count = 0
+            self._date = today
+
+
+request_tracker = RequestTracker()
 
 print("⏳ Booting up AI Engine...")
 try:
@@ -139,10 +170,9 @@ def api_stats():
         blocklist_stats = community_blocklist.get_stats()
         cache_stats = cache_manager.get_stats()
 
-        # Calculate daily usage from per-key request counts
+        # Daily usage from server-level request tracker (thread-safe)
         key_status = shared_key_rotator.get_status()
-        request_counts = key_status.get("request_counts", {})
-        daily_requests = sum(request_counts.values())
+        daily_requests = request_tracker.get_count()
 
         # Gemini free tier: 1,500 requests/day/key → total daily capacity
         total_keys = len(API_KEY_POOL)
@@ -167,7 +197,11 @@ def api_stats():
                 "daily_requests": daily_requests,
                 "daily_limit": daily_limit,
                 "daily_remaining": daily_remaining,
-                "usage_percent": round(daily_requests / daily_limit * 100, 1) if daily_limit > 0 else 0,
+                "usage_percent": (
+                    round(daily_requests / daily_limit * 100, 1)
+                    if daily_limit > 0
+                    else 0
+                ),
             },
             "cache": cache_stats,
             "feedback": feedback_stats,
@@ -305,6 +339,9 @@ def analyze_content_v4_stream(req: ScanRequest):
                         req.article_text, req.url
                     )
                     summary_text = article_summary.get("summary", "")
+                    # Track Gemini call (skip if cached)
+                    if article_summary.get("method") == "gemini":
+                        request_tracker.increment(1)
                 except Exception as e:
                     print(f"⚠️ [SSE] Summary failed: {e}")
             yield _sse_event(
@@ -362,6 +399,9 @@ def analyze_content_v4_stream(req: ScanRequest):
                     fact_check_v4 = fact_checker_v4_engine.check(
                         req.article_text, req.url
                     )
+                    # Track Gemini verification call
+                    if fact_check_v4.get("verification_methods"):
+                        request_tracker.increment(1)
                 except Exception as e:
                     print(f"⚠️ [SSE] Fact check failed: {e}")
             yield _sse_event(
@@ -411,6 +451,12 @@ def analyze_content_v4_stream(req: ScanRequest):
                 comments_analysis = _analyze_comments_v4(
                     req.comments[:50], summary_text, req.url, learning_ctx
                 )
+                # Track Gemini calls for ambiguous comments
+                sent_to_ai = comments_analysis.get("filter_stats", {}).get("sent_to_ai", 0)
+                if sent_to_ai > 0:
+                    # Each batch of up to 25 = 1 Gemini call
+                    batch_calls = max(1, (sent_to_ai + 24) // 25)
+                    request_tracker.increment(batch_calls)
             yield _sse_event(
                 "module", {"module": "comments_analysis", "data": comments_analysis}
             )
@@ -484,6 +530,7 @@ def analyze_content(req: ScanRequest):
             try:
                 fake_json = gemini_agent.check_fake_news(req.article_text)
                 fake_data = json.loads(fake_json)
+                request_tracker.increment(1)  # Track Gemini call
             except json.JSONDecodeError:
                 fake_data = {
                     "risk_score": 0,

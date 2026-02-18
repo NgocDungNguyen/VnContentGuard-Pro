@@ -22,11 +22,27 @@
         "severity": "None"
       },
       "timestamp": "2026-02-13T16:08:50.229854"
+    },
+    {
+      "url": "https://dantri.com.vn/suc-khoe/tphcm-cap-cuu-cac-ca-chan-thuong-phao-no-trong-dem-giao-thua-20260217123847454.htm",
+      "domain": "dantri.com.vn",
+      "rating": "positive",
+      "correction": "",
+      "modules": {},
+      "scan_snapshot": {
+        "verdict": "Có thể đúng",
+        "risk_score": 15.25,
+        "risk_level": "Low",
+        "sentiment": "Neutral",
+        "is_toxic": false,
+        "severity": "None"
+      },
+      "timestamp": "2026-02-18T15:44:00.038726"
     }
   ],
   "stats": {
-    "total": 2,
-    "positive": 2,
+    "total": 3,
+    "positive": 3,
     "negative": 0
   }
 }

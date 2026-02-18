@@ -247,6 +247,8 @@ function startPollingForResults(url) {
                 document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
                 document.getElementById('status').textContent = 'Phân tích hoàn tất';
                 renderResults(status.results, url);
+                // Refresh usage dashboard after scan
+                loadUsageDashboard();
             } else {
                 // Check URL cache
                 chrome.storage.local.get([url], (result) => {
@@ -255,6 +257,7 @@ function startPollingForResults(url) {
                         document.getElementById('scanBtn').disabled = false;
                         document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
                         renderResults(result[url], url);
+                        loadUsageDashboard();
                     }
                 });
             }
