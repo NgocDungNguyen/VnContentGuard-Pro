@@ -2134,8 +2134,8 @@ async function loadUsageDashboard() {
             color = '#e74c3c'; emoji = '🔴';
         }
 
-        // Format numbers
-        const formatNum = (n) => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : n;
+        // Format numbers — show exact count when small, 'k' only for large
+        const formatNum = (n) => n >= 1000 ? (n / 1000).toFixed(1) + 'k' : String(n);
 
         // Cache hit rate
         const hitRate = cache.hit_rate || 'N/A';
@@ -2144,8 +2144,9 @@ async function loadUsageDashboard() {
         const uptimeSec = stats.uptime_seconds || 0;
         const uptimeStr = formatUptime(uptimeSec);
 
+        // Show "used / limit" so small usage is visible (not "remaining / limit" which rounds the same)
         updateUsageUI({
-            text: `${emoji} ${formatNum(dailyRemaining)}/${formatNum(dailyLimit)} lượt còn lại`,
+            text: `${emoji} Đã dùng ${formatNum(dailyRequests)}/${formatNum(dailyLimit)} lượt`,
             percent: remainPercent,
             color: color,
             keys: `🔑 ${keys.available || 0}/${keys.total || 0}`,

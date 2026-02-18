@@ -38,11 +38,27 @@
         "severity": "None"
       },
       "timestamp": "2026-02-18T15:44:00.038726"
+    },
+    {
+      "url": "https://dantri.com.vn/suc-khoe/chuyen-18-bo-me-nen-lam-gi-khi-phat-hien-con-quan-he-som-20260123210324711.htm",
+      "domain": "dantri.com.vn",
+      "rating": "positive",
+      "correction": "",
+      "modules": {},
+      "scan_snapshot": {
+        "verdict": "Có thể đúng",
+        "risk_score": 16,
+        "risk_level": "Low",
+        "sentiment": "Positive",
+        "is_toxic": false,
+        "severity": "None"
+      },
+      "timestamp": "2026-02-18T15:58:32.955068"
     }
   ],
   "stats": {
-    "total": 3,
-    "positive": 3,
+    "total": 4,
+    "positive": 4,
     "negative": 0
   }
 }

@@ -2,8 +2,8 @@ import asyncio
 import json
 import platform
 import sys
-import time
 import threading
+import time
 from datetime import datetime
 from typing import List, Optional
 
@@ -452,7 +452,9 @@ def analyze_content_v4_stream(req: ScanRequest):
                     req.comments[:50], summary_text, req.url, learning_ctx
                 )
                 # Track Gemini calls for ambiguous comments
-                sent_to_ai = comments_analysis.get("filter_stats", {}).get("sent_to_ai", 0)
+                sent_to_ai = comments_analysis.get("filter_stats", {}).get(
+                    "sent_to_ai", 0
+                )
                 if sent_to_ai > 0:
                     # Each batch of up to 25 = 1 Gemini call
                     batch_calls = max(1, (sent_to_ai + 24) // 25)
