@@ -1,14 +1,14 @@
 """
 VnContentGuard Pro v4 - Article Summarizer
 ============================================
-Generates detailed 8-10 sentence summaries of Vietnamese news articles
+Generates detailed 12-15 sentence summaries of Vietnamese news articles
 using Gemini AI. Results are cached per URL to avoid redundant API calls.
 
 Features:
-- Gemini 2.5 Flash Lite for fast, cheap summaries
+- Gemini 2.5 Flash for detailed summaries
 - Automatic caching (24h TTL per URL)
-- Fallback to first-2-sentences extraction if API fails
-- Input truncation to 2000 chars to save tokens
+- Fallback to first-3-sentences extraction if API fails
+- Input truncation to 8000 chars for maximum context
 """
 
 from typing import Any, Dict, Optional
@@ -89,26 +89,27 @@ class ArticleSummarizer:
         if self.client:
             for attempt in range(max_attempts):
                 try:
-                    # Truncate to save tokens (first 6000 chars for better context)
-                    truncated = article_text[:6000]
+                    # Truncate to save tokens (first 8000 chars for maximum context)
+                    truncated = article_text[:8000]
 
                     prompt = (
                         "Bạn là chuyên gia tóm tắt tin tức tiếng Việt và tiếng Anh.\n"
-                        "Hãy viết MỘT ĐOẠN VĂN tóm tắt CHI TIẾT bài báo dưới đây.\n\n"
+                        "Hãy viết MỘT ĐOẠN VĂN tóm tắt RẤT CHI TIẾT bài báo dưới đây.\n\n"
                         "QUY TẮC BẮT BUỘC (QUAN TRỌNG - PHẢI TUÂN THỦ):\n"
-                        "1. Đoạn tóm tắt BẮT BUỘC PHẢI có TỐI THIỂU 8-10 câu đầy đủ\n"
-                        "2. Đoạn tóm tắt PHẢI dài TỐI THIỂU 1000 ký tự (khoảng 500-600 từ)\n"
+                        "1. Đoạn tóm tắt BẮT BUỘC PHẢI có TỐI THIỂU 12-15 câu đầy đủ\n"
+                        "2. Đoạn tóm tắt PHẢI dài TỐI THIỂU 1500 ký tự (khoảng 700-900 từ)\n"
                         "3. Câu 1-2: Nêu chủ đề chính, ai/cái gì đang xảy ra, ở đâu, khi nào\n"
-                        "4. Câu 3: Nêu con số, dữ liệu, giá cả cụ thể quan trọng nhất\n"
-                        "5. Câu 4-5: Giải thích nguyên nhân, bối cảnh, diễn biến chi tiết\n"
-                        "6. Câu 6-7: Nêu các chi tiết bổ sung, so sánh, phản ứng của các bên liên quan\n"
-                        "7. Câu 8-10: Nêu tác động, hệ quả, ý nghĩa, dự báo hoặc khuyến nghị\n"
-                        "8. Giữ nguyên tên riêng, địa danh và số liệu cụ thể từ bài gốc\n"
-                        "9. Viết liền mạch thành MỘT đoạn văn duy nhất, KHÔNG xuống dòng, KHÔNG đánh số\n"
-                        "10. Chỉ trả về đoạn tóm tắt, KHÔNG thêm tiêu đề hay giải thích\n"
-                        "11. NẾU đoạn tóm tắt dưới 1000 ký tự → BẠN ĐÃ LÀM SAI, hãy viết dài hơn\n\n"
+                        "4. Câu 3-4: Nêu con số, dữ liệu, giá cả, thống kê cụ thể quan trọng nhất\n"
+                        "5. Câu 5-7: Giải thích nguyên nhân, bối cảnh lịch sử, diễn biến chi tiết từng bước\n"
+                        "6. Câu 8-9: Nêu phản ứng, ý kiến của các bên liên quan (chính phủ, chuyên gia, người dân)\n"
+                        "7. Câu 10-11: So sánh với tình huống tương tự, bối cảnh quốc tế hoặc lịch sử\n"
+                        "8. Câu 12-15: Nêu tác động ngắn/dài hạn, hệ quả, dự báo, khuyến nghị và kết luận\n"
+                        "9. Giữ nguyên tên riêng, địa danh, tổ chức và số liệu cụ thể từ bài gốc\n"
+                        "10. Viết liền mạch thành MỘT đoạn văn duy nhất, KHÔNG xuống dòng, KHÔNG đánh số\n"
+                        "11. Chỉ trả về đoạn tóm tắt, KHÔNG thêm tiêu đề hay giải thích\n"
+                        "12. NẾU đoạn tóm tắt dưới 1500 ký tự → BẠN ĐÃ LÀM SAI, hãy viết dài hơn\n\n"
                         f"BÀI BÁO:\n{truncated}\n\n"
-                        "ĐOẠN TÓM TẮT CHI TIẾT (8-10 câu, tối thiểu 1000 ký tự, khoảng 500-600 từ):"
+                        "ĐOẠN TÓM TẮT RẤT CHI TIẾT (12-15 câu, tối thiểu 1500 ký tự, khoảng 700-900 từ):"
                     )
 
                     response = self.client.models.generate_content(
@@ -116,7 +117,7 @@ class ArticleSummarizer:
                         contents=prompt,
                         config=types.GenerateContentConfig(
                             temperature=0.5,
-                            max_output_tokens=2048,
+                            max_output_tokens=4096,
                         ),
                     )
 
@@ -126,22 +127,23 @@ class ArticleSummarizer:
                     summary = self._strip_meta_prefix(summary)
 
                     # If summary is too short, retry with stronger prompt
-                    if summary and len(summary) < 600:
+                    if summary and len(summary) < 1000:
                         retry_prompt = (
-                            f"Đoạn tóm tắt sau đây quá ngắn (CHỈ {len(summary)} ký tự, cần TỐI THIỂU 1000):\n"
+                            f"Đoạn tóm tắt sau đây quá ngắn (CHỈ {len(summary)} ký tự, cần TỐI THIỂU 1500):\n"
                             f'"{summary}"\n\n'
-                            "Hãy VIẾT LẠI đoạn tóm tắt DÀI HƠN RẤT NHIỀU với ít nhất 8-10 câu đầy đủ "
-                            "và tối thiểu 1000 ký tự. BẮT BUỘC thêm chi tiết về: con số cụ thể, "
-                            "nguyên nhân, bối cảnh, diễn biến, so sánh, phản ứng các bên, và tác động/hệ quả.\n\n"
-                            f"BÀI BÁO GỐC:\n{truncated[:4000]}\n\n"
-                            "ĐOẠN TÓM TẮT MỚI (8-10 câu, 1000+ ký tự, PHẢI đầy đủ chi tiết):"
+                            "Hãy VIẾT LẠI đoạn tóm tắt DÀI HƠN RẤT NHIỀU với ít nhất 12-15 câu đầy đủ "
+                            "và tối thiểu 1500 ký tự. BẮT BUỘC thêm chi tiết về: con số cụ thể, thống kê, "
+                            "nguyên nhân, bối cảnh lịch sử, diễn biến từng bước, phản ứng các bên, "
+                            "so sánh quốc tế, tác động ngắn/dài hạn, và khuyến nghị.\n\n"
+                            f"BÀI BÁO GỐC:\n{truncated[:6000]}\n\n"
+                            "ĐOẠN TÓM TẮT MỚI (12-15 câu, 1500+ ký tự, PHẢI cực kỳ chi tiết):"
                         )
                         retry_resp = self.client.models.generate_content(
                             model=self.model_name,
                             contents=retry_prompt,
                             config=types.GenerateContentConfig(
                                 temperature=0.6,
-                                max_output_tokens=2048,
+                                max_output_tokens=4096,
                             ),
                         )
                         retry_text = retry_resp.text.strip()
@@ -208,7 +210,7 @@ class ArticleSummarizer:
 
     def _fallback_summary(self, article_text: str) -> Dict[str, Any]:
         """
-        Extract first 2 sentences as a basic summary.
+        Extract first 3 sentences as a basic summary.
         Used when Gemini API is unavailable.
         """
         # Try splitting by Vietnamese sentence endings
@@ -224,12 +226,12 @@ class ArticleSummarizer:
                 break
 
         if not sentences:
-            # No sentence boundaries found, just take first 200 chars
-            summary = text[:200] + ("..." if len(text) > 200 else "")
+            # No sentence boundaries found, just take first 300 chars
+            summary = text[:300] + ("..." if len(text) > 300 else "")
         else:
-            summary = " ".join(sentences[:2])
-            if len(summary) > 300:
-                summary = summary[:300] + "..."
+            summary = " ".join(sentences[:3])
+            if len(summary) > 500:
+                summary = summary[:500] + "..."
 
         return {
             "summary": summary,
