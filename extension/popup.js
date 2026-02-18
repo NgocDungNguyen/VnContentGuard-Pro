@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v5.0 — Auto-scan toggle handler
+    // v4.9 — Auto-scan toggle handler
     const autoScanBtn = document.getElementById('autoScanBtn');
     if (autoScanBtn) {
         // Load current auto-scan state
@@ -146,19 +146,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v5.0 — Comparison mode button handler
+    // v4.9 — Comparison mode button handler
     const compareBtn = document.getElementById('compareBtn');
     if (compareBtn) {
         compareBtn.addEventListener('click', toggleComparePanel);
     }
 
-    // v5.0 — Compare Go button
+    // v4.9 — Compare Go button
     const compareGoBtn = document.getElementById('compareGoBtn');
     if (compareGoBtn) {
         compareGoBtn.addEventListener('click', runComparison);
     }
 
-    // v5.0 — Feedback button handlers
+    // v4.9 — Feedback button handlers
     const feedbackUp = document.getElementById('feedbackUp');
     const feedbackDown = document.getElementById('feedbackDown');
     if (feedbackUp) {
@@ -1664,7 +1664,7 @@ function exportReport(data, url) {
 }
 
 // ============================================================================
-// USER FEEDBACK — Feature 3.3 (v5.0)
+// USER FEEDBACK — Feature 3.3 (v4.9)
 // ============================================================================
 
 let feedbackRating = null;
@@ -1740,7 +1740,7 @@ async function submitFeedbackToBackend(rating, correction) {
 }
 
 // ============================================================================
-// COMPARISON MODE — Feature 2.5 (v5.0)
+// COMPARISON MODE — Feature 2.5 (v4.9)
 // ============================================================================
 
 async function toggleComparePanel() {

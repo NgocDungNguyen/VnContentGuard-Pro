@@ -1,6 +1,6 @@
 /**
- * VnContentGuard Pro v5.0 — Offline Regex Analyzer
- * ==================================================
+ * VnContentGuard Pro v4.9 — Offline Regex Analyzer
+ * ==
  * Instant local analysis using regex patterns + keyword sentiment.
  * Runs entirely in the extension (no backend needed).
  * Shows partial results with "⚡ Chế độ nhanh" badge while
