@@ -17,40 +17,33 @@
  * 11. 📊 Weekly Safety Report via alarms (4.4)
  */
 
-// API endpoints (local first, cloud fallback)
+// API endpoints (cloud)
 const API_ENDPOINTS = [
-    "http://127.0.0.1:8000/analyze/v4",
     "https://vncontentguard-pro.onrender.com/analyze/v4"
 ];
 
 const STREAM_ENDPOINTS = [
-    "http://127.0.0.1:8000/analyze/v4/stream",
     "https://vncontentguard-pro.onrender.com/analyze/v4/stream"
 ];
 
 // Feedback endpoints
 const FEEDBACK_ENDPOINTS = [
-    "http://127.0.0.1:8000/api/feedback",
     "https://vncontentguard-pro.onrender.com/api/feedback"
 ];
 
 const REPORT_ENDPOINTS = [
-    "http://127.0.0.1:8000/api/report",
     "https://vncontentguard-pro.onrender.com/api/report"
 ];
 
 const BLOCKLIST_ENDPOINTS = [
-    "http://127.0.0.1:8000/api/blocklist",
     "https://vncontentguard-pro.onrender.com/api/blocklist"
 ];
 
 const BLOCKLIST_CHECK_ENDPOINTS = [
-    "http://127.0.0.1:8000/api/blocklist/check",
     "https://vncontentguard-pro.onrender.com/api/blocklist/check"
 ];
 
 const STATS_ENDPOINTS = [
-    "http://127.0.0.1:8000/api/stats",
     "https://vncontentguard-pro.onrender.com/api/stats"
 ];
 
@@ -190,14 +183,11 @@ async function handleScan(data) {
                         status: 'scanning',
                         url: url,
                         timestamp: new Date().toISOString(),
-                        progress: endpoint.includes('127.0.0.1') 
-                            ? 'Đang phân tích (máy chủ cục bộ)...' 
-                            : 'Đang phân tích (đám mây)...'
+                        progress: 'Đang phân tích (đám mây)...'
                     }
                 });
 
-                const isLocal = endpoint.includes('127.0.0.1') || endpoint.includes('localhost');
-                const timeoutMs = isLocal ? 120000 : 30000;
+                const timeoutMs = 30000;
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -404,9 +394,8 @@ async function handleStreamScan(data) {
         for (const endpoint of STREAM_ENDPOINTS) {
             try {
                 console.log(`[BG] Stream trying: ${endpoint}`);
-                const isLocal = endpoint.includes('127.0.0.1') || endpoint.includes('localhost');
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), isLocal ? 180000 : 60000);
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
 
                 response = await fetch(endpoint, {
                     method: "POST",

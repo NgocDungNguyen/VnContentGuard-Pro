@@ -8,14 +8,11 @@
     "tabs",
     "scripting",
     "storage",
-    "downloads",
     "notifications",
     "webNavigation",
     "alarms"
   ],
   "host_permissions": [
-    "http://localhost:8000/*",
-    "http://127.0.0.1:8000/*",
     "https://vncontentguard-pro.onrender.com/*",
     "https://*.facebook.com/*",
     "https://*.vnexpress.net/*",

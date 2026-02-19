@@ -421,8 +421,8 @@ function showError(msg) {
     const errorBox = document.getElementById('errorBox');
     const errorMessage = document.getElementById('errorMessage');
 
-    if (msg.includes('localhost') || msg.includes('Failed to fetch')) {
-        errorMessage.textContent = 'Chưa kết nối máy chủ\nKhởi động API: python api.py';
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        errorMessage.textContent = 'Không thể kết nối máy chủ. Vui lòng thử lại sau.';
     } else {
         errorMessage.textContent = msg;
     }

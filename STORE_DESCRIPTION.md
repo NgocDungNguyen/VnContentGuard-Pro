@@ -309,7 +309,6 @@ Updated: February 2026
 | `tabs` | Query active tab URL and title for scan history |
 | `scripting` | Inject content scraper to extract article text and comments |
 | `storage` | Save scan history, settings, parental control config locally |
-| `downloads` | Export PDF reports |
 | `notifications` | Alert users about high-risk content |
 | `webNavigation` | Parental control interception and community blocklist warnings |
 | `alarms` | Weekly safety report scheduling |
@@ -318,8 +317,7 @@ Updated: February 2026
 
 | Host | Reason |
 |---|---|
-| `localhost:8000` / `127.0.0.1:8000` | Local development/analysis server |
-| `vncontentguard-pro.onrender.com` | Cloud fallback analysis server |
+| `vncontentguard-pro.onrender.com` | Cloud analysis server (AI processing via Gemini & sentiment models) |
 | `*.facebook.com` | Content scraping for Facebook posts and comments |
 | `*.vnexpress.net` | Content scraping for VnExpress articles and comments |
 | `*.dantri.com.vn` | Content scraping for Dân Trí articles and comments |
