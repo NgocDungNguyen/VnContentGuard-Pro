@@ -187,7 +187,7 @@ async function handleScan(data) {
                     }
                 });
 
-                const timeoutMs = 30000;
+                const timeoutMs = 120000;
 
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
@@ -395,7 +395,7 @@ async function handleStreamScan(data) {
             try {
                 console.log(`[BG] Stream trying: ${endpoint}`);
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 60000);
+                const timeoutId = setTimeout(() => controller.abort(), 180000);
 
                 response = await fetch(endpoint, {
                     method: "POST",
