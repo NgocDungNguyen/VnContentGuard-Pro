@@ -52,6 +52,21 @@ let cachedBlocklist = [];
 let blocklistLastFetch = 0;
 const BLOCKLIST_REFRESH_MS = 6 * 60 * 60 * 1000;
 
+// Server warm-up: Render free tier cold-starts in ~30s.
+// Pre-ping /health to wake the server before sending the actual scan.
+const HEALTH_URL = "https://vncontentguard-pro.onrender.com/health";
+async function warmUpServer() {
+    try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 50000);
+        await fetch(HEALTH_URL, { signal: controller.signal });
+        clearTimeout(tid);
+        console.log('[BG] Server warm-up OK');
+    } catch (e) {
+        console.log('[BG] Server warm-up ping failed:', e.message);
+    }
+}
+
 // Supported domains for auto-scan
 const AUTO_SCAN_DOMAINS = [
     'facebook.com', 'vnexpress.net', 'dantri.com.vn', 'tuoitre.vn',
@@ -155,6 +170,9 @@ async function handleScan(data) {
     const storageKey = `scan_${url}`;
 
     try {
+        // 0. Wake up server (cold-start protection)
+        await warmUpServer();
+
         // 1. Save scanning state immediately
         await chrome.storage.local.set({
             [storageKey]: {
@@ -377,6 +395,9 @@ async function handleStreamScan(data) {
     const storageKey = `scan_${url}`;
 
     try {
+        // 0. Wake up server (cold-start protection)
+        await warmUpServer();
+
         await chrome.storage.local.set({
             [storageKey]: {
                 status: 'scanning',
@@ -713,6 +734,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'weeklyReport') {
         generateWeeklyReportNotification();
     }
+    if (alarm.name === 'keepAlive') {
+        // Ping backend to prevent Render cold-start
+        fetch(HEALTH_URL).then(() => console.log('[BG] Keep-alive ping OK')).catch(() => {});
+    }
 });
 
 async function generateWeeklyReportNotification() {
@@ -907,6 +932,9 @@ chrome.runtime.onInstalled.addListener(() => {
 
     // Initialize weekly report alarm
     chrome.alarms.create('weeklyReport', { periodInMinutes: 7 * 24 * 60 });
+
+    // Keep backend warm: ping every 10 minutes to prevent Render cold-start
+    chrome.alarms.create('keepAlive', { periodInMinutes: 10 });
 
     // Initialize blocklist
     refreshBlocklist(true);

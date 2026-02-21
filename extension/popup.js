@@ -388,7 +388,7 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
             document.getElementById('results').classList.add('hidden');
             document.getElementById('scanBtn').disabled = true;
             document.getElementById('scanBtn').textContent = '⏳ Đang phân tích...';
-            document.getElementById('status').textContent = 'Đang streaming phân tích... (có thể đóng popup)';
+            document.getElementById('status').textContent = 'Đang kết nối máy chủ... (có thể đóng popup)';
             // Show streaming progress bar
             document.getElementById('streamProgress').classList.remove('hidden');
             updateStreamProgress(0, {});
