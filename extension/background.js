@@ -510,7 +510,11 @@ async function handleUnifiedScan(data) {
         };
 
         await chrome.storage.local.set({ [storageKey]: resultData });
-        await chrome.storage.local.set({ [url]: resultData });
+        // URL-keyed cache: spread results directly (same format as handleScan/handleStreamScan)
+        // so popup.js can use them without unwrapping the resultData envelope
+        await chrome.storage.local.set({
+            [url]: { ...results, timestamp: new Date().toISOString(), url }
+        });
 
         // 6. Update badge
         const risk = results?.risk_score_v5?.risk_score ?? results?.risk_score ?? 0;
@@ -1117,24 +1121,39 @@ function autoScrapeContent() {
             text = document.body.innerText.substring(0, 5000).trim();
         }
 
-        // Get comments (basic)
+        // Get comments with platform-aware selectors
         const commentSet = new Set();
-        const commentSelectors = [
-            '[data-testid="comment"]', '.comment-content', '.comment_text',
-            '[data-comment-id]', '.user-comment', '[class*="comment"] p'
-        ];
         const structuredComments = [];
-        commentSelectors.forEach(sel => {
-            document.querySelectorAll(sel).forEach(el => {
-                const t = cleanText(el.innerText);
-                if (t.length > 5 && t.length < 500 && !commentSet.has(t)) {
-                    commentSet.add(t);
-                    structuredComments.push({
-                        text: t, author: '', reactions: 0, is_reply: false, timestamp: ''
-                    });
-                }
+
+        const addComment = (t, author = '') => {
+            const clean = cleanText(t);
+            if (clean.length > 5 && clean.length < 500 && !commentSet.has(clean)) {
+                commentSet.add(clean);
+                structuredComments.push({ text: clean, author, reactions: 0, is_reply: false, timestamp: '' });
+            }
+        };
+
+        if (pageType === 'youtube_video') {
+            document.querySelectorAll('ytd-comment-renderer #content-text, ytd-comment-view-model #content-text').forEach(el => {
+                const container = el.closest('ytd-comment-renderer, ytd-comment-view-model');
+                const author = container?.querySelector('#author-text span')?.innerText || '';
+                addComment(el.innerText, cleanText(author));
             });
-        });
+        } else if (pageType === 'tiktok') {
+            document.querySelectorAll('[data-e2e="comment-level-1"] p, [data-e2e="comment-level-1-item"]').forEach(el => {
+                const container = el.closest('[data-e2e="comment-level-1"], [class*="CommentItemContainer"]');
+                const author = container?.querySelector('[data-e2e="comment-username-1"]')?.innerText || '';
+                addComment(el.innerText, cleanText(author));
+            });
+        } else {
+            const commentSelectors = [
+                '[data-testid="comment"]', '.comment-content', '.comment_text',
+                '[data-comment-id]', '.user-comment', '[class*="comment"] p'
+            ];
+            commentSelectors.forEach(sel => {
+                document.querySelectorAll(sel).forEach(el => addComment(el.innerText));
+            });
+        }
         const finalComments = structuredComments.slice(0, 50);
 
         return {

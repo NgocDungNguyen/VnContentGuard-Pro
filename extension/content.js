@@ -330,13 +330,17 @@
     }
 
     // ─── Auto-restore if storage has results ─────────────────────────────────
-    chrome.storage.local.get(['lastScanResults', 'lastScanUrl', 'overlayEnabled'], (s) => {
+    // background.js saves completed scans under both 'scan_${url}' (envelope)
+    // and '[url]' (raw results spread). We use the envelope key here since it
+    // has a reliable status field so we only restore truly completed scans.
+    const scanKey = `scan_${location.href}`;
+    chrome.storage.local.get([scanKey, 'overlayEnabled'], (s) => {
         overlayEnabled = s.overlayEnabled !== false;
         if (!overlayEnabled) return;
-        if (s.lastScanUrl && s.lastScanUrl === location.href && s.lastScanResults) {
-            // Auto-show overlay for the same URL visited again
-            currentResults = s.lastScanResults;
-            // Delay to let page settle
+        const scanData = s[scanKey];
+        if (scanData?.status === 'completed' && scanData?.results) {
+            currentResults = scanData.results;
+            // Delay to let page fully settle after navigation
             setTimeout(() => renderOverlay(currentResults), 1500);
         }
     });
