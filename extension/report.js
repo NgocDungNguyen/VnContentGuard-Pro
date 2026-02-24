@@ -1,4 +1,4 @@
-// report.js — Weekly Safety Report logic for VnContentGuard Pro v4.9
+// report.js — Weekly Safety Report logic for VnContentGuard Pro v5.0
 (function () {
     'use strict';
 

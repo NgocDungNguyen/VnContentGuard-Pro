@@ -1,5 +1,5 @@
 /**
- * VnContentGuard Pro v4.9 - Clean Design with Dark Mode
+ * VnContentGuard Pro v5.0 - Clean Design with Dark Mode
  */
 
 /* ============================================================================ */
@@ -86,7 +86,7 @@ h2 {
 }
 
 /* ============================================================================
-   API USAGE DASHBOARD — Feature 3.4 (v4.9.1)
+   API USAGE DASHBOARD — Feature 3.4 (v5.0)
    ============================================================================ */
 
 .usage-dashboard {
@@ -537,7 +537,7 @@ h3 {
 }
 
 /* ============================================================================ */
-/* v4 HEADER BAR                                                                 */
+/* v5 HEADER BAR                                                                 */
 /* ============================================================================ */
 
 .header-bar {
@@ -581,7 +581,7 @@ h3 {
 }
 
 /* ============================================================================ */
-/* v4 HISTORY CARD                                                               */
+/* v5 HISTORY CARD                                                               */
 /* ============================================================================ */
 
 .history-card {
@@ -601,7 +601,7 @@ h3 {
 }
 
 /* ============================================================================ */
-/* v4 DARK MODE TRANSITION HELPERS                                               */
+/* v5 DARK MODE TRANSITION HELPERS                                               */
 /* ============================================================================ */
 
 body.dark-mode .btn-secondary {
@@ -684,7 +684,7 @@ body.dark-mode .history-card:hover {
 }
 
 /* ============================================================================ */
-/* v4.9 AUTO-SCAN BUTTON (active state)                                          */
+/* v5 AUTO-SCAN BUTTON (active state)                                          */
 /* ============================================================================ */
 
 .icon-btn.active {
@@ -701,7 +701,7 @@ body.dark-mode .icon-btn.active {
 }
 
 /* ============================================================================ */
-/* v4.9 OFFLINE MODE BADGE                                                       */
+/* v5 OFFLINE MODE BADGE                                                       */
 /* ============================================================================ */
 
 .summary-badge.offline {
@@ -715,7 +715,7 @@ body.dark-mode .icon-btn.active {
 }
 
 /* ============================================================================ */
-/* v4.9 COMPARISON MODE                                                          */
+/* v5 COMPARISON MODE                                                          */
 /* ============================================================================ */
 
 .compare-select {
@@ -742,7 +742,7 @@ body.dark-mode .compare-select {
 }
 
 /* ============================================================================ */
-/* v4.9 FEEDBACK BUTTONS                                                         */
+/* v5 FEEDBACK BUTTONS                                                         */
 /* ============================================================================ */
 
 .feedback-btn {
@@ -775,7 +775,7 @@ body.dark-mode .feedback-btn {
 }
 
 /* ============================================================================ */
-/* v4.9 STREAMING PROGRESS BAR — Feature 1.5                                    */
+/* v5 STREAMING PROGRESS BAR — Feature 1.5                                    */
 /* ============================================================================ */
 
 .stream-progress-bar {
@@ -802,7 +802,7 @@ body.dark-mode .feedback-btn {
 }
 
 /* ============================================================================ */
-/* v4.9 PARENTAL CONTROL TOGGLE SWITCH — Feature 4.2                             */
+/* v5 PARENTAL CONTROL TOGGLE SWITCH — Feature 4.2                             */
 /* ============================================================================ */
 
 .switch {
@@ -851,7 +851,7 @@ input:checked + .slider:before {
 }
 
 /* ============================================================================ */
-/* v4.9 REPORT BUTTON + PANELS                                                  */
+/* v5 REPORT BUTTON + PANELS                                                  */
 /* ============================================================================ */
 
 #reportPageBtn.active,
@@ -870,4 +870,87 @@ body.dark-mode #parentalPinInput {
     background: var(--input-bg);
     color: var(--text-primary);
     border-color: var(--border-color);
+}
+
+/* ============================================================================ */
+/* v5.0 OVERLAY CONTROL CARD (Feature 2.1)                                       */
+/* ============================================================================ */
+
+.overlay-ctrl-card {
+    border-left: 4px solid #9b59b6 !important;
+    padding: 10px !important;
+}
+
+.overlay-ctrl-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.overlay-ctrl-title {
+    font-weight: 700;
+    font-size: 12px;
+    color: var(--text-primary);
+}
+
+.overlay-mode-tag {
+    font-weight: 400;
+    color: #9b59b6;
+    font-size: 10px;
+}
+
+.overlay-page-badge {
+    font-size: 10px;
+    background: #f0eaf8;
+    color: #8e44ad;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+body.dark-mode .overlay-page-badge {
+    background: #3a2a4a;
+    color: #c39bd3;
+}
+
+.overlay-ctrl-btns {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.overlay-ctrl-meta {
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--text-muted);
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+body.dark-mode .overlay-ctrl-card {
+    border-left-color: #c39bd3 !important;
+}
+
+body.dark-mode .overlay-ctrl-title {
+    color: var(--text-primary);
+}
+
+body.dark-mode .overlay-mode-tag {
+    color: #c39bd3;
+}
+
+body.dark-mode .overlay-ctrl-meta {
+    color: var(--text-muted);
+}
+
+body.dark-mode .overlay-ctrl-btns .btn-secondary {
+    background: #3d3d55;
+    color: #e0e0f0;
+    border-color: #9b59b6;
+}
+
+body.dark-mode .overlay-ctrl-btns .btn-primary {
+    background: #8e44ad;
 }

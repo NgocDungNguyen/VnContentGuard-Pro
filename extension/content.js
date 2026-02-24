@@ -49,7 +49,6 @@
     // ─── Main Render ─────────────────────────────────────────────────────────
     function renderOverlay(results) {
         removeOverlay(); // clean up any previous overlay first
-        injectStyles();
 
         const risk = results?.risk_score_v5 || results?.risk_assessment || {};
         const riskScore = risk.risk_score ?? risk.score ?? 0;
@@ -57,13 +56,17 @@
         const riskCategory = risk.risk_category || risk.category || '';
         const analysisMode = results?.analysis_mode || '';
 
-        // 1. Floating risk badge
-        renderRiskBadge(riskScore, riskLevel, riskCategory, analysisMode, results);
+        // Inject CSS first; wait for it to load before adding the badge
+        // so the visibility transition fires correctly.
+        injectStyles(() => {
+            // 1. Floating risk badge
+            renderRiskBadge(riskScore, riskLevel, riskCategory, analysisMode, results);
 
-        // 2. Highlight toxic comments in page
-        if (results?.comments_analysis?.length) {
-            highlightComments(results.comments_analysis);
-        }
+            // 2. Highlight toxic comments in page
+            if (results?.comments_analysis?.length) {
+                highlightComments(results.comments_analysis);
+            }
+        });
     }
 
     // ─── Risk Badge ──────────────────────────────────────────────────────────
@@ -124,7 +127,8 @@
         document.body.appendChild(badge);
         badgeEl = badge;
 
-        // Animate in
+        // Animate in — one rAF is enough; CSS is guaranteed loaded by this point
+        // (renderOverlay waits for injectStyles' onReady callback before calling us)
         requestAnimationFrame(() => badge.classList.add('vcg-badge-visible'));
     }
 
@@ -286,13 +290,22 @@
     }
 
     // ─── Style Injection ─────────────────────────────────────────────────────
-    function injectStyles() {
-        if (document.getElementById('vcg-overlay-styles')) return;
+    // Accepts an optional callback fired once the CSS is ready to use.
+    function injectStyles(onReady) {
+        const existing = document.getElementById('vcg-overlay-styles');
+        if (existing) {
+            // CSS already injected — fire callback immediately
+            onReady?.();
+            return;
+        }
         const link = document.createElement('link');
         link.id = 'vcg-overlay-styles';
         link.rel = 'stylesheet';
         link.href = chrome.runtime.getURL('content.css');
-        document.head.appendChild(link);
+        // Wait for CSS to load before signalling readiness
+        link.onload  = () => onReady?.();
+        link.onerror = () => onReady?.(); // still render even if CSS fails
+        (document.head || document.documentElement).appendChild(link);
         styleEl = link;
     }
 
