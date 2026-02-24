@@ -1,4 +1,4 @@
-"""
+﻿"""
 VnContentGuard Pro v5 - Objective Risk Scoring System
 =====================================================
 Comprehensive risk assessment integrating all v5 detection modules:
@@ -133,7 +133,7 @@ class RiskScorerV5:
 
             results["evidence"].append(
                 {
-                    "module": "Phân tích cảm xúc v4",
+                    "module": "Phân tích cảm xúc v5",
                     "finding": f"{sentiment_label} (độ tin cậy {sentiment_result.get('confidence', 0)*100:.0f}%)",
                     "risk_contribution": f"{sentiment_risk}/100",
                 }
@@ -150,7 +150,7 @@ class RiskScorerV5:
 
             results["evidence"].append(
                 {
-                    "module": "Phát hiện độc hại v4",
+                    "module": "Phát hiện độc hại v5",
                     "finding": f"Mức độ: {toxicity_result['severity']} (Điểm: {toxicity_result['overall_score']:.2f})",
                     "risk_contribution": f"{toxicity_risk}/100",
                 }
@@ -172,7 +172,7 @@ class RiskScorerV5:
 
             results["evidence"].append(
                 {
-                    "module": "Kiểm tra thực tế v4",
+                    "module": "Kiểm tra thực tế v5",
                     "finding": f"{fact_result['verdict']} (độ tin cậy {fact_result['confidence']})",
                     "risk_contribution": f"{credibility_risk}/100",
                 }
@@ -195,7 +195,7 @@ class RiskScorerV5:
 
                 results["evidence"].append(
                     {
-                        "module": "Phân tích nguồn v4",
+                        "module": "Phân tích nguồn v5",
                         "finding": f"{source_result['verdict']} (Điểm: {source_result['reputation_score']}/100)",
                         "risk_contribution": f"{source_risk}/100",
                     }
@@ -333,7 +333,7 @@ class RiskScorerV5:
             )
             results["evidence"].append(
                 {
-                    "module": "Phân tích cảm xúc v4",
+                    "module": "Phân tích cảm xúc v5",
                     "finding": f"{sentiment_label} (độ tin cậy {sentiment_result.get('confidence', 0)*100:.0f}%)",
                     "risk_contribution": f"{sentiment_risk}/100",
                 }
@@ -346,7 +346,7 @@ class RiskScorerV5:
             results["breakdown"]["toxicity_component"] = toxicity_risk * 0.25
             results["evidence"].append(
                 {
-                    "module": "Phát hiện độc hại v4",
+                    "module": "Phát hiện độc hại v5",
                     "finding": f"Mức độ: {toxicity_result.get('severity', 'None')} (Điểm: {toxicity_result.get('overall_score', 0):.2f})",
                     "risk_contribution": f"{toxicity_risk}/100",
                 }
@@ -365,7 +365,7 @@ class RiskScorerV5:
             results["breakdown"]["fake_news_component"] = credibility_risk * 0.40
             results["evidence"].append(
                 {
-                    "module": "Kiểm tra thực tế v4",
+                    "module": "Kiểm tra thực tế v5",
                     "finding": f"{fact_check_result.get('verdict', 'Unknown')} (độ tin cậy {fact_check_result.get('confidence', 'Low')})",
                     "risk_contribution": f"{credibility_risk}/100",
                 }
@@ -384,7 +384,7 @@ class RiskScorerV5:
                 results["breakdown"]["source_component"] = source_risk * 0.10
                 results["evidence"].append(
                     {
-                        "module": "Phân tích nguồn v4",
+                        "module": "Phân tích nguồn v5",
                         "finding": f"{source_result['verdict']} (Điểm: {source_result['reputation_score']}/100)",
                         "risk_contribution": f"{source_risk}/100",
                     }

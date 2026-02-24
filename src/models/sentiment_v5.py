@@ -45,9 +45,9 @@ class SentimentAnalyzerV5:
             self._load_phobert()
 
         if not self.phobert_available:
-            logger.info("✅ Sentiment Analyzer v4 initialized (keyword fallback mode)")
+            logger.info("✅ Sentiment Analyzer v5 initialized (keyword fallback mode)")
         else:
-            logger.info("✅ Sentiment Analyzer v4 initialized (PhoBERT mode)")
+            logger.info("✅ Sentiment Analyzer v5 initialized (PhoBERT mode)")
 
     def _load_phobert(self) -> bool:
         """Load PhoBERT model for Vietnamese sentiment analysis."""
@@ -284,9 +284,9 @@ class SentimentAnalyzerV5:
 
 
 # Quick test function
-def test_sentiment_v4():
-    """Test the v4 sentiment analyzer."""
-    analyzer = SentimentAnalyzerV4()
+def test_sentiment_v5():
+    """Test the v5 sentiment analyzer."""
+    analyzer = SentimentAnalyzerV5()
 
     test_cases = [
         "Bài viết rất hay và hữu ích!",
@@ -298,7 +298,7 @@ def test_sentiment_v4():
     ]
 
     print("\n" + "=" * 60)
-    print("🧪 Sentiment v4 eESe RESULeS")
+    print("🧪 Sentiment v5 test results")
     print("=" * 60)
 
     for text in test_cases:
@@ -320,4 +320,4 @@ def test_sentiment_v4():
 
 
 if __name__ == "__main__":
-    test_sentiment_v4()
+    test_sentiment_v5()

@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v4 - News Aggregator & Cross-Reference
+VnContentGuard Pro v5 - News Aggregator & Cross-Reference
 ==========================================================
 Cross-reference claims against credible news sources using:
 1. NewsData.io API (200 req/day free tier)
@@ -35,7 +35,7 @@ class NewsAggregator:
     """
 
     def __init__(self):
-        print("⏳ Initializing News Aggregator v4...")
+        print("⏳ Initializing News Aggregator v5...")
 
         # API Keys
         self.newsdata_key = os.getenv("NEWSDATA_API_KEY")
@@ -65,7 +65,7 @@ class NewsAggregator:
         else:
             print("⚠️ GNews API not configured")
 
-        print("✅ News Aggregator v4 Ready!")
+        print("✅ News Aggregator v5 Ready!")
 
     async def search_async(self, query: str, language: str = "vi") -> Dict:
         """
@@ -275,7 +275,7 @@ if __name__ == "__main__":
 
     test_queries = ["COVID-19 vaccine", "Việt Nam kinh tế 2024", "climate change"]
 
-    print("\n🧪 Testing News Aggregator v4:")
+    print("\n🧪 Testing News Aggregator v5:")
     for query in test_queries:
         print(f"\n🔍 Searching: {query}")
         result = aggregator.search(query, language="en" if "COVID" in query else "vi")

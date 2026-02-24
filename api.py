@@ -1,4 +1,4 @@
-import asyncio
+﻿import asyncio
 import json
 import platform
 import sys
@@ -108,7 +108,7 @@ try:
     # v5.0 Feedback Store
     feedback_store = FeedbackStore()
 
-    # v4.9 Community Blocklist
+    # v5.0 Community Blocklist
     community_blocklist = CommunityBlocklist()
 
     # Reuse same shared key rotator for batch comment analysis
@@ -230,7 +230,7 @@ class FeedbackRequest(BaseModel):
 
 @app.post("/api/feedback")
 def submit_feedback(req: FeedbackRequest):
-    """v4.9 — Accept user feedback on scan results. Feeds into learning system."""
+    """v5.0 \u2014 Accept user feedback on scan results. Feeds into learning system."""
     try:
         result = feedback_store.add_feedback(
             url=req.url,
@@ -248,7 +248,7 @@ def submit_feedback(req: FeedbackRequest):
 
 
 # ============================================================================
-# Community Blocklist Endpoints (v4.9)
+# Community Blocklist Endpoints (v5.0)
 # ============================================================================
 
 
@@ -262,7 +262,7 @@ class ReportRequest(BaseModel):
 
 @app.post("/api/report")
 def report_page(req: ReportRequest):
-    """v4.9 — Report a page/domain to the community blocklist."""
+    """v5.0 \u2014 Report a page/domain to the community blocklist."""
     try:
         result = community_blocklist.add_report(
             url=req.url,
@@ -278,7 +278,7 @@ def report_page(req: ReportRequest):
 
 @app.get("/api/blocklist")
 def get_blocklist():
-    """v4.9 — Get community blocklist (domains with 5+ reports)."""
+    """v5.0 \u2014 Get community blocklist (domains with 5+ reports)."""
     try:
         domains = community_blocklist.get_blocklist()
         return {"blocklist": domains, "count": len(domains)}
@@ -288,7 +288,7 @@ def get_blocklist():
 
 @app.get("/api/blocklist/check")
 def check_blocklist(url: str):
-    """v4.9 — Check if a URL is blocked."""
+    """v5.0 \u2014 Check if a URL is blocked."""
     try:
         is_blocked = community_blocklist.is_blocked(url)
         report_count = community_blocklist.get_domain_report_count(url)
@@ -303,7 +303,7 @@ def check_blocklist(url: str):
 
 @app.get("/api/feedback/domain")
 def get_domain_feedback(url: str):
-    """v4.9 — Get feedback learning data for a domain."""
+    """v5.0 \u2014 Get feedback learning data for a domain."""
     try:
         return feedback_store.get_domain_feedback(url)
     except Exception as e:
@@ -799,11 +799,11 @@ def analyze_content_v5(req: ScanRequest):
         return response
 
     except Exception as e:
-        print(f"❌ [v4] Critical Error: {e}")
+        print(f"❌ [v5] Critical Error: {e}")
         import traceback
 
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"v4 analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"v5 analysis error: {str(e)}")
 
 
 def _analyze_comments_v5(
@@ -830,7 +830,7 @@ def _analyze_comments_v5(
         + len(filtered["spam"])
     )
 
-    print(f"📊 [v4] Comment filtering:")
+    print(f"📊 [v5] Comment filtering:")
     print(f"   Total: {total}")
     print(f"   Obvious toxic: {len(filtered['obvious_toxic'])}")
     print(f"   Obvious clean: {len(filtered['obvious_clean'])}")
@@ -926,7 +926,7 @@ def _analyze_comments_v5(
         cached = cache_manager.get(cache_key)
 
         if cached:
-            print(f"✅ [v4] Batch cache hit ({len(still_ambiguous)} comments)")
+            print(f"✅ [v5] Batch cache hit ({len(still_ambiguous)} comments)")
             all_results.extend(cached)
         else:
             # Process in chunks of 25 (safe token limit) with rate limit sleep
@@ -996,14 +996,14 @@ def _batch_gemini_analyze(
     # Circuit breaker: check how many keys are left
     available = len(batch_key_rotator.api_keys) - len(batch_key_rotator.exhausted_keys)
     if available <= 0:
-        print("⚠️ [v4] All API keys exhausted — using regex fallback for batch")
+        print("⚠️ [v5] All API keys exhausted — using regex fallback for batch")
         return _fallback_results(comments)
 
     max_batch_attempts = min(3, available)  # Try up to 3 different keys
     for attempt in range(max_batch_attempts):
         api_key = batch_key_rotator.get_current_key()
         if not api_key:
-            print("⚠️ [v4] No API key available for batch analysis")
+            print("⚠️ [v5] No API key available for batch analysis")
             return _fallback_results(comments)
 
         try:
@@ -1016,15 +1016,15 @@ def _batch_gemini_analyze(
 
                 retry_delay = APIKeyRotator.parse_retry_delay(error_str)
                 print(
-                    f"⚠️ [v4] Batch attempt {attempt+1}/{max_batch_attempts} got 429, cooldown {retry_delay:.0f}s..."
+                    f"⚠️ [v5] Batch attempt {attempt+1}/{max_batch_attempts} got 429, cooldown {retry_delay:.0f}s..."
                 )
                 batch_key_rotator.mark_key_rate_limited(retry_delay)
                 continue
             else:
-                print(f"⚠️ [v4] Batch analysis failed: {e}")
+                print(f"⚠️ [v5] Batch analysis failed: {e}")
                 return _fallback_results(comments)
 
-    print("⚠️ [v4] All batch attempts exhausted — using regex fallback")
+    print("⚠️ [v5] All batch attempts exhausted — using regex fallback")
     return _fallback_results(comments)
 
 
@@ -1044,7 +1044,7 @@ def _try_batch_gemini(
     if article_summary:
         context_line = f"Bối cảnh bài báo: {article_summary[:500]}\n\n"
 
-    # v4.9: Inject learning from user feedback
+    # v5.0: Inject learning from user feedback
     learning_line = ""
     if learning_ctx:
         learning_line = f"\n{learning_ctx}\n\n"
@@ -1105,7 +1105,7 @@ Quy tắc:
                 try:
                     repaired = _repair_truncated_json(match.group())
                     parsed = json.loads(repaired)
-                    print(f"✅ [v4] Repaired truncated JSON ({len(parsed)} items)")
+                    print(f"✅ [v5] Repaired truncated JSON ({len(parsed)} items)")
                 except json.JSONDecodeError:
                     pass
 
@@ -1114,7 +1114,7 @@ Quy tắc:
             try:
                 repaired = _repair_truncated_json(raw)
                 parsed = json.loads(repaired)
-                print(f"✅ [v4] Repaired raw JSON ({len(parsed)} items)")
+                print(f"✅ [v5] Repaired raw JSON ({len(parsed)} items)")
             except json.JSONDecodeError:
                 # Last resort: extract individual complete JSON objects
                 objects = _re.findall(r"\{[^{}]*\}", raw)
@@ -1126,10 +1126,10 @@ Quy tắc:
                         except json.JSONDecodeError:
                             continue
                     print(
-                        f"✅ [v4] Extracted {len(parsed)} objects from malformed JSON"
+                        f"✅ [v5] Extracted {len(parsed)} objects from malformed JSON"
                     )
                 else:
-                    print(f"⚠️ [v4] Could not parse Gemini response, using fallback")
+                    print(f"⚠️ [v5] Could not parse Gemini response, using fallback")
                     return _fallback_results(comments)
 
     results = []
@@ -1166,7 +1166,7 @@ Quy tắc:
                 }
             )
 
-    print(f"✅ [v4] Batch analyzed {len(comments)} comments (1 API call)")
+    print(f"✅ [v5] Batch analyzed {len(comments)} comments (1 API call)")
     return results
 
 

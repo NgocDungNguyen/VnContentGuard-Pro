@@ -1,5 +1,5 @@
-/**
- * VnContentGuard Pro v4.9 — Popup Script
+﻿/**
+ * VnContentGuard Pro v5.0 — Popup Script
  * ========================================
  * - Delegates API calls to background.js (survives popup close)
  * - Resumes scan state on popup reopen
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v4.9 — Auto-scan toggle handler
+    // v5.0 — Auto-scan toggle handler
     const autoScanBtn = document.getElementById('autoScanBtn');
     if (autoScanBtn) {
         // Load current auto-scan state
@@ -146,19 +146,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v4.9 — Comparison mode button handler
+    // v5.0 — Comparison mode button handler
     const compareBtn = document.getElementById('compareBtn');
     if (compareBtn) {
         compareBtn.addEventListener('click', toggleComparePanel);
     }
 
-    // v4.9 — Compare Go button
+    // v5.0 — Compare Go button
     const compareGoBtn = document.getElementById('compareGoBtn');
     if (compareGoBtn) {
         compareGoBtn.addEventListener('click', runComparison);
     }
 
-    // v4.9 — Feedback button handlers
+    // v5.0 — Feedback button handlers
     const feedbackUp = document.getElementById('feedbackUp');
     const feedbackDown = document.getElementById('feedbackDown');
     if (feedbackUp) {
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         feedbackSubmit.addEventListener('click', submitFeedbackWithCorrection);
     }
 
-    // v4.9 — Report page button handler (4.1)
+    // v5.0 — Report page button handler (4.1)
     const reportPageBtn = document.getElementById('reportPageBtn');
     if (reportPageBtn) {
         reportPageBtn.addEventListener('click', toggleReportPanel);
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         reportSubmitBtn.addEventListener('click', submitPageReport);
     }
 
-    // v4.9 — Weekly report button handler (4.4)
+    // v5.0 — Weekly report button handler (4.4)
     const weeklyReportBtn = document.getElementById('weeklyReportBtn');
     if (weeklyReportBtn) {
         weeklyReportBtn.addEventListener('click', () => {
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v4.9 — Parental control button handler (4.2)
+    // v5.0 — Parental control button handler (4.2)
     const parentalBtn = document.getElementById('parentalBtn');
     if (parentalBtn) {
         parentalBtn.addEventListener('click', toggleParentalPanel);
@@ -365,7 +365,7 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
     btn.textContent = '⏳ Đang gửi...';
 
     try {
-        // Delegate to background service worker (SSE streaming mode v4.9!)
+        // Delegate to background service worker (SSE streaming mode v5.0!)
         // Get tab title for history display
         const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const pageTitle = activeTab?.title || '';
@@ -848,12 +848,12 @@ function scrapePageContent() {
 }
 
 // ============================================================================
-// RESULT RENDERING WITH WARNING MODAL - v4 Enhanced
+// RESULT RENDERING WITH WARNING MODAL - v5 Enhanced
 // ============================================================================
 
 function renderResults(data, urlInfo) {
-    // Check if v4 or v2 response
-    const isV4 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v4;
+    // Check if v5 or v2 response
+    const isV5 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v5;
     
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
@@ -863,29 +863,29 @@ function renderResults(data, urlInfo) {
     // Show results container
     document.getElementById('results').classList.remove('hidden');
 
-    if (isV4) {
-        renderV4Results(data, urlInfo);
+    if (isV5) {
+        renderV5Results(data, urlInfo);
     } else {
         renderV2Results(data, urlInfo);
     }
 }
 
-function renderV4Results(data, urlInfo) {
-    const sentiment = data.sentiment_v4 || { overall: "Neutral", confidence: 0, intensity: "Weak" };
-    const toxicity = data.toxicity_v4 || { is_toxic: false, overall_score: 0, severity: "Low" };
-    const factCheck = data.fact_check_v4 || { score: 50, verdict: "Unknown" };
-    const riskScore = data.risk_score_v4 || { risk_score: 0, risk_level: "Low" };
+function renderV5Results(data, urlInfo) {
+    const sentiment = data.sentiment_v5 || { overall: "Neutral", confidence: 0, intensity: "Weak" };
+    const toxicity = data.toxicity_v5 || { is_toxic: false, overall_score: 0, severity: "Low" };
+    const factCheck = data.fact_check_v5 || { score: 50, verdict: "Unknown" };
+    const riskScore = data.risk_score_v5 || { risk_score: 0, risk_level: "Low" };
     const comments = data.comments_analysis || { total: 0, toxic_count: 0, toxic_comments: [], details: [] };
     const articleSummary = data.article_summary || null;
     const isOffline = data.offline_mode === true;
 
-    console.log("📊 Rendering v4 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
+    console.log("📊 Rendering v5 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
 
     // Hide streaming progress bar
     const streamEl = document.getElementById('streamProgress');
     if (streamEl) streamEl.classList.add('hidden');
 
-    // Show learning indicator if AI used feedback (v4.9)
+    // Show learning indicator if AI used feedback (v5.0)
     const learningIndicator = document.getElementById('learningIndicator');
     if (learningIndicator && data.learning_applied) {
         learningIndicator.classList.remove('hidden');
@@ -905,7 +905,7 @@ function renderV4Results(data, urlInfo) {
         blockWarning.classList.add('hidden');
     }
 
-    // ===== 0. ARTICLE SUMMARY (NEW in v4) =====
+    // ===== 0. ARTICLE SUMMARY (NEW in v5) =====
     const summaryCard = document.getElementById('summaryCard');
     const summaryContent = articleSummary?.summary || articleSummary?.text || '';
     if (summaryContent) {
@@ -961,7 +961,7 @@ function renderV4Results(data, urlInfo) {
         document.getElementById('riskBreakdown').innerHTML = breakdownHTML;
     }
 
-    // ===== 2. SENTIMENT v4 (PhoBERT) =====
+    // ===== 2. SENTIMENT v5 (PhoBERT) =====
     const sentLabel = sentiment.overall || "Neutral";
     const sentConf = sentiment.confidence || 0;
     const sentIntensity = sentiment.intensity || "Weak";
@@ -992,7 +992,7 @@ function renderV4Results(data, urlInfo) {
         </div>
     `;
 
-    // ===== 3. TOXICITY v4 (4-Layer) =====
+    // ===== 3. TOXICITY v5 (4-Layer) =====
     const isToxic = toxicity.is_toxic || false;
     const toxScore = toxicity.overall_score || 0;
     const toxSeverity = toxicity.severity || "Low";
@@ -1029,7 +1029,7 @@ function renderV4Results(data, urlInfo) {
     toxDetailsHTML += '</div>';
     document.getElementById('toxicDetails').innerHTML = toxDetailsHTML;
 
-    // ===== 4. FACT CHECK v4 (Multi-Source) =====
+    // ===== 4. FACT CHECK v5 (Multi-Source) =====
     const credScore = factCheck.score || 50;
     const verdict = factCheck.verdict || "Unknown";
     const evidence = factCheck.evidence || [];
@@ -1067,7 +1067,7 @@ function renderV4Results(data, urlInfo) {
         document.getElementById('fakeEvidence').innerHTML = evidenceHTML;
     }
 
-    // ===== 5. COMMENTS ANALYSIS v4 (Enhanced) =====
+    // ===== 5. COMMENTS ANALYSIS v5 (Enhanced) =====
     const totalComments = comments.total || 0;
     const toxicCount = comments.toxic_count || 0;
     const toxicComments = comments.toxic_comments || [];
@@ -1152,9 +1152,9 @@ function renderV4Results(data, urlInfo) {
         document.getElementById('recommendationsCard').style.display = 'none';
     }
 
-    console.log("✅ v4 results rendered");
+    console.log("✅ v5 results rendered");
 
-    // ===== v4.9 — SHOW FEEDBACK SECTION (after results) =====
+    // ===== v5.0 — SHOW FEEDBACK SECTION (after results) =====
     const feedbackSection = document.getElementById('feedbackSection');
     if (feedbackSection && !isOffline) {
         feedbackSection.classList.remove('hidden');
@@ -1168,7 +1168,7 @@ function renderV4Results(data, urlInfo) {
     // ===== SHOW WARNING MODAL if high risk (after delay) =====
     if (riskValue >= 50) {  // Medium-High or higher (0-100 scale)
         setTimeout(() => {
-            showWarningModalV4(riskScore, sentiment, toxicity, factCheck);
+            showWarningModalV5(riskScore, sentiment, toxicity, factCheck);
         }, 12000);
     }
 }
@@ -1178,7 +1178,7 @@ function renderV2Results(data, urlInfo) {
     const sentiment = data.sentiment || { label: "Neutral", score: 0 };
     const toxicity = data.toxicity || { total: 0, toxic_count: 0, results: [] };
 
-    // Clear v4-specific elements
+    // Clear v5-specific elements
     document.getElementById('riskScore').textContent = 'Chế độ v2';
     document.getElementById('riskLevel').textContent = 'Đang dùng API v2';
     document.getElementById('riskBreakdown').innerHTML = '';
@@ -1252,7 +1252,7 @@ function renderV2Results(data, urlInfo) {
     }
 }
 
-function showWarningModalV4(riskScore, sentiment, toxicity, factCheck) {
+function showWarningModalV5(riskScore, sentiment, toxicity, factCheck) {
     const warningModal = document.getElementById('warningModal');
     const warningContent = document.getElementById('warningContent');
 
@@ -1524,13 +1524,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function exportReport(data, url) {
-    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v4;
+    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v5;
     if (!isSupported) return;
 
-    const sentiment = data.sentiment_v4 || {};
-    const toxicity = data.toxicity_v4 || {};
-    const factCheck = data.fact_check_v4 || {};
-    const riskScore = data.risk_score_v4 || {};
+    const sentiment = data.sentiment_v5 || {};
+    const toxicity = data.toxicity_v5 || {};
+    const factCheck = data.fact_check_v5 || {};
+    const riskScore = data.risk_score_v5 || {};
     const comments = data.comments_analysis || {};
     const summary = data.article_summary || {};
 
@@ -1577,7 +1577,7 @@ function exportReport(data, url) {
     <h1>🛡️ VnContentGuard Pro — Báo cáo phân tích</h1>
     <p><strong>URL:</strong> <a href="${url || '#'}">${url || 'N/A'}</a></p>
     <p><strong>Ngày quét:</strong> ${dateStr}</p>
-    <p><strong>Phiên bản:</strong> v4.9</p>
+    <p><strong>Phiên bản:</strong> v5.0</p>
 
     <h2>📊 Điểm Rủi Ro Tổng Thể</h2>
     <div style="text-align: center; margin: 15px 0;">
@@ -1636,7 +1636,7 @@ function exportReport(data, url) {
     <ul>${riskScore.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
 
     <div class="footer">
-        <p>Báo cáo được tạo bởi VnContentGuard Pro v4.9</p>
+        <p>Báo cáo được tạo bởi VnContentGuard Pro v5.0</p>
         <p>⚠️ Kết quả phân tích mang tính tham khảo. Hãy luôn kiểm chứng thông tin từ nhiều nguồn.</p>
     </div>
 </body>
@@ -1664,7 +1664,7 @@ function exportReport(data, url) {
 }
 
 // ============================================================================
-// USER FEEDBACK — Feature 3.3 (v4.9)
+// USER FEEDBACK — Feature 3.3 (v5.0)
 // ============================================================================
 
 let feedbackRating = null;
@@ -1740,7 +1740,7 @@ async function submitFeedbackToBackend(rating, correction) {
 }
 
 // ============================================================================
-// COMPARISON MODE — Feature 2.5 (v4.9)
+// COMPARISON MODE — Feature 2.5 (v5.0)
 // ============================================================================
 
 async function toggleComparePanel() {
@@ -1814,18 +1814,18 @@ async function runComparison() {
 }
 
 async function renderComparison(data1, data2, url1, url2) {
-    const risk1 = data1.risk_score_v4?.risk_score || 0;
-    const risk2 = data2.risk_score_v4?.risk_score || 0;
-    const level1 = data1.risk_score_v4?.risk_level || 'Low';
-    const level2 = data2.risk_score_v4?.risk_level || 'Low';
-    const sent1 = data1.sentiment_v4?.overall || 'Neutral';
-    const sent2 = data2.sentiment_v4?.overall || 'Neutral';
-    const toxic1 = data1.toxicity_v4?.is_toxic || false;
-    const toxic2 = data2.toxicity_v4?.is_toxic || false;
-    const fact1 = data1.fact_check_v4?.score || 50;
-    const fact2 = data2.fact_check_v4?.score || 50;
-    const verdict1 = data1.fact_check_v4?.verdict || '?';
-    const verdict2 = data2.fact_check_v4?.verdict || '?';
+    const risk1 = data1.risk_score_v5?.risk_score || 0;
+    const risk2 = data2.risk_score_v5?.risk_score || 0;
+    const level1 = data1.risk_score_v5?.risk_level || 'Low';
+    const level2 = data2.risk_score_v5?.risk_level || 'Low';
+    const sent1 = data1.sentiment_v5?.overall || 'Neutral';
+    const sent2 = data2.sentiment_v5?.overall || 'Neutral';
+    const toxic1 = data1.toxicity_v5?.is_toxic || false;
+    const toxic2 = data2.toxicity_v5?.is_toxic || false;
+    const fact1 = data1.fact_check_v5?.score || 50;
+    const fact2 = data2.fact_check_v5?.score || 50;
+    const verdict1 = data1.fact_check_v5?.verdict || '?';
+    const verdict2 = data2.fact_check_v5?.verdict || '?';
     const toxicCount1 = data1.comments_analysis?.toxic_count || 0;
     const toxicCount2 = data2.comments_analysis?.toxic_count || 0;
     const totalComments1 = data1.comments_analysis?.total || 0;
@@ -1909,15 +1909,15 @@ function getDomain(url) {
 }
 
 // ============================================================================
-// STREAMING PROGRESS — Feature 1.5 (v4.9)
+// STREAMING PROGRESS — Feature 1.5 (v5.0)
 // ============================================================================
 
 const MODULE_NAMES = {
     article_summary: '📰 Tóm tắt',
-    sentiment_v4: '🎭 Cảm xúc',
-    toxicity_v4: '🛡️ Độc hại',
-    fact_check_v4: '📰 Kiểm tra TT',
-    risk_score_v4: '📊 Rủi ro',
+    sentiment_v5: '🎭 Cảm xúc',
+    toxicity_v5: '🛡️ Độc hại',
+    fact_check_v5: '📰 Kiểm tra TT',
+    risk_score_v5: '📊 Rủi ro',
     comments_analysis: '💬 Bình luận'
 };
 
@@ -1937,7 +1937,7 @@ function updateStreamProgress(count, modules) {
 }
 
 // ============================================================================
-// BLOCKLIST CHECK — Feature 4.1 (v4.9)
+// BLOCKLIST CHECK — Feature 4.1 (v5.0)
 // ============================================================================
 
 async function checkBlocklistStatus(url) {
@@ -1955,7 +1955,7 @@ async function checkBlocklistStatus(url) {
 }
 
 // ============================================================================
-// REPORT PAGE — Feature 4.1 (v4.9)
+// REPORT PAGE — Feature 4.1 (v5.0)
 // ============================================================================
 
 function toggleReportPanel() {
@@ -1993,7 +1993,7 @@ async function submitPageReport() {
         return;
     }
 
-    const riskScore = currentResultsData?.risk_score_v4?.risk_score || 50;
+    const riskScore = currentResultsData?.risk_score_v5?.risk_score || 50;
     const btn = document.getElementById('reportSubmitBtn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang gửi...'; }
 
@@ -2032,7 +2032,7 @@ async function submitPageReport() {
 }
 
 // ============================================================================
-// PARENTAL CONTROL — Feature 4.2 (v4.9)
+// PARENTAL CONTROL — Feature 4.2 (v5.0)
 // ============================================================================
 
 function toggleParentalPanel() {
@@ -2091,7 +2091,7 @@ async function saveParentalSettings() {
 }
 
 // ============================================================================
-// API USAGE DASHBOARD — Feature 3.4 (v4.9.1)
+// API USAGE DASHBOARD — Feature 3.4 (v5.0)
 // ============================================================================
 
 async function loadUsageDashboard() {

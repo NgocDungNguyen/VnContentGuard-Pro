@@ -36,7 +36,7 @@ class ToxicityAnalyzerV5:
     """
 
     def __init__(self, use_detoxify: bool = False):
-        print("⏳ Initializing Advanced Toxicity Detection v4...")
+        print("⏳ Initializing Advanced Toxicity Detection v5...")
 
         # Layer 1: v2 Regex patterns (fallback)
         try:
@@ -76,7 +76,7 @@ class ToxicityAnalyzerV5:
                 "⚠️ Layer 4: Gemini AI disabled (enable with USE_GEMINI_TOXICITY=true)"
             )
 
-        print("✅ Toxicity Analyzer v4 Ready!")
+        print("✅ Toxicity Analyzer v5 Ready!")
 
     def analyze(self, text: str) -> Dict:
         """
@@ -394,13 +394,13 @@ class ToxicityAnalyzerV5:
 # Convenience function
 def analyze_toxicity(text: str) -> Dict:
     """Quick toxicity analysis"""
-    analyzer = ToxicityAnalyzerV4()
+    analyzer = ToxicityAnalyzerV5()
     return analyzer.analyze(text)
 
 
 if __name__ == "__main__":
     # Quick test
-    analyzer = ToxicityAnalyzerV4()
+    analyzer = ToxicityAnalyzerV5()
 
     test_cases = [
         "Bài viết rất hay và hữu ích!",  # Clean
@@ -409,7 +409,7 @@ if __name__ == "__main__":
         "Thông tin rất bổ ích, cảm ơn bạn",  # Clean
     ]
 
-    print("\n🧪 Testing Toxicity Analyzer v4:")
+    print("\n🧪 Testing Toxicity Analyzer v5:")
     for text in test_cases:
         result = analyzer.analyze(text)
         print(f"\nText: {text}")

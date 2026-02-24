@@ -37,7 +37,7 @@ class FactCheckerV5:
     """
 
     def __init__(self, key_rotator=None):
-        print("⏳ Initializing Fact-Checking System v4...")
+        print("⏳ Initializing Fact-Checking System v5...")
 
         # API Keys
         self.google_factcheck_key = os.getenv("GOOGLE_FACT_CHECK_API_KEY")
@@ -54,7 +54,7 @@ class FactCheckerV5:
 
         # Import source analyzer
         try:
-            from .source_analyzer_v4 import SourceAnalyzer
+            from .source_analyzer_v5 import SourceAnalyzer
 
             self.source_analyzer = SourceAnalyzer()
             print("✅ Source analyzer loaded")
@@ -94,7 +94,7 @@ class FactCheckerV5:
         else:
             print("⚠️ NewsData.io API not configured (optional)")
 
-        print("✅ Fact-Checker v4 Ready!")
+        print("✅ Fact-Checker v5 Ready!")
 
     def check(self, text: str, url: Optional[str] = None) -> Dict:
         """
