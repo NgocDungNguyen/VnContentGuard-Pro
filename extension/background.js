@@ -1084,16 +1084,32 @@ function autoScrapeContent() {
         else if (hostname.includes('tiktok.com')) pageType = 'tiktok';
         else if (/vnexpress|dantri|tuoitre|thanhnien|24h|vietnamnet/.test(hostname)) pageType = 'news_article';
 
-        // Get main content
+        // Get main content with platform-aware selectors
         let text = '';
         let articleTitle = '';
         let articleAuthor = '';
 
-        const articleEl = document.querySelector('article, [role="article"], main');
-        if (articleEl) {
-            const h1 = articleEl.querySelector('h1');
-            if (h1) articleTitle = cleanText(h1.innerText);
-            text = articleEl.innerText.substring(0, 5000).trim();
+        if (pageType === 'youtube_video') {
+            const ytTitle = document.querySelector('h1.ytd-watch-metadata yt-formatted-string, #title h1 yt-formatted-string, ytd-watch-metadata h1');
+            if (ytTitle) articleTitle = cleanText(ytTitle.innerText);
+            const ytChannel = document.querySelector('ytd-channel-name yt-formatted-string a, #channel-name a');
+            if (ytChannel) articleAuthor = cleanText(ytChannel.innerText);
+            const ytDesc = document.querySelector('ytd-text-inline-expander yt-attributed-string, #description-inner yt-attributed-string');
+            if (ytDesc) text = cleanText(ytDesc.innerText).substring(0, 3000);
+            if (!text) { const m = document.querySelector('meta[name="description"]'); if (m) text = m.getAttribute('content') || ''; }
+        } else if (pageType === 'tiktok') {
+            const ttDesc = document.querySelector('[data-e2e="browse-video-desc"], [data-e2e="video-desc"]');
+            if (ttDesc) { text = cleanText(ttDesc.innerText).substring(0, 2000); articleTitle = text.substring(0, 100); }
+            const ttAuthor = document.querySelector('[data-e2e="browse-video-author-title"], [data-e2e="video-author-uniqueid"]');
+            if (ttAuthor) articleAuthor = cleanText(ttAuthor.innerText);
+            if (!text) { const m = document.querySelector('meta[name="description"], meta[property="og:description"]'); if (m) text = m.getAttribute('content') || ''; }
+        } else {
+            const articleEl = document.querySelector('article, [role="article"], main');
+            if (articleEl) {
+                const h1 = articleEl.querySelector('h1');
+                if (h1) articleTitle = cleanText(h1.innerText);
+                text = articleEl.innerText.substring(0, 5000).trim();
+            }
         }
         if (!text || text.length < 30) {
             const h1 = document.querySelector('h1');

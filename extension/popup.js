@@ -968,10 +968,67 @@ function structuredScrapePageContent() {
                 articleBody = cleanText(document.body.innerText).substring(0, 3000);
             }
 
-        } else {
-            // Generic fallback
-            const titleEl = document.querySelector('h1');
+        } else if (pageType === 'youtube_video') {
+            // ── YouTube Watch Page ──────────────────────────────────────
+            // Title
+            const titleEl = document.querySelector(
+                'h1.ytd-watch-metadata yt-formatted-string, #title h1 yt-formatted-string, ytd-watch-metadata h1'
+            );
             if (titleEl) articleTitle = cleanText(titleEl.innerText);
+
+            // Channel name
+            const channelEl = document.querySelector(
+                'ytd-channel-name yt-formatted-string a, #channel-name a, #upload-info #channel-name a'
+            );
+            if (channelEl) articleAuthor = cleanText(channelEl.innerText);
+
+            // Upload date
+            const dateEl = document.querySelector(
+                'ytd-video-primary-info-renderer #info yt-formatted-string.bold, ytd-watch-info-text #info yt-formatted-string'
+            );
+            if (dateEl) articleDate = cleanText(dateEl.innerText);
+
+            // Description
+            const descEl = document.querySelector(
+                'ytd-text-inline-expander yt-attributed-string, ytd-expander #content yt-formatted-string, #description-inner yt-attributed-string'
+            );
+            if (descEl) articleBody = cleanText(descEl.innerText).substring(0, 3000);
+            if (!articleBody) {
+                // Fallback via meta tag
+                const metaEl = document.querySelector('meta[name="description"]');
+                if (metaEl) articleBody = metaEl.getAttribute('content') || '';
+            }
+
+        } else if (pageType === 'tiktok') {
+            // ── TikTok Video Page ──────────────────────────────────────
+            // Video description / title
+            const descEl = document.querySelector(
+                '[data-e2e="browse-video-desc"], [data-e2e="video-desc"], [class*="video-meta-title"]'
+            );
+            if (descEl) {
+                articleBody = cleanText(descEl.innerText).substring(0, 2000);
+                articleTitle = articleBody.substring(0, 100);
+            }
+
+            // Channel / author
+            const authorEl = document.querySelector(
+                '[data-e2e="browse-video-author-title"], [data-e2e="video-author-uniqueid"], h3[class*="AuthorTitle"]'
+            );
+            if (authorEl) articleAuthor = cleanText(authorEl.innerText);
+
+            // Timestamp
+            const timeEl = document.querySelector(
+                '[data-e2e="browser-nickname-create-time"], span[class*="create-time"]'
+            );
+            if (timeEl) articleDate = cleanText(timeEl.innerText);
+
+            // Meta description fallback
+            if (!articleBody) {
+                const metaEl = document.querySelector('meta[name="description"], meta[property="og:description"]');
+                if (metaEl) articleBody = metaEl.getAttribute('content') || '';
+            }
+
+        } else {
 
             const metaDesc = document.querySelector('meta[name="description"], meta[property="og:description"]');
             if (metaDesc) articleBody = metaDesc.getAttribute('content') || '';
@@ -1004,9 +1061,49 @@ function structuredScrapePageContent() {
                     if (m) shares = parseFloat(m[0].replace(/,/g, ''));
                 }
             });
+        } else if (pageType === 'youtube_video') {
+            // Like count
+            const likeEl = document.querySelector(
+                'ytd-toggle-button-renderer[is-icon-button] #text, yt-formatted-string#text.ytd-toggle-button-renderer'
+            );
+            if (likeEl) {
+                const m = likeEl.innerText.replace(/[,. ]/g, '').match(/\d+/);
+                if (m) reactionsTotal = parseInt(m[0], 10);
+            }
+
+            // View count → use as shares proxy (for metadata richness)
+            const viewEl = document.querySelector(
+                'ytd-watch-info-text span.bold, .view-count, ytd-video-view-count-renderer'
+            );
+            if (viewEl) {
+                const m = viewEl.innerText.replace(/[,. lượt xem views]/gi, '').match(/\d+/);
+                if (m) shares = parseInt(m[0], 10);
+            }
+
+        } else if (pageType === 'tiktok') {
+            // Likes
+            const likeEl = document.querySelector(
+                '[data-e2e="browse-like-count"], [data-e2e="like-count"], [class*="like-count"]'
+            );
+            if (likeEl) {
+                const raw = (likeEl.innerText || '').trim();
+                if (/k/i.test(raw)) reactionsTotal = Math.round(parseFloat(raw) * 1000);
+                else if (/m/i.test(raw)) reactionsTotal = Math.round(parseFloat(raw) * 1_000_000);
+                else { const m = raw.match(/[\d,.]+/); if (m) reactionsTotal = parseInt(m[0].replace(/,/g, ''), 10); }
+            }
+
+            // Shares
+            const shareEl = document.querySelector(
+                '[data-e2e="browse-share-count"], [data-e2e="share-count"], [class*="share-count"]'
+            );
+            if (shareEl) {
+                const raw = (shareEl.innerText || '').trim();
+                if (/k/i.test(raw)) shares = Math.round(parseFloat(raw) * 1000);
+                else if (/m/i.test(raw)) shares = Math.round(parseFloat(raw) * 1_000_000);
+                else { const m = raw.match(/[\d,.]+/); if (m) shares = parseInt(m[0].replace(/,/g, ''), 10); }
+            }
+
         } else if (pageType === 'news_article') {
-            // Social share counts (e.g., VnExpress share bar)
-            const shareEl = document.querySelector('.share-count, [class*="share-num"], .social-count');
             if (shareEl) {
                 const m = shareEl.innerText.match(/[\d,]+/);
                 if (m) shares = parseInt(m[0].replace(/,/g, ''), 10);
@@ -1102,9 +1199,71 @@ function structuredScrapePageContent() {
                     break; // Found a working selector
                 }
             }
+        } else if (pageType === 'youtube_video') {
+            // ── YouTube Comments ──────────────────────────────────────
+            // Selectors work once comments section scrolled into view
+            const commentEls = document.querySelectorAll(
+                'ytd-comment-renderer #content-text, ytd-comment-view-model #content-text'
+            );
+            commentEls.forEach(el => {
+                const text = cleanText(el.innerText);
+                if (!text || text.length < 3 || text.length > 500) return;
+                if (seenTexts.has(text)) return;
+                seenTexts.add(text);
+
+                // Author
+                const container = el.closest('ytd-comment-renderer, ytd-comment-view-model');
+                const authorEl = container?.querySelector('#author-text span, #author-text a');
+                const author = authorEl ? cleanText(authorEl.innerText) : '';
+
+                // Likes
+                let reactions = 0;
+                const likeEl = container?.querySelector('#vote-count-middle, span.ytd-comment-action-buttons-renderer');
+                if (likeEl) {
+                    const m = likeEl.innerText.match(/[\d,]+/);
+                    if (m) reactions = parseInt(m[0].replace(/,/g, ''), 10);
+                }
+
+                // Is reply
+                const isReply = !!el.closest('ytd-comment-replies-renderer');
+
+                structuredComments.push({ text, author, reactions, is_reply: isReply, timestamp: '' });
+            });
+
+        } else if (pageType === 'tiktok') {
+            // ── TikTok Comments ──────────────────────────────────────
+            const commentEls = document.querySelectorAll(
+                '[data-e2e="comment-level-1"] p, [class*="CommentItemContainer"] p[class*="comment-text"], [data-e2e="comment-level-1-item"]'
+            );
+            commentEls.forEach(el => {
+                const text = cleanText(el.innerText);
+                if (!text || text.length < 3 || text.length > 500) return;
+                if (seenTexts.has(text)) return;
+                seenTexts.add(text);
+
+                // Container
+                const container = el.closest('[data-e2e="comment-level-1"], [class*="CommentItemContainer"]');
+                const authorEl = container?.querySelector('[data-e2e="comment-username-1"], [class*="user-name"]');
+                const author = authorEl ? cleanText(authorEl.innerText) : '';
+
+                let reactions = 0;
+                const likeEl = container?.querySelector('[data-e2e="comment-like-count"], [class*="like-count"]');
+                if (likeEl) {
+                    const m = likeEl.innerText.match(/[\d,.KkMm]+/);
+                    if (m) {
+                        const raw = m[0].replace(/,/g, '');
+                        if (/k/i.test(raw)) reactions = Math.round(parseFloat(raw) * 1000);
+                        else if (/m/i.test(raw)) reactions = Math.round(parseFloat(raw) * 1_000_000);
+                        else reactions = parseInt(raw, 10) || 0;
+                    }
+                }
+
+                // Replies are nested differently in TikTok
+                const isReply = el.closest('[data-e2e="comment-level-2"]') !== null;
+                structuredComments.push({ text, author, reactions, is_reply: isReply, timestamp: '' });
+            });
+
         } else {
-            // Generic: any paragraph-in-comment pattern
-            document.querySelectorAll('[class*="comment"] p, [id*="comment"] p').forEach(el => {
                 const text = cleanText(el.innerText);
                 if (!text || text.length < 3 || text.length > 500) return;
                 if (seenTexts.has(text)) return;
@@ -1128,10 +1287,27 @@ function structuredScrapePageContent() {
     // ── Total comment count on page ─────────────────────────────────────────
     let commentCountTotal = finalComments.length;
     try {
-        const countEl = document.querySelector('[class*="comment-count"], [class*="comment-total"], .txt_comment_list_title');
-        if (countEl) {
-            const m = countEl.innerText.match(/\d+/);
-            if (m) commentCountTotal = parseInt(m[0], 10);
+        if (pageType === 'youtube_video') {
+            // YouTube shows comment count in #count .count-text
+            const ytCountEl = document.querySelector('#count .count-text yt-formatted-string, ytd-comments-header-renderer h2 yt-formatted-string');
+            if (ytCountEl) {
+                const m = ytCountEl.innerText.replace(/[,. ]/g, '').match(/\d+/);
+                if (m) commentCountTotal = parseInt(m[0], 10);
+            }
+        } else if (pageType === 'tiktok') {
+            const ttCountEl = document.querySelector('[data-e2e="browse-comment-count"], [class*="comment-count"]');
+            if (ttCountEl) {
+                const raw = (ttCountEl.innerText || '').trim();
+                if (/k/i.test(raw)) commentCountTotal = Math.round(parseFloat(raw) * 1000);
+                else if (/m/i.test(raw)) commentCountTotal = Math.round(parseFloat(raw) * 1_000_000);
+                else { const m = raw.match(/[\d,.]+/); if (m) commentCountTotal = parseInt(m[0].replace(/,/g, ''), 10); }
+            }
+        } else {
+            const countEl = document.querySelector('[class*="comment-count"], [class*="comment-total"], .txt_comment_list_title');
+            if (countEl) {
+                const m = countEl.innerText.match(/\d+/);
+                if (m) commentCountTotal = parseInt(m[0], 10);
+            }
         }
     } catch (e) { /* ignore */ }
 
