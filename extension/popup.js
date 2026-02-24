@@ -1264,6 +1264,8 @@ function structuredScrapePageContent() {
             });
 
         } else {
+            // Generic: any paragraph-in-comment pattern
+            document.querySelectorAll('[class*="comment"] p, [id*="comment"] p').forEach(el => {
                 const text = cleanText(el.innerText);
                 if (!text || text.length < 3 || text.length > 500) return;
                 if (seenTexts.has(text)) return;
