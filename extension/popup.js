@@ -1,5 +1,5 @@
-/**
- * VnContentGuard Pro v4.9 — Popup Script
+﻿/**
+ * VnContentGuard Pro v5.0 — Popup Script
  * ========================================
  * - Delegates API calls to background.js (survives popup close)
  * - Resumes scan state on popup reopen
@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v4.9 — Auto-scan toggle handler
+    // v5.0 — Auto-scan toggle handler
     const autoScanBtn = document.getElementById('autoScanBtn');
     if (autoScanBtn) {
         // Load current auto-scan state
@@ -146,19 +146,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v4.9 — Comparison mode button handler
+    // v5.0 — Comparison mode button handler
     const compareBtn = document.getElementById('compareBtn');
     if (compareBtn) {
         compareBtn.addEventListener('click', toggleComparePanel);
     }
 
-    // v4.9 — Compare Go button
+    // v5.0 — Compare Go button
     const compareGoBtn = document.getElementById('compareGoBtn');
     if (compareGoBtn) {
         compareGoBtn.addEventListener('click', runComparison);
     }
 
-    // v4.9 — Feedback button handlers
+    // v5.0 — Feedback button handlers
     const feedbackUp = document.getElementById('feedbackUp');
     const feedbackDown = document.getElementById('feedbackDown');
     if (feedbackUp) {
@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         feedbackSubmit.addEventListener('click', submitFeedbackWithCorrection);
     }
 
-    // v4.9 — Report page button handler (4.1)
+    // v5.0 — Report page button handler (4.1)
     const reportPageBtn = document.getElementById('reportPageBtn');
     if (reportPageBtn) {
         reportPageBtn.addEventListener('click', toggleReportPanel);
@@ -184,7 +184,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         reportSubmitBtn.addEventListener('click', submitPageReport);
     }
 
-    // v4.9 — Weekly report button handler (4.4)
+    // v5.0 — Weekly report button handler (4.4)
     const weeklyReportBtn = document.getElementById('weeklyReportBtn');
     if (weeklyReportBtn) {
         weeklyReportBtn.addEventListener('click', () => {
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v4.9 — Parental control button handler (4.2)
+    // v5.0 — Parental control button handler (4.2)
     const parentalBtn = document.getElementById('parentalBtn');
     if (parentalBtn) {
         parentalBtn.addEventListener('click', toggleParentalPanel);
@@ -297,10 +297,10 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
     try {
         console.log(`📍 Scanning: ${tab.url}`);
 
-        // Scrape content
+        // Scrape content — use structured scraper (ARCH-01)
         const scrapeResult = await chrome.scripting.executeScript({
             target: { tabId: tab.id },
-            func: scrapePageContent
+            func: structuredScrapePageContent
         });
 
         if (!scrapeResult || !scrapeResult[0] || !scrapeResult[0].result) {
@@ -309,17 +309,24 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
 
         const scrapedData = scrapeResult[0].result;
         
-        console.log(`📊 Scraped Data:`, {
-            textLength: scrapedData.text.length,
-            commentsCount: scrapedData.comments.length,
-            hasText: scrapedData.text.length > 0
+        // Support both structured (_is_structured) and legacy flat format
+        const textLength = scrapedData._is_structured
+            ? (scrapedData.article?.body?.length || 0)
+            : (scrapedData.text?.length || 0);
+        const commentsCount = scrapedData._is_structured
+            ? (scrapedData.comments?.length || 0)
+            : (scrapedData.comments?.length || 0);
+
+        console.log(`📊 Scraped Data (${scrapedData._is_structured ? 'structured' : 'flat'}):`, {
+            textLength, commentsCount,
+            pageType: scrapedData.page_type || 'unknown'
         });
         
-        if (!scrapedData.text || scrapedData.text.trim().length === 0) {
+        if (textLength < 20 && !(scrapedData.text?.length > 20)) {
             throw new Error("Không tìm thấy nội dung — trang có thể đang tải hoặc trống");
         }
 
-        console.log(`✂️ Scraped: ${scrapedData.text.length} chars, ${scrapedData.comments.length} comments`);
+        console.log(`✂️ Scraped: text=${textLength} chars, ${commentsCount} comments`);
 
         // Store for confirmation
         scannedDataCache = scrapedData;
@@ -349,12 +356,25 @@ function showConfirmation(url, data) {
     // Show URL
     document.getElementById('confirmUrl').textContent = url;
 
-    // Show preview
-    const preview = data.text.substring(0, 200).replace(/\n\n/g, ' ').trim();
-    document.getElementById('confirmPreview').textContent = preview + (data.text.length > 200 ? '...' : '');
+    // Support structured and flat data
+    const previewText = data._is_structured
+        ? (data.article?.title || data.article?.body || data.text || '')
+        : (data.text || '');
+    const commentCount = data._is_structured
+        ? (data.comments?.length || 0)
+        : (data.comments?.length || 0);
 
-    // Show comment count
-    document.getElementById('confirmComments').textContent = data.comments.length;
+    // Show preview
+    const preview = previewText.substring(0, 200).replace(/\n\n/g, ' ').trim();
+    document.getElementById('confirmPreview').textContent = preview + (previewText.length > 200 ? '...' : '');
+
+    // Show comment count + page type badge
+    const pageType = data.page_type || '';
+    const pageLabel = pageType === 'facebook_post' ? ' (Facebook)' :
+                      pageType === 'news_article' ? ' (Báo)' :
+                      pageType === 'youtube_video' ? ' (YouTube)' :
+                      pageType === 'tiktok' ? ' (TikTok)' : '';
+    document.getElementById('confirmComments').textContent = `${commentCount}${pageLabel}`;
 }
 
 document.getElementById('confirmYes').addEventListener('click', async () => {
@@ -365,20 +385,38 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
     btn.textContent = '⏳ Đang gửi...';
 
     try {
-        // Delegate to background service worker (SSE streaming mode v4.9!)
-        // Get tab title for history display
+        // Delegate to background service worker
+        // ARCH-01: Use unified endpoint when structured data is available
         const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const pageTitle = activeTab?.title || '';
 
-        const response = await chrome.runtime.sendMessage({
-            type: 'START_SCAN_STREAM',
-            data: {
-                url: currentTabUrl,
-                article_text: scannedDataCache.text,
-                comments: scannedDataCache.comments,
-                pageTitle: pageTitle
-            }
-        });
+        let response;
+
+        if (scannedDataCache._is_structured) {
+            // ARCH-01: Send structured data to /analyze/v5/unified (1 Gemini call)
+            response = await chrome.runtime.sendMessage({
+                type: 'START_SCAN_UNIFIED',
+                data: {
+                    structured: scannedDataCache,
+                    url: currentTabUrl,
+                    // Also include flat format for fallback
+                    article_text: scannedDataCache.text || scannedDataCache.article?.body || '',
+                    comments: scannedDataCache._flat_comments || scannedDataCache.comments?.map(c => c.text) || [],
+                    pageTitle: pageTitle,
+                }
+            });
+        } else {
+            // Legacy flat format → streaming endpoint
+            response = await chrome.runtime.sendMessage({
+                type: 'START_SCAN_STREAM',
+                data: {
+                    url: currentTabUrl,
+                    article_text: scannedDataCache.text,
+                    comments: scannedDataCache.comments,
+                    pageTitle: pageTitle
+                }
+            });
+        }
 
         if (response && response.status === 'started') {
             console.log("✅ Scan delegated to background service worker");
@@ -848,12 +886,466 @@ function scrapePageContent() {
 }
 
 // ============================================================================
-// RESULT RENDERING WITH WARNING MODAL - v4 Enhanced
+// ARCH-01: Structured Scraper — returns rich JSON for unified analysis
+// Self-contained: runs inside chrome.scripting.executeScript
 // ============================================================================
 
+function structuredScrapePageContent() {
+    const hostname = location.hostname;
+    const domain = hostname.replace(/^www\./, '');
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    const cleanText = (raw) => {
+        if (!raw) return '';
+        return raw.trim()
+            .replace(/\s+/g, ' ')
+            .replace(/(\n\s*)+/g, '\n');
+    };
+
+    const detectPageType = () => {
+        if (hostname.includes('facebook.com')) return 'facebook_post';
+        if (hostname.includes('youtube.com')) return 'youtube_video';
+        if (hostname.includes('tiktok.com')) return 'tiktok';
+        if (/vnexpress|dantri|tuoitre|thanhnien|24h|vietnamnet|vov|vtc|zingnews|kenh14/.test(hostname)) return 'news_article';
+        return 'generic';
+    };
+
+    const pageType = detectPageType();
+
+    // ── Article extraction ─────────────────────────────────────────────────
+    let articleTitle = '';
+    let articleAuthor = '';
+    let articleDate = '';
+    let articleBody = '';
+
+    try {
+        if (pageType === 'facebook_post') {
+            // Title: first meaningful line of post
+            const postEl = document.querySelector('[data-testid="post_message"]') ||
+                           document.querySelector('[data-ad-comet-preview="message"]') ||
+                           document.querySelector('div[dir="auto"]');
+            if (postEl) articleBody = cleanText(postEl.innerText).substring(0, 3000);
+
+            // Author: page/profile name
+            const authorEl = document.querySelector('a[href*="profile"] strong') ||
+                             document.querySelector('h3[class*="actor"] a') ||
+                             document.querySelector('[data-testid="actor-name"]') ||
+                             document.querySelector('strong[class*="x1q0g3bu"]');
+            if (authorEl) articleAuthor = cleanText(authorEl.innerText);
+
+            // Date: aria-label on time element
+            const timeEl = document.querySelector('abbr[data-utime], time[datetime], a[role="link"] > span > span[aria-hidden]');
+            if (timeEl) articleDate = timeEl.getAttribute('datetime') || timeEl.getAttribute('data-utime') || timeEl.innerText;
+
+            articleTitle = articleAuthor ? `${articleAuthor}: ${articleBody.substring(0, 80)}` : articleBody.substring(0, 80);
+
+        } else if (pageType === 'news_article') {
+            // Title
+            const titleEl = document.querySelector('h1.title-detail, h1.article-title, h1[class*="title"], h1');
+            if (titleEl) articleTitle = cleanText(titleEl.innerText);
+
+            // Author byline
+            const authorEl = document.querySelector(
+                '.author-name, .byline, .article-author, [class*="author"], [rel="author"], .reporter-name, .txt_author, .article_author'
+            );
+            if (authorEl) articleAuthor = cleanText(authorEl.innerText).substring(0, 100);
+
+            // Date
+            const dateEl = document.querySelector('time[datetime], time[pubdate], .PublishDate, .datePublished, .article-date, [class*="date"], meta[property="article:published_time"]');
+            if (dateEl) articleDate = dateEl.getAttribute('datetime') || dateEl.getAttribute('content') || cleanText(dateEl.innerText);
+
+            // Body: try article selectors then fall back to paragraphs
+            const bodyEl = document.querySelector(
+                'article, .article-body, .content-detail, [class*="article-content"], [class*="news-content"], .fck_detail, .detail-content, main'
+            );
+            if (bodyEl) {
+                articleBody = Array.from(bodyEl.querySelectorAll('p'))
+                    .map(p => cleanText(p.innerText))
+                    .filter(t => t.length > 20)
+                    .join('\n').substring(0, 3000);
+            }
+            if (!articleBody) {
+                articleBody = cleanText(document.body.innerText).substring(0, 3000);
+            }
+
+        } else if (pageType === 'youtube_video') {
+            // ── YouTube Watch Page ──────────────────────────────────────
+            // Title
+            const titleEl = document.querySelector(
+                'h1.ytd-watch-metadata yt-formatted-string, #title h1 yt-formatted-string, ytd-watch-metadata h1'
+            );
+            if (titleEl) articleTitle = cleanText(titleEl.innerText);
+
+            // Channel name
+            const channelEl = document.querySelector(
+                'ytd-channel-name yt-formatted-string a, #channel-name a, #upload-info #channel-name a'
+            );
+            if (channelEl) articleAuthor = cleanText(channelEl.innerText);
+
+            // Upload date
+            const dateEl = document.querySelector(
+                'ytd-video-primary-info-renderer #info yt-formatted-string.bold, ytd-watch-info-text #info yt-formatted-string'
+            );
+            if (dateEl) articleDate = cleanText(dateEl.innerText);
+
+            // Description
+            const descEl = document.querySelector(
+                'ytd-text-inline-expander yt-attributed-string, ytd-expander #content yt-formatted-string, #description-inner yt-attributed-string'
+            );
+            if (descEl) articleBody = cleanText(descEl.innerText).substring(0, 3000);
+            if (!articleBody) {
+                // Fallback via meta tag
+                const metaEl = document.querySelector('meta[name="description"]');
+                if (metaEl) articleBody = metaEl.getAttribute('content') || '';
+            }
+
+        } else if (pageType === 'tiktok') {
+            // ── TikTok Video Page ──────────────────────────────────────
+            // Video description / title
+            const descEl = document.querySelector(
+                '[data-e2e="browse-video-desc"], [data-e2e="video-desc"], [class*="video-meta-title"]'
+            );
+            if (descEl) {
+                articleBody = cleanText(descEl.innerText).substring(0, 2000);
+                articleTitle = articleBody.substring(0, 100);
+            }
+
+            // Channel / author
+            const authorEl = document.querySelector(
+                '[data-e2e="browse-video-author-title"], [data-e2e="video-author-uniqueid"], h3[class*="AuthorTitle"]'
+            );
+            if (authorEl) articleAuthor = cleanText(authorEl.innerText);
+
+            // Timestamp
+            const timeEl = document.querySelector(
+                '[data-e2e="browser-nickname-create-time"], span[class*="create-time"]'
+            );
+            if (timeEl) articleDate = cleanText(timeEl.innerText);
+
+            // Meta description fallback
+            if (!articleBody) {
+                const metaEl = document.querySelector('meta[name="description"], meta[property="og:description"]');
+                if (metaEl) articleBody = metaEl.getAttribute('content') || '';
+            }
+
+        } else {
+
+            const metaDesc = document.querySelector('meta[name="description"], meta[property="og:description"]');
+            if (metaDesc) articleBody = metaDesc.getAttribute('content') || '';
+            if (!articleBody) articleBody = cleanText(document.body.innerText).substring(0, 3000);
+        }
+    } catch (e) {
+        articleBody = cleanText(document.body.innerText).substring(0, 3000);
+    }
+
+    // ── Reactions & shares (Facebook) ──────────────────────────────────────
+    let reactionsTotal = 0;
+    let shares = 0;
+
+    try {
+        if (pageType === 'facebook_post') {
+            // Reactions
+            const reactionEl = document.querySelector('[aria-label*="reaction"], [data-testid="ufi_reaction_count"] > span');
+            if (reactionEl) {
+                const num = reactionEl.getAttribute('aria-label') || reactionEl.innerText;
+                const match = num.match(/[\d,]+/);
+                if (match) reactionsTotal = parseInt(match[0].replace(/,/g, ''), 10);
+            }
+
+            // Shares
+            const shareEls = document.querySelectorAll('div[role="button"]');
+            shareEls.forEach(el => {
+                const txt = el.innerText || '';
+                if (/^\d[\d,\.Kk]* (share|lượt chia sẻ)/i.test(txt)) {
+                    const m = txt.match(/[\d,\.]+/);
+                    if (m) shares = parseFloat(m[0].replace(/,/g, ''));
+                }
+            });
+        } else if (pageType === 'youtube_video') {
+            // Like count
+            const likeEl = document.querySelector(
+                'ytd-toggle-button-renderer[is-icon-button] #text, yt-formatted-string#text.ytd-toggle-button-renderer'
+            );
+            if (likeEl) {
+                const m = likeEl.innerText.replace(/[,. ]/g, '').match(/\d+/);
+                if (m) reactionsTotal = parseInt(m[0], 10);
+            }
+
+            // View count → use as shares proxy (for metadata richness)
+            const viewEl = document.querySelector(
+                'ytd-watch-info-text span.bold, .view-count, ytd-video-view-count-renderer'
+            );
+            if (viewEl) {
+                const m = viewEl.innerText.replace(/[,. lượt xem views]/gi, '').match(/\d+/);
+                if (m) shares = parseInt(m[0], 10);
+            }
+
+        } else if (pageType === 'tiktok') {
+            // Likes
+            const likeEl = document.querySelector(
+                '[data-e2e="browse-like-count"], [data-e2e="like-count"], [class*="like-count"]'
+            );
+            if (likeEl) {
+                const raw = (likeEl.innerText || '').trim();
+                if (/k/i.test(raw)) reactionsTotal = Math.round(parseFloat(raw) * 1000);
+                else if (/m/i.test(raw)) reactionsTotal = Math.round(parseFloat(raw) * 1_000_000);
+                else { const m = raw.match(/[\d,.]+/); if (m) reactionsTotal = parseInt(m[0].replace(/,/g, ''), 10); }
+            }
+
+            // Shares
+            const shareEl = document.querySelector(
+                '[data-e2e="browse-share-count"], [data-e2e="share-count"], [class*="share-count"]'
+            );
+            if (shareEl) {
+                const raw = (shareEl.innerText || '').trim();
+                if (/k/i.test(raw)) shares = Math.round(parseFloat(raw) * 1000);
+                else if (/m/i.test(raw)) shares = Math.round(parseFloat(raw) * 1_000_000);
+                else { const m = raw.match(/[\d,.]+/); if (m) shares = parseInt(m[0].replace(/,/g, ''), 10); }
+            }
+
+        } else if (pageType === 'news_article') {
+            if (shareEl) {
+                const m = shareEl.innerText.match(/[\d,]+/);
+                if (m) shares = parseInt(m[0].replace(/,/g, ''), 10);
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    // ── Comments extraction (structured) ──────────────────────────────────
+    const structuredComments = [];
+    const seenTexts = new Set();
+
+    try {
+        if (pageType === 'facebook_post') {
+            // Comment containers: each [data-testid="comment"] or ul[class*="comment"]
+            const commentContainers = document.querySelectorAll(
+                '[aria-label*="Comment"], [data-testid="comment"], div[class*="Comment"]'
+            );
+
+            commentContainers.forEach((container) => {
+                // Author
+                const authorEl = container.querySelector('a[href*="profile"] strong, a[href*="/"] > span[class*="x1q0g3bu"]');
+                const author = authorEl ? cleanText(authorEl.innerText) : '';
+
+                // Text
+                const textEl = container.querySelector('[data-testid="comment_text"] > span, div[dir="auto"] > span');
+                const text = textEl ? cleanText(textEl.innerText) : cleanText(container.innerText);
+                if (!text || text.length < 3 || text.length > 500) return;
+                if (seenTexts.has(text)) return;
+                seenTexts.add(text);
+
+                // Reactions on comment
+                let reactions = 0;
+                const reactionEl = container.querySelector('[aria-label*="reaction"], span[class*="reaction"]');
+                if (reactionEl) {
+                    const m = (reactionEl.getAttribute('aria-label') || reactionEl.innerText).match(/[\d,]+/);
+                    if (m) reactions = parseInt(m[0].replace(/,/g, ''), 10);
+                }
+
+                // Is reply? (nested inside another comment)
+                const isReply = container.closest('[data-testid="comment"]') !== container;
+
+                structuredComments.push({ text, author, reactions, is_reply: isReply, timestamp: '' });
+            });
+
+            // Fallback: grab texts from [data-testid="comment_text"]
+            if (structuredComments.length === 0) {
+                document.querySelectorAll('[data-testid="comment_text"] span, [data-ad-comet-preview="comment_body"] span').forEach(el => {
+                    const text = cleanText(el.innerText);
+                    if (!text || text.length < 3 || text.length > 500) return;
+                    if (seenTexts.has(text)) return;
+                    seenTexts.add(text);
+                    structuredComments.push({ text, author: '', reactions: 0, is_reply: false, timestamp: '' });
+                });
+            }
+
+        } else if (pageType === 'news_article') {
+            // VnExpress, DanTri, TuoiTre comment schemas
+            const selectors = [
+                '.comment-item .content-comment p',
+                '.comment-item .comment_body',
+                '.comment_pos .comment_text',
+                '.comment-content .txt-content',
+                '.cmt-item .nd_body',
+                '[class*="comment"] p',
+                'li.comment span.comment-text',
+            ];
+
+            for (const sel of selectors) {
+                const els = document.querySelectorAll(sel);
+                if (els.length > 0) {
+                    els.forEach(el => {
+                        const text = cleanText(el.innerText);
+                        if (!text || text.length < 3 || text.length > 500) return;
+                        if (seenTexts.has(text)) return;
+                        seenTexts.add(text);
+
+                        // Try to get author from parent
+                        const container = el.closest('li, div[class*="comment"]');
+                        const authorEl = container ? container.querySelector('[class*="author"], [class*="user"], .fullname, b') : null;
+                        const author = authorEl ? cleanText(authorEl.innerText) : '';
+
+                        // Likes on comment
+                        let reactions = 0;
+                        if (container) {
+                            const likeEl = container.querySelector('[class*="like"], [class*="vote"]');
+                            if (likeEl) {
+                                const m = likeEl.innerText.match(/\d+/);
+                                if (m) reactions = parseInt(m[0], 10);
+                            }
+                        }
+                        structuredComments.push({ text, author, reactions, is_reply: false, timestamp: '' });
+                    });
+                    break; // Found a working selector
+                }
+            }
+        } else if (pageType === 'youtube_video') {
+            // ── YouTube Comments ──────────────────────────────────────
+            // Selectors work once comments section scrolled into view
+            const commentEls = document.querySelectorAll(
+                'ytd-comment-renderer #content-text, ytd-comment-view-model #content-text'
+            );
+            commentEls.forEach(el => {
+                const text = cleanText(el.innerText);
+                if (!text || text.length < 3 || text.length > 500) return;
+                if (seenTexts.has(text)) return;
+                seenTexts.add(text);
+
+                // Author
+                const container = el.closest('ytd-comment-renderer, ytd-comment-view-model');
+                const authorEl = container?.querySelector('#author-text span, #author-text a');
+                const author = authorEl ? cleanText(authorEl.innerText) : '';
+
+                // Likes
+                let reactions = 0;
+                const likeEl = container?.querySelector('#vote-count-middle, span.ytd-comment-action-buttons-renderer');
+                if (likeEl) {
+                    const m = likeEl.innerText.match(/[\d,]+/);
+                    if (m) reactions = parseInt(m[0].replace(/,/g, ''), 10);
+                }
+
+                // Is reply
+                const isReply = !!el.closest('ytd-comment-replies-renderer');
+
+                structuredComments.push({ text, author, reactions, is_reply: isReply, timestamp: '' });
+            });
+
+        } else if (pageType === 'tiktok') {
+            // ── TikTok Comments ──────────────────────────────────────
+            const commentEls = document.querySelectorAll(
+                '[data-e2e="comment-level-1"] p, [class*="CommentItemContainer"] p[class*="comment-text"], [data-e2e="comment-level-1-item"]'
+            );
+            commentEls.forEach(el => {
+                const text = cleanText(el.innerText);
+                if (!text || text.length < 3 || text.length > 500) return;
+                if (seenTexts.has(text)) return;
+                seenTexts.add(text);
+
+                // Container
+                const container = el.closest('[data-e2e="comment-level-1"], [class*="CommentItemContainer"]');
+                const authorEl = container?.querySelector('[data-e2e="comment-username-1"], [class*="user-name"]');
+                const author = authorEl ? cleanText(authorEl.innerText) : '';
+
+                let reactions = 0;
+                const likeEl = container?.querySelector('[data-e2e="comment-like-count"], [class*="like-count"]');
+                if (likeEl) {
+                    const m = likeEl.innerText.match(/[\d,.KkMm]+/);
+                    if (m) {
+                        const raw = m[0].replace(/,/g, '');
+                        if (/k/i.test(raw)) reactions = Math.round(parseFloat(raw) * 1000);
+                        else if (/m/i.test(raw)) reactions = Math.round(parseFloat(raw) * 1_000_000);
+                        else reactions = parseInt(raw, 10) || 0;
+                    }
+                }
+
+                // Replies are nested differently in TikTok
+                const isReply = el.closest('[data-e2e="comment-level-2"]') !== null;
+                structuredComments.push({ text, author, reactions, is_reply: isReply, timestamp: '' });
+            });
+
+        } else {
+            // Generic: any paragraph-in-comment pattern
+            document.querySelectorAll('[class*="comment"] p, [id*="comment"] p').forEach(el => {
+                const text = cleanText(el.innerText);
+                if (!text || text.length < 3 || text.length > 500) return;
+                if (seenTexts.has(text)) return;
+                seenTexts.add(text);
+                structuredComments.push({ text, author: '', reactions: 0, is_reply: false, timestamp: '' });
+            });
+        }
+    } catch (e) { /* ignore comment errors */ }
+
+    // Cap at 50 comments
+    const finalComments = structuredComments.slice(0, 50);
+
+    // ── Word count ──────────────────────────────────────────────────────────
+    const wordCount = articleBody ? articleBody.split(/\s+/).filter(Boolean).length : 0;
+
+    // ── Flat backward-compatible fallback ───────────────────────────────────
+    // Old /analyze/v5 still works with this
+    const flatText = [articleTitle, articleBody].filter(Boolean).join('\n').trim() || cleanText(document.body.innerText).substring(0, 5000);
+    const flatComments = finalComments.map(c => c.text);
+
+    // ── Total comment count on page ─────────────────────────────────────────
+    let commentCountTotal = finalComments.length;
+    try {
+        if (pageType === 'youtube_video') {
+            // YouTube shows comment count in #count .count-text
+            const ytCountEl = document.querySelector('#count .count-text yt-formatted-string, ytd-comments-header-renderer h2 yt-formatted-string');
+            if (ytCountEl) {
+                const m = ytCountEl.innerText.replace(/[,. ]/g, '').match(/\d+/);
+                if (m) commentCountTotal = parseInt(m[0], 10);
+            }
+        } else if (pageType === 'tiktok') {
+            const ttCountEl = document.querySelector('[data-e2e="browse-comment-count"], [class*="comment-count"]');
+            if (ttCountEl) {
+                const raw = (ttCountEl.innerText || '').trim();
+                if (/k/i.test(raw)) commentCountTotal = Math.round(parseFloat(raw) * 1000);
+                else if (/m/i.test(raw)) commentCountTotal = Math.round(parseFloat(raw) * 1_000_000);
+                else { const m = raw.match(/[\d,.]+/); if (m) commentCountTotal = parseInt(m[0].replace(/,/g, ''), 10); }
+            }
+        } else {
+            const countEl = document.querySelector('[class*="comment-count"], [class*="comment-total"], .txt_comment_list_title');
+            if (countEl) {
+                const m = countEl.innerText.match(/\d+/);
+                if (m) commentCountTotal = parseInt(m[0], 10);
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    return {
+        // ── ARCH-01 structured data ──
+        page_type: pageType,
+        url: location.href,
+        scraped_at: new Date().toISOString(),
+        article: {
+            title: articleTitle.substring(0, 200),
+            author: articleAuthor.substring(0, 100),
+            published_date: articleDate.substring(0, 50),
+            body: articleBody,
+            word_count: wordCount,
+        },
+        comments: finalComments,
+        metadata: {
+            domain: domain,
+            comment_count_visible: finalComments.length,
+            comment_count_total: commentCountTotal,
+            reactions_total: reactionsTotal,
+            shares: shares,
+            page_language: document.documentElement.lang || 'vi',
+        },
+        // ── Backward-compatible flat format ──
+        text: flatText,
+        _flat_comments: flatComments,
+        _is_structured: true,
+    };
+}
+
+
+
 function renderResults(data, urlInfo) {
-    // Check if v4 or v2 response
-    const isV4 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v4;
+    // Check if v5 or v2 response
+    const isV5 = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v5;
     
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
@@ -863,29 +1355,29 @@ function renderResults(data, urlInfo) {
     // Show results container
     document.getElementById('results').classList.remove('hidden');
 
-    if (isV4) {
-        renderV4Results(data, urlInfo);
+    if (isV5) {
+        renderV5Results(data, urlInfo);
     } else {
         renderV2Results(data, urlInfo);
     }
 }
 
-function renderV4Results(data, urlInfo) {
-    const sentiment = data.sentiment_v4 || { overall: "Neutral", confidence: 0, intensity: "Weak" };
-    const toxicity = data.toxicity_v4 || { is_toxic: false, overall_score: 0, severity: "Low" };
-    const factCheck = data.fact_check_v4 || { score: 50, verdict: "Unknown" };
-    const riskScore = data.risk_score_v4 || { risk_score: 0, risk_level: "Low" };
+function renderV5Results(data, urlInfo) {
+    const sentiment = data.sentiment_v5 || { overall: "Neutral", confidence: 0, intensity: "Weak" };
+    const toxicity = data.toxicity_v5 || { is_toxic: false, overall_score: 0, severity: "Low" };
+    const factCheck = data.fact_check_v5 || { score: 50, verdict: "Unknown" };
+    const riskScore = data.risk_score_v5 || { risk_score: 0, risk_level: "Low" };
     const comments = data.comments_analysis || { total: 0, toxic_count: 0, toxic_comments: [], details: [] };
     const articleSummary = data.article_summary || null;
     const isOffline = data.offline_mode === true;
 
-    console.log("📊 Rendering v4 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
+    console.log("📊 Rendering v5 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
 
     // Hide streaming progress bar
     const streamEl = document.getElementById('streamProgress');
     if (streamEl) streamEl.classList.add('hidden');
 
-    // Show learning indicator if AI used feedback (v4.9)
+    // Show learning indicator if AI used feedback (v5.0)
     const learningIndicator = document.getElementById('learningIndicator');
     if (learningIndicator && data.learning_applied) {
         learningIndicator.classList.remove('hidden');
@@ -905,7 +1397,7 @@ function renderV4Results(data, urlInfo) {
         blockWarning.classList.add('hidden');
     }
 
-    // ===== 0. ARTICLE SUMMARY (NEW in v4) =====
+    // ===== 0. ARTICLE SUMMARY (NEW in v5) =====
     const summaryCard = document.getElementById('summaryCard');
     const summaryContent = articleSummary?.summary || articleSummary?.text || '';
     if (summaryContent) {
@@ -961,7 +1453,7 @@ function renderV4Results(data, urlInfo) {
         document.getElementById('riskBreakdown').innerHTML = breakdownHTML;
     }
 
-    // ===== 2. SENTIMENT v4 (PhoBERT) =====
+    // ===== 2. SENTIMENT v5 (PhoBERT) =====
     const sentLabel = sentiment.overall || "Neutral";
     const sentConf = sentiment.confidence || 0;
     const sentIntensity = sentiment.intensity || "Weak";
@@ -992,7 +1484,7 @@ function renderV4Results(data, urlInfo) {
         </div>
     `;
 
-    // ===== 3. TOXICITY v4 (4-Layer) =====
+    // ===== 3. TOXICITY v5 (4-Layer) =====
     const isToxic = toxicity.is_toxic || false;
     const toxScore = toxicity.overall_score || 0;
     const toxSeverity = toxicity.severity || "Low";
@@ -1029,7 +1521,7 @@ function renderV4Results(data, urlInfo) {
     toxDetailsHTML += '</div>';
     document.getElementById('toxicDetails').innerHTML = toxDetailsHTML;
 
-    // ===== 4. FACT CHECK v4 (Multi-Source) =====
+    // ===== 4. FACT CHECK v5 (Multi-Source) =====
     const credScore = factCheck.score || 50;
     const verdict = factCheck.verdict || "Unknown";
     const evidence = factCheck.evidence || [];
@@ -1067,7 +1559,7 @@ function renderV4Results(data, urlInfo) {
         document.getElementById('fakeEvidence').innerHTML = evidenceHTML;
     }
 
-    // ===== 5. COMMENTS ANALYSIS v4 (Enhanced) =====
+    // ===== 5. COMMENTS ANALYSIS v5 (Enhanced) =====
     const totalComments = comments.total || 0;
     const toxicCount = comments.toxic_count || 0;
     const toxicComments = comments.toxic_comments || [];
@@ -1152,9 +1644,12 @@ function renderV4Results(data, urlInfo) {
         document.getElementById('recommendationsCard').style.display = 'none';
     }
 
-    console.log("✅ v4 results rendered");
+    console.log("✅ v5 results rendered");
 
-    // ===== v4.9 — SHOW FEEDBACK SECTION (after results) =====
+    // ===== 2.1 — OVERLAY CONTROLS (Content Script) =====
+    renderOverlayControls(data, urlInfo);
+
+    // ===== v5.0 — SHOW FEEDBACK SECTION (after results) =====
     const feedbackSection = document.getElementById('feedbackSection');
     if (feedbackSection && !isOffline) {
         feedbackSection.classList.remove('hidden');
@@ -1168,17 +1663,108 @@ function renderV4Results(data, urlInfo) {
     // ===== SHOW WARNING MODAL if high risk (after delay) =====
     if (riskValue >= 50) {  // Medium-High or higher (0-100 scale)
         setTimeout(() => {
-            showWarningModalV4(riskScore, sentiment, toxicity, factCheck);
+            showWarningModalV5(riskScore, sentiment, toxicity, factCheck);
         }, 12000);
     }
 }
 
+/**
+ * 2.1 Content Script Overlay — Toggle controls card injected into popup results.
+ * Shows/hides the floating risk badge on the active page via content.js.
+ */
+async function renderOverlayControls(data, urlInfo) {
+    // Find or create the overlay card
+    let card = document.getElementById('overlayControlCard');
+    if (!card) {
+        card = document.createElement('div');
+        card.id = 'overlayControlCard';
+        card.style.cssText = 'margin-top: 10px;';
+        // Inject after results container (append to #results)
+        const resultsEl = document.getElementById('results');
+        if (resultsEl) resultsEl.appendChild(card);
+        else return;
+    }
+
+    // Read stored toggle state
+    const stored = await chrome.storage.local.get(['overlayEnabled']);
+    let enabled = stored.overlayEnabled !== false;
+
+    const renderCard = () => {
+        const modeTag = data.analysis_mode === 'unified' ? ' ⚡ Unified' : data.was_fallback ? ' (fallback)' : '';
+        const pageType = data.page_metadata?.page_type || '';
+        const pageTypeLabel = { facebook_post: '📘 Facebook', news_article: '📰 Báo', youtube_video: '▶ YouTube', tiktok: '🎵 TikTok', generic: '🌐 Web' }[pageType] || '';
+
+        card.innerHTML = `
+            <div class="card" style="border-left: 4px solid #9b59b6; padding: 10px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <div style="font-weight: 700; font-size: 12px; color: #2c3e50;">
+                        🔍 Overlay trang${modeTag ? `<span style="font-weight:400; color:#9b59b6; font-size:10px;"> ${modeTag}</span>` : ''}
+                    </div>
+                    ${pageTypeLabel ? `<span style="font-size: 10px; background: #f0eaf8; color: #8e44ad; padding: 2px 6px; border-radius: 4px;">${pageTypeLabel}</span>` : ''}
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button id="overlayToggleBtn" class="${enabled ? 'btn-primary' : 'btn-secondary'}" style="flex:1; padding: 7px; margin: 0; font-size: 11px;">
+                        ${enabled ? '👁 Ẩn Overlay' : '👁 Hiện Overlay'}
+                    </button>
+                    <button id="overlayJumpBtn" class="btn-secondary" style="flex:1; padding: 7px; font-size: 11px;" title="Cuộn đến bình luận độc hại đầu tiên">
+                        💬 BL độc hại
+                    </button>
+                </div>
+                ${data.page_metadata ? `
+                <div style="margin-top: 8px; font-size: 10px; color: #7f8c8d; display: flex; gap: 8px; flex-wrap: wrap;">
+                    ${data.page_metadata.comment_count_total ? `<span>💬 ${data.page_metadata.comment_count_total} BL</span>` : ''}
+                    ${data.page_metadata.reactions_total ? `<span>❤ ${data.page_metadata.reactions_total} react</span>` : ''}
+                    ${data.page_metadata.shares ? `<span>↗ ${data.page_metadata.shares} share</span>` : ''}
+                    ${data.page_metadata.page_language ? `<span>🌐 ${data.page_metadata.page_language}</span>` : ''}
+                </div>` : ''}
+            </div>
+        `;
+
+        // Toggle handler
+        card.querySelector('#overlayToggleBtn').addEventListener('click', async () => {
+            enabled = !enabled;
+            await chrome.storage.local.set({ overlayEnabled: enabled });
+
+            // Send to content script
+            try {
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (tab?.id) {
+                    await chrome.tabs.sendMessage(tab.id, {
+                        type: 'TOGGLE_OVERLAY',
+                        enabled,
+                    }).catch(() => {
+                        // Content script not loaded — reload it
+                        chrome.scripting?.executeScript?.({
+                            target: { tabId: tab.id },
+                            files: ['content.js'],
+                        });
+                    });
+                }
+            } catch (_) {}
+
+            renderCard(); // Re-render with updated button state
+        });
+
+        // Jump to first toxic comment
+        card.querySelector('#overlayJumpBtn').addEventListener('click', async () => {
+            try {
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (tab?.id) {
+                    chrome.tabs.sendMessage(tab.id, { type: 'SHOW_OVERLAY', data }).catch(() => {});
+                }
+            } catch (_) {}
+            window.close(); // Close popup so user can see the page
+        });
+    };
+
+    renderCard();
+}
+
 function renderV2Results(data, urlInfo) {
-    const fake = data.fake_check || {};
     const sentiment = data.sentiment || { label: "Neutral", score: 0 };
     const toxicity = data.toxicity || { total: 0, toxic_count: 0, results: [] };
 
-    // Clear v4-specific elements
+    // Clear v5-specific elements
     document.getElementById('riskScore').textContent = 'Chế độ v2';
     document.getElementById('riskLevel').textContent = 'Đang dùng API v2';
     document.getElementById('riskBreakdown').innerHTML = '';
@@ -1252,7 +1838,7 @@ function renderV2Results(data, urlInfo) {
     }
 }
 
-function showWarningModalV4(riskScore, sentiment, toxicity, factCheck) {
+function showWarningModalV5(riskScore, sentiment, toxicity, factCheck) {
     const warningModal = document.getElementById('warningModal');
     const warningContent = document.getElementById('warningContent');
 
@@ -1524,13 +2110,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function exportReport(data, url) {
-    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v4;
+    const isSupported = data.version === "3.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "5.0" || data.sentiment_v5;
     if (!isSupported) return;
 
-    const sentiment = data.sentiment_v4 || {};
-    const toxicity = data.toxicity_v4 || {};
-    const factCheck = data.fact_check_v4 || {};
-    const riskScore = data.risk_score_v4 || {};
+    const sentiment = data.sentiment_v5 || {};
+    const toxicity = data.toxicity_v5 || {};
+    const factCheck = data.fact_check_v5 || {};
+    const riskScore = data.risk_score_v5 || {};
     const comments = data.comments_analysis || {};
     const summary = data.article_summary || {};
 
@@ -1577,7 +2163,7 @@ function exportReport(data, url) {
     <h1>🛡️ VnContentGuard Pro — Báo cáo phân tích</h1>
     <p><strong>URL:</strong> <a href="${url || '#'}">${url || 'N/A'}</a></p>
     <p><strong>Ngày quét:</strong> ${dateStr}</p>
-    <p><strong>Phiên bản:</strong> v4.9</p>
+    <p><strong>Phiên bản:</strong> v5.0</p>
 
     <h2>📊 Điểm Rủi Ro Tổng Thể</h2>
     <div style="text-align: center; margin: 15px 0;">
@@ -1636,7 +2222,7 @@ function exportReport(data, url) {
     <ul>${riskScore.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
 
     <div class="footer">
-        <p>Báo cáo được tạo bởi VnContentGuard Pro v4.9</p>
+        <p>Báo cáo được tạo bởi VnContentGuard Pro v5.0</p>
         <p>⚠️ Kết quả phân tích mang tính tham khảo. Hãy luôn kiểm chứng thông tin từ nhiều nguồn.</p>
     </div>
 </body>
@@ -1664,7 +2250,7 @@ function exportReport(data, url) {
 }
 
 // ============================================================================
-// USER FEEDBACK — Feature 3.3 (v4.9)
+// USER FEEDBACK — Feature 3.3 (v5.0)
 // ============================================================================
 
 let feedbackRating = null;
@@ -1740,7 +2326,7 @@ async function submitFeedbackToBackend(rating, correction) {
 }
 
 // ============================================================================
-// COMPARISON MODE — Feature 2.5 (v4.9)
+// COMPARISON MODE — Feature 2.5 (v5.0)
 // ============================================================================
 
 async function toggleComparePanel() {
@@ -1814,18 +2400,18 @@ async function runComparison() {
 }
 
 async function renderComparison(data1, data2, url1, url2) {
-    const risk1 = data1.risk_score_v4?.risk_score || 0;
-    const risk2 = data2.risk_score_v4?.risk_score || 0;
-    const level1 = data1.risk_score_v4?.risk_level || 'Low';
-    const level2 = data2.risk_score_v4?.risk_level || 'Low';
-    const sent1 = data1.sentiment_v4?.overall || 'Neutral';
-    const sent2 = data2.sentiment_v4?.overall || 'Neutral';
-    const toxic1 = data1.toxicity_v4?.is_toxic || false;
-    const toxic2 = data2.toxicity_v4?.is_toxic || false;
-    const fact1 = data1.fact_check_v4?.score || 50;
-    const fact2 = data2.fact_check_v4?.score || 50;
-    const verdict1 = data1.fact_check_v4?.verdict || '?';
-    const verdict2 = data2.fact_check_v4?.verdict || '?';
+    const risk1 = data1.risk_score_v5?.risk_score || 0;
+    const risk2 = data2.risk_score_v5?.risk_score || 0;
+    const level1 = data1.risk_score_v5?.risk_level || 'Low';
+    const level2 = data2.risk_score_v5?.risk_level || 'Low';
+    const sent1 = data1.sentiment_v5?.overall || 'Neutral';
+    const sent2 = data2.sentiment_v5?.overall || 'Neutral';
+    const toxic1 = data1.toxicity_v5?.is_toxic || false;
+    const toxic2 = data2.toxicity_v5?.is_toxic || false;
+    const fact1 = data1.fact_check_v5?.score || 50;
+    const fact2 = data2.fact_check_v5?.score || 50;
+    const verdict1 = data1.fact_check_v5?.verdict || '?';
+    const verdict2 = data2.fact_check_v5?.verdict || '?';
     const toxicCount1 = data1.comments_analysis?.toxic_count || 0;
     const toxicCount2 = data2.comments_analysis?.toxic_count || 0;
     const totalComments1 = data1.comments_analysis?.total || 0;
@@ -1909,15 +2495,15 @@ function getDomain(url) {
 }
 
 // ============================================================================
-// STREAMING PROGRESS — Feature 1.5 (v4.9)
+// STREAMING PROGRESS — Feature 1.5 (v5.0)
 // ============================================================================
 
 const MODULE_NAMES = {
     article_summary: '📰 Tóm tắt',
-    sentiment_v4: '🎭 Cảm xúc',
-    toxicity_v4: '🛡️ Độc hại',
-    fact_check_v4: '📰 Kiểm tra TT',
-    risk_score_v4: '📊 Rủi ro',
+    sentiment_v5: '🎭 Cảm xúc',
+    toxicity_v5: '🛡️ Độc hại',
+    fact_check_v5: '📰 Kiểm tra TT',
+    risk_score_v5: '📊 Rủi ro',
     comments_analysis: '💬 Bình luận'
 };
 
@@ -1937,7 +2523,7 @@ function updateStreamProgress(count, modules) {
 }
 
 // ============================================================================
-// BLOCKLIST CHECK — Feature 4.1 (v4.9)
+// BLOCKLIST CHECK — Feature 4.1 (v5.0)
 // ============================================================================
 
 async function checkBlocklistStatus(url) {
@@ -1955,7 +2541,7 @@ async function checkBlocklistStatus(url) {
 }
 
 // ============================================================================
-// REPORT PAGE — Feature 4.1 (v4.9)
+// REPORT PAGE — Feature 4.1 (v5.0)
 // ============================================================================
 
 function toggleReportPanel() {
@@ -1993,7 +2579,7 @@ async function submitPageReport() {
         return;
     }
 
-    const riskScore = currentResultsData?.risk_score_v4?.risk_score || 50;
+    const riskScore = currentResultsData?.risk_score_v5?.risk_score || 50;
     const btn = document.getElementById('reportSubmitBtn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang gửi...'; }
 
@@ -2032,7 +2618,7 @@ async function submitPageReport() {
 }
 
 // ============================================================================
-// PARENTAL CONTROL — Feature 4.2 (v4.9)
+// PARENTAL CONTROL — Feature 4.2 (v5.0)
 // ============================================================================
 
 function toggleParentalPanel() {
@@ -2091,7 +2677,7 @@ async function saveParentalSettings() {
 }
 
 // ============================================================================
-// API USAGE DASHBOARD — Feature 3.4 (v4.9.1)
+// API USAGE DASHBOARD — Feature 3.4 (v5.0)
 // ============================================================================
 
 async function loadUsageDashboard() {

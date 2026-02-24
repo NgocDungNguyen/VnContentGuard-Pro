@@ -1,0 +1,271 @@
+/**
+ * VnContentGuard Pro v5.0 — Content Script Overlay Styles (2.1)
+ * Injected into every matched page via chrome.runtime.getURL('content.css')
+ */
+
+/* ============================================================
+   FLOATING RISK BADGE
+   ============================================================ */
+#vcg-risk-badge {
+    position: fixed;
+    top: 80px;
+    right: 16px;
+    width: 200px;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18), 0 1px 6px rgba(0, 0, 0, 0.10);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size: 12px;
+    z-index: 2147483640;
+    opacity: 0;
+    transform: translateX(24px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    border-top: 4px solid #95a5a6;
+    overflow: hidden;
+    user-select: none;
+}
+
+#vcg-risk-badge.vcg-badge-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Risk-level border colors */
+#vcg-risk-badge.vcg-risk-low  { border-top-color: #27ae60; }
+#vcg-risk-badge.vcg-risk-medium { border-top-color: #f39c12; }
+#vcg-risk-badge.vcg-risk-high { border-top-color: #e74c3c; }
+
+/* Header row */
+.vcg-badge-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px 4px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.vcg-badge-logo { font-size: 16px; line-height: 1; }
+
+.vcg-badge-title {
+    flex: 1;
+    font-weight: 700;
+    font-size: 11px;
+    color: #2c3e50;
+    letter-spacing: 0.3px;
+}
+
+.vcg-badge-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: #7f8c8d;
+    padding: 2px 4px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: background 0.15s;
+}
+.vcg-badge-close:hover { background: #e9ecef; color: #e74c3c; }
+
+/* Score */
+.vcg-badge-score {
+    font-size: 40px;
+    font-weight: 800;
+    text-align: center;
+    padding: 10px 0 2px;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.vcg-badge-max {
+    font-size: 14px;
+    font-weight: 500;
+    color: #7f8c8d;
+}
+
+.vcg-risk-low    .vcg-badge-score { color: #27ae60; }
+.vcg-risk-medium .vcg-badge-score { color: #e67e22; }
+.vcg-risk-high   .vcg-badge-score { color: #e74c3c; }
+
+/* Level label */
+.vcg-badge-level {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 0 10px 4px;
+}
+
+.vcg-risk-low    .vcg-badge-level { color: #27ae60; }
+.vcg-risk-medium .vcg-badge-level { color: #e67e22; }
+.vcg-risk-high   .vcg-badge-level { color: #e74c3c; }
+
+/* Category */
+.vcg-badge-category {
+    text-align: center;
+    font-size: 10px;
+    color: #7f8c8d;
+    padding: 0 10px 6px;
+}
+
+/* Details */
+.vcg-badge-details {
+    padding: 6px 10px;
+    border-top: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.vcg-detail-row {
+    font-size: 11px;
+    color: #555;
+    padding: 2px 0;
+    line-height: 1.4;
+}
+
+/* Footer */
+.vcg-badge-footer {
+    padding: 6px 10px;
+    display: flex;
+    justify-content: center;
+}
+
+.vcg-badge-jump {
+    background: none;
+    border: 1px solid #bdc3c7;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 10px;
+    color: #555;
+    padding: 3px 8px;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+.vcg-badge-jump:hover {
+    background: #f0f0f0;
+    border-color: #95a5a6;
+}
+
+/* Minimized state */
+#vcg-risk-badge.vcg-badge-minimized {
+    width: auto;
+    min-width: 70px;
+    border-top-width: 3px;
+}
+
+.vcg-badge-mini {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: default;
+    white-space: nowrap;
+}
+
+.vcg-badge-restore {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 10px;
+    color: #7f8c8d;
+    padding: 2px 4px;
+    font-family: inherit;
+}
+.vcg-badge-restore:hover { color: #2c3e50; }
+
+/* ============================================================
+   DARK MODE SUPPORT
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+    #vcg-risk-badge {
+        background: #1e1e1e;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+    }
+    .vcg-badge-header { background: #2a2a2a; border-bottom-color: #3a3a3a; }
+    .vcg-badge-title  { color: #ecf0f1; }
+    .vcg-badge-score  { color: #ecf0f1; }
+    .vcg-detail-row   { color: #aaa; }
+    .vcg-badge-details, .vcg-badge-footer { border-color: #3a3a3a; }
+    .vcg-badge-jump   { border-color: #555; color: #aaa; }
+    .vcg-badge-jump:hover { background: #2a2a2a; }
+    .vcg-badge-close  { color: #aaa; }
+    .vcg-badge-close:hover { background: #3a3a3a; }
+}
+
+/* ============================================================
+   TOXIC COMMENT HIGHLIGHTING
+   ============================================================ */
+.vcg-comment-toxic {
+    border-left: 3px solid #e74c3c !important;
+    padding-left: 8px !important;
+    background: rgba(231, 76, 60, 0.04) !important;
+    position: relative;
+    transition: background 0.2s ease;
+}
+
+.vcg-comment-toxic:hover {
+    background: rgba(231, 76, 60, 0.08) !important;
+}
+
+/* Pulse animation for "jump to first" */
+@keyframes vcg-pulse-border {
+    0%   { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.5); }
+    50%  { box-shadow: 0 0 0 6px rgba(231, 76, 60, 0.15); }
+    100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}
+
+.vcg-comment-toxic.vcg-pulse {
+    animation: vcg-pulse-border 0.6s ease 2;
+}
+
+/* ============================================================
+   COMMENT TOOLTIP
+   ============================================================ */
+.vcg-comment-tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    z-index: 2147483641;
+    background: #2c3e50;
+    color: #fff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    min-width: 200px;
+    max-width: 280px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    font-size: 11px;
+    line-height: 1.4;
+    pointer-events: none;
+}
+
+/* Arrow */
+.vcg-comment-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    border: 6px solid transparent;
+    border-top-color: #2c3e50;
+}
+
+.vcg-tooltip-header {
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 4px;
+    color: #ff8c7a;
+}
+
+.vcg-tooltip-body {
+    color: #ecf0f1;
+    margin-bottom: 4px;
+}
+
+.vcg-tooltip-footer {
+    font-size: 9px;
+    color: #7f8c8d;
+    margin-top: 4px;
+    text-align: right;
+}

@@ -1,7 +1,7 @@
 """
-Tests for VnContentGuard Pro v4 - Risk Scoring System
+Tests for VnContentGuard Pro v5 - Risk Scoring System
 ======================================================
-Comprehensive tests for RiskScorerV4 integrating all v4 modules
+Comprehensive tests for RiskScorerV5 integrating all v5 modules
 """
 
 import os
@@ -12,11 +12,11 @@ import pytest
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.models.risk_scorer_v4 import RiskScorerV4, calculate_risk
+from src.models.risk_scorer_v5 import RiskScorerV5, calculate_risk
 
 
-class TestRiskScorerV4:
-    """Test suite for RiskScorerV4"""
+class TestRiskScorerV5:
+    """Test suite for RiskScorerV5"""
 
     # Class-level scorer to avoid reloading models
     scorer = None
@@ -24,7 +24,7 @@ class TestRiskScorerV4:
     @classmethod
     def setup_class(cls):
         """Setup once for entire test class"""
-        cls.scorer = RiskScorerV4()
+        cls.scorer = RiskScorerV5()
 
     def test_initialization(self):
         """Test risk scorer initializes correctly"""
@@ -33,7 +33,7 @@ class TestRiskScorerV4:
         assert hasattr(self.scorer, "sentiment_analyzer")
         assert hasattr(self.scorer, "toxicity_analyzer")
         assert hasattr(self.scorer, "fact_checker")
-        print("✅ RiskScorerV4 initialization test passed")
+        print("✅ RiskScorerV5 initialization test passed")
 
     def test_empty_input(self):
         """Test handling of empty input"""
@@ -270,11 +270,11 @@ class TestRiskScorerV4:
 
 
 class TestIntegration:
-    """Integration tests with all v4 modules"""
+    """Integration tests with all v5 modules"""
 
-    def test_full_v4_pipeline(self):
-        """Test complete v4 pipeline integration"""
-        scorer = RiskScorerV4()
+    def test_full_v5_pipeline(self):
+        """Test complete v5 pipeline integration"""
+        scorer = RiskScorerV5()
 
         # Test with complex content
         result = scorer.score(
@@ -291,14 +291,14 @@ class TestIntegration:
         # Should have recommendations
         assert len(result["recommendations"]) > 0
 
-        print(f"✅ Full v4 pipeline test passed")
+        print(f"✅ Full v5 pipeline test passed")
         print(f"   Risk: {result['risk_score']:.1f}/100 ({result['risk_level']})")
         print(f"   Evidence: {len(result['evidence'])} sources")
         print(f"   Recommendations: {len(result['recommendations'])}")
 
     def test_all_components_contribution(self):
         """Test that all components contribute to final score"""
-        scorer = RiskScorerV4()
+        scorer = RiskScorerV5()
 
         result = scorer.score(
             "Shocking news! This is terrible and unbelievable!",
@@ -317,7 +317,7 @@ class TestIntegration:
 
 if __name__ == "__main__":
     print("\n" + "=" * 60)
-    print("🧪 VnContentGuard Pro v4 - Risk Scorer Test Suite")
+    print("🧪 VnContentGuard Pro v5 - Risk Scorer Test Suite")
     print("=" * 60 + "\n")
 
     # Run pytest

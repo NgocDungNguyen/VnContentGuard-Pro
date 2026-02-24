@@ -1,5 +1,5 @@
 /**
- * VnContentGuard Pro v4.9 — Background Service Worker
+ * VnContentGuard Pro v5.0 — Background Service Worker
  * =====================================================
  * Handles API calls in the background so they survive popup close.
  * 
@@ -19,11 +19,16 @@
 
 // API endpoints (cloud)
 const API_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/v4"
+    "https://vncontentguard-pro.onrender.com/analyze/v5"
 ];
 
 const STREAM_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/v4/stream"
+    "https://vncontentguard-pro.onrender.com/analyze/v5/stream"
+];
+
+// ARCH-01: Unified single-pass endpoint
+const UNIFIED_ENDPOINTS = [
+    "https://vncontentguard-pro.onrender.com/analyze/v5/unified"
 ];
 
 // Feedback endpoints
@@ -84,6 +89,12 @@ const autoScanTimestamps = {};
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'START_SCAN') {
         handleScan(message.data);
+        sendResponse({ status: 'started' });
+        return true;
+    }
+
+    if (message.type === 'START_SCAN_UNIFIED') {
+        handleUnifiedScan(message.data);
         sendResponse({ status: 'started' });
         return true;
     }
@@ -257,8 +268,8 @@ async function handleScan(data) {
         });
 
         // 5. Update badge with risk score
-        const riskScore = results.risk_score_v4?.risk_score || 0;
-        const riskLevel = results.risk_score_v4?.risk_level || 'Low';
+        const riskScore = results.risk_score_v5?.risk_score || 0;
+        const riskLevel = results.risk_score_v5?.risk_level || 'Low';
         updateBadge(riskScore, riskLevel);
 
         // 6. Add to scan history
@@ -345,13 +356,13 @@ async function addToScanHistory(url, results, pageTitle = '') {
             url: url,
             title: articleTitle || domain,
             domain: domain,
-            riskScore: results.risk_score_v4?.risk_score || 0,
-            riskLevel: results.risk_score_v4?.risk_level || 'Low',
+            riskScore: results.risk_score_v5?.risk_score || 0,
+            riskLevel: results.risk_score_v5?.risk_level || 'Low',
             toxicPercent: results.comments_analysis?.toxic_percentage || 0,
             toxicCount: results.comments_analysis?.toxic_count || 0,
             totalComments: results.comments_analysis?.total || 0,
-            verdict: results.fact_check_v4?.verdict || 'Chưa rõ',
-            sentiment: results.sentiment_v4?.overall || 'Neutral',
+            verdict: results.fact_check_v5?.verdict || 'Chưa rõ',
+            sentiment: results.sentiment_v5?.overall || 'Neutral',
             timestamp: new Date().toISOString(),
             resultsKey: url // Key to load full results
         };
@@ -387,7 +398,175 @@ function extractDomain(url) {
 }
 
 // ============================================================================
-// SSE STREAMING SCAN — Feature 1.5 (v4.9)
+// ARCH-01: UNIFIED SINGLE-PASS SCAN — Structured /analyze/v5/unified
+// 70-80% fewer Gemini calls, 5-15s latency
+// ============================================================================
+
+async function handleUnifiedScan(data) {
+    const { structured, url, article_text, comments, pageTitle } = data;
+    const storageKey = `scan_${url}`;
+
+    try {
+        // 0. Wake up server (cold-start)
+        await warmUpServer();
+
+        // 1. Save scanning state immediately
+        await chrome.storage.local.set({
+            [storageKey]: {
+                status: 'scanning',
+                url,
+                timestamp: new Date().toISOString(),
+                progress: 'Đang phân tích thống nhất (v5)…',
+            }
+        });
+        chrome.action.setBadgeText({ text: '…' });
+        chrome.action.setBadgeBackgroundColor({ color: '#9b59b6' }); // Purple = ARCH-01 mode
+
+        // 2. Build StructuredScanRequest body from popup's structuredScrapePageContent output
+        const requestBody = {
+            page_type: structured.page_type || 'generic',
+            url: url,
+            scraped_at: structured.scraped_at || new Date().toISOString(),
+            article: {
+                title: structured.article?.title || '',
+                author: structured.article?.author || '',
+                published_date: structured.article?.published_date || '',
+                body: structured.article?.body || article_text || '',
+                word_count: structured.article?.word_count || 0,
+            },
+            comments: (structured.comments || []).map(c =>
+                typeof c === 'string'
+                    ? { text: c, author: '', timestamp: '', reactions: 0, is_reply: false }
+                    : { text: c.text || '', author: c.author || '', timestamp: c.timestamp || '', reactions: c.reactions || 0, is_reply: !!c.is_reply }
+            ),
+            metadata: {
+                domain: structured.metadata?.domain || '',
+                comment_count_visible: structured.metadata?.comment_count_visible || 0,
+                comment_count_total: structured.metadata?.comment_count_total || 0,
+                reactions_total: structured.metadata?.reactions_total || 0,
+                shares: structured.metadata?.shares || 0,
+                page_language: structured.metadata?.page_language || 'vi',
+            },
+        };
+
+        // 3. Try unified endpoint
+        let response = null;
+        let lastError = null;
+
+        for (const endpoint of UNIFIED_ENDPOINTS) {
+            try {
+                console.log(`[BG-unified] Trying: ${endpoint}`);
+
+                await chrome.storage.local.set({
+                    [storageKey]: {
+                        status: 'scanning', url,
+                        timestamp: new Date().toISOString(),
+                        progress: 'Gửi dữ liệu cấu trúc đến AI…',
+                    }
+                });
+
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+                response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody),
+                    signal: controller.signal,
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.ok) {
+                    console.log(`[BG-unified] Connected: ${endpoint}`);
+                    break;
+                } else {
+                    console.warn(`[BG-unified] ${endpoint} returned ${response.status}`);
+                    response = null;
+                }
+            } catch (err) {
+                console.warn(`[BG-unified] Failed ${endpoint}: ${err.message}`);
+                lastError = err;
+                response = null;
+            }
+        }
+
+        // 4. Fallback to streaming if unified fails
+        if (!response || !response.ok) {
+            console.warn('[BG-unified] Falling back to stream endpoint');
+            chrome.action.setBadgeText({ text: '…' });
+            chrome.action.setBadgeBackgroundColor({ color: '#3498db' });
+            return handleStreamScan({ url, article_text, comments, pageTitle });
+        }
+
+        // 5. Parse and save results
+        const results = await response.json();
+
+        const resultData = {
+            status: 'completed',
+            url,
+            timestamp: new Date().toISOString(),
+            results,
+        };
+
+        await chrome.storage.local.set({ [storageKey]: resultData });
+        // URL-keyed cache: spread results directly (same format as handleScan/handleStreamScan)
+        // so popup.js can use them without unwrapping the resultData envelope
+        await chrome.storage.local.set({
+            [url]: { ...results, timestamp: new Date().toISOString(), url }
+        });
+
+        // 6. Update badge
+        const risk = results?.risk_score_v5?.risk_score ?? results?.risk_score ?? 0;
+        const riskInt = Math.round(risk);
+        const badgeColor = riskInt >= 75 ? '#e74c3c' : riskInt >= 50 ? '#e67e22' : riskInt >= 25 ? '#f39c12' : '#27ae60';
+        chrome.action.setBadgeText({ text: `${riskInt}` });
+        chrome.action.setBadgeBackgroundColor({ color: badgeColor });
+
+        // 7. Save to scan history
+        await addToScanHistory(url, results, pageTitle || structured?.article?.title || '');
+
+        // 8. Notification for high-risk content
+        if (riskInt >= 50) {
+            const domain = new URL(url).hostname;
+            chrome.notifications.create(`risk_${Date.now()}`, {
+                type: 'basic',
+                iconUrl: 'icons/icon48.png',
+                title: '⚠️ VnContentGuard Pro',
+                message: `${domain} — Rủi ro: ${riskInt}/100 (${results?.risk_score_v5?.risk_level || 'Cao'})`,
+            });
+        }
+
+        // 9. Send results to content script for overlay
+        try {
+            const [tab] = await chrome.tabs.query({ url: url.replace(/#.*$/, '*') });
+            if (tab) {
+                chrome.tabs.sendMessage(tab.id, {
+                    type: 'SHOW_OVERLAY',
+                    data: results,
+                }).catch(() => {}); // Content script may not be loaded yet
+            }
+        } catch (e) { /* ignore */ }
+
+        console.log(`[BG-unified] Done. Risk: ${riskInt}/100, Mode: ${results?.analysis_mode || 'unknown'}`);
+
+    } catch (err) {
+        console.error('[BG-unified] Critical Error:', err);
+        await chrome.storage.local.set({
+            [storageKey]: {
+                status: 'error',
+                url,
+                timestamp: new Date().toISOString(),
+                error: err.message,
+            }
+        });
+        chrome.action.setBadgeText({ text: '!' });
+        chrome.action.setBadgeBackgroundColor({ color: '#e74c3c' });
+    }
+}
+
+// ============================================================================
+// SSE STREAMING SCAN — Feature 1.5 (v5.0)
 // ============================================================================
 
 async function handleStreamScan(data) {
@@ -504,8 +683,8 @@ async function handleStreamScan(data) {
             [url]: { ...results, timestamp: new Date().toISOString(), url: url }
         });
 
-        const riskScore = results.risk_score_v4?.risk_score || 0;
-        const riskLevel = results.risk_score_v4?.risk_level || 'Low';
+        const riskScore = results.risk_score_v5?.risk_score || 0;
+        const riskLevel = results.risk_score_v5?.risk_level || 'Low';
         updateBadge(riskScore, riskLevel);
         await addToScanHistory(url, results, pageTitle);
         sendRiskNotification(url, riskScore, riskLevel);
@@ -521,18 +700,18 @@ async function handleStreamScan(data) {
 
 function buildResultFromModules(modules) {
     return {
-        version: '4.9',
+        version: '5.0',
         article_summary: modules.article_summary || {},
-        sentiment_v4: modules.sentiment_v4 || {},
-        toxicity_v4: modules.toxicity_v4 || {},
-        fact_check_v4: modules.fact_check_v4 || {},
-        risk_score_v4: modules.risk_score_v4 || {},
+        sentiment_v5: modules.sentiment_v5 || {},
+        toxicity_v5: modules.toxicity_v5 || {},
+        fact_check_v5: modules.fact_check_v5 || {},
+        risk_score_v5: modules.risk_score_v5 || {},
         comments_analysis: modules.comments_analysis || {}
     };
 }
 
 // ============================================================================
-// NOTIFICATION SYSTEM — Feature 3.5 (v4.9)
+// NOTIFICATION SYSTEM — Feature 3.5 (v5.0)
 // ============================================================================
 
 function sendRiskNotification(url, riskScore, riskLevel) {
@@ -587,7 +766,7 @@ chrome.notifications.onClicked.addListener((notifId) => {
 });
 
 // ============================================================================
-// COMMUNITY REPORT — Feature 4.1 (v4.9)
+// COMMUNITY REPORT — Feature 4.1 (v5.0)
 // ============================================================================
 
 async function submitReport(data) {
@@ -613,7 +792,7 @@ async function submitReport(data) {
 }
 
 // ============================================================================
-// COMMUNITY BLOCKLIST — Feature 4.1 (v4.9)
+// COMMUNITY BLOCKLIST — Feature 4.1 (v5.0)
 // ============================================================================
 
 async function refreshBlocklist(force = false) {
@@ -649,7 +828,7 @@ async function checkBlocklist(url) {
 }
 
 // ============================================================================
-// PARENTAL CONTROL — Feature 4.2 (v4.9)
+// PARENTAL CONTROL — Feature 4.2 (v5.0)
 // ============================================================================
 
 async function setParentalControl(enabled, pin, threshold) {
@@ -663,7 +842,7 @@ async function setParentalControl(enabled, pin, threshold) {
 }
 
 // ============================================================================
-// CONTENT WARNING + PARENTAL INTERCEPT — Features 4.2 + 4.3 (v4.9)
+// CONTENT WARNING + PARENTAL INTERCEPT — Features 4.2 + 4.3 (v5.0)
 // ============================================================================
 
 chrome.webNavigation.onCompleted.addListener(async (details) => {
@@ -706,7 +885,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
             const cached = scanData[url];
 
             if (cached) {
-                const risk = cached.risk_score_v4?.risk_score || 0;
+                const risk = cached.risk_score_v5?.risk_score || 0;
                 if (risk >= threshold) {
                     const blockUrl = chrome.runtime.getURL('block.html') +
                         `?url=${encodeURIComponent(url)}&risk=${risk >= 70 ? 'Cao' : 'Trung bình'}`;
@@ -721,7 +900,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
 });
 
 // ============================================================================
-// WEEKLY SAFETY REPORT — Feature 4.4 (v4.9)
+// WEEKLY SAFETY REPORT — Feature 4.4 (v5.0)
 // ============================================================================
 
 // Set up weekly alarm
@@ -773,7 +952,7 @@ chrome.notifications.onButtonClicked.addListener((notifId, btnIdx) => {
 });
 
 // ============================================================================
-// SYSTEM STATS — Feature 3.4 (v4.9.1)
+// SYSTEM STATS — Feature 3.4 (v5.0)
 // ============================================================================
 
 async function fetchSystemStats() {
@@ -817,7 +996,7 @@ async function submitFeedback(data) {
 }
 
 // ============================================================================
-// AUTO-SCAN — Feature 1.3 (v4.9)
+// AUTO-SCAN — Feature 1.3 (v5.0)
 // ============================================================================
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
@@ -863,17 +1042,28 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
         }
 
         const scraped = scrapeResult[0].result;
-        if (!scraped.text || scraped.text.trim().length < 30) {
+        const articleBody = scraped.article?.body || scraped.text || '';
+        if (articleBody.trim().length < 30) {
             console.log('[BG] Auto-scan: Content too short');
             return;
         }
 
-        // Start the scan
-        handleScan({
-            url: url,
-            article_text: scraped.text,
-            comments: scraped.comments
-        });
+        // Start the scan (use unified if structured data available)
+        if (scraped._is_structured) {
+            handleUnifiedScan({
+                structured: scraped,
+                url: url,
+                article_text: articleBody,
+                comments: scraped._flat_comments || (scraped.comments || []).map(c => typeof c === 'string' ? c : c.text),
+                pageTitle: '',
+            });
+        } else {
+            handleScan({
+                url: url,
+                article_text: scraped.text,
+                comments: scraped.comments || [],
+            });
+        }
 
     } catch (err) {
         console.log(`[BG] Auto-scan scrape failed: ${err.message}`);
@@ -881,44 +1071,121 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 });
 
 /**
- * Lightweight content scraper for auto-scan.
+ * Lightweight structured content scraper for auto-scan.
+ * Returns same format as structuredScrapePageContent() in popup.js.
  * Runs in the content script context of the tab.
  */
 function autoScrapeContent() {
     try {
-        let text = "";
-        let comments = [];
+        const hostname = location.hostname;
+        const domain = hostname.replace(/^www\./, '');
+        const cleanText = (raw) => (raw || '').trim().replace(/\s+/g, ' ');
 
-        // Get main content
-        const main = document.querySelector('article') ||
-                     document.querySelector('main') ||
-                     document.querySelector('[role="main"]') ||
-                     document.querySelector('[role="article"]');
+        // Detect page type
+        let pageType = 'generic';
+        if (hostname.includes('facebook.com')) pageType = 'facebook_post';
+        else if (hostname.includes('youtube.com')) pageType = 'youtube_video';
+        else if (hostname.includes('tiktok.com')) pageType = 'tiktok';
+        else if (/vnexpress|dantri|tuoitre|thanhnien|24h|vietnamnet/.test(hostname)) pageType = 'news_article';
 
-        if (main) {
-            text = main.innerText.substring(0, 5000).trim();
+        // Get main content with platform-aware selectors
+        let text = '';
+        let articleTitle = '';
+        let articleAuthor = '';
+
+        if (pageType === 'youtube_video') {
+            const ytTitle = document.querySelector('h1.ytd-watch-metadata yt-formatted-string, #title h1 yt-formatted-string, ytd-watch-metadata h1');
+            if (ytTitle) articleTitle = cleanText(ytTitle.innerText);
+            const ytChannel = document.querySelector('ytd-channel-name yt-formatted-string a, #channel-name a');
+            if (ytChannel) articleAuthor = cleanText(ytChannel.innerText);
+            const ytDesc = document.querySelector('ytd-text-inline-expander yt-attributed-string, #description-inner yt-attributed-string');
+            if (ytDesc) text = cleanText(ytDesc.innerText).substring(0, 3000);
+            if (!text) { const m = document.querySelector('meta[name="description"]'); if (m) text = m.getAttribute('content') || ''; }
+        } else if (pageType === 'tiktok') {
+            const ttDesc = document.querySelector('[data-e2e="browse-video-desc"], [data-e2e="video-desc"]');
+            if (ttDesc) { text = cleanText(ttDesc.innerText).substring(0, 2000); articleTitle = text.substring(0, 100); }
+            const ttAuthor = document.querySelector('[data-e2e="browse-video-author-title"], [data-e2e="video-author-uniqueid"]');
+            if (ttAuthor) articleAuthor = cleanText(ttAuthor.innerText);
+            if (!text) { const m = document.querySelector('meta[name="description"], meta[property="og:description"]'); if (m) text = m.getAttribute('content') || ''; }
+        } else {
+            const articleEl = document.querySelector('article, [role="article"], main');
+            if (articleEl) {
+                const h1 = articleEl.querySelector('h1');
+                if (h1) articleTitle = cleanText(h1.innerText);
+                text = articleEl.innerText.substring(0, 5000).trim();
+            }
         }
         if (!text || text.length < 30) {
+            const h1 = document.querySelector('h1');
+            if (h1) articleTitle = cleanText(h1.innerText);
             text = document.body.innerText.substring(0, 5000).trim();
         }
 
-        // Get comments (basic)
+        // Get comments with platform-aware selectors
         const commentSet = new Set();
-        const commentSelectors = [
-            '[data-testid="comment"]', '.comment', '.comments',
-            '.comment-content', '[data-comment-id]', '.user-comment'
-        ];
-        commentSelectors.forEach(sel => {
-            document.querySelectorAll(sel).forEach(el => {
-                const t = (el.innerText || '').trim();
-                if (t.length > 5 && t.length < 500) commentSet.add(t);
-            });
-        });
-        comments = Array.from(commentSet).slice(0, 50);
+        const structuredComments = [];
 
-        return { text, comments };
+        const addComment = (t, author = '') => {
+            const clean = cleanText(t);
+            if (clean.length > 5 && clean.length < 500 && !commentSet.has(clean)) {
+                commentSet.add(clean);
+                structuredComments.push({ text: clean, author, reactions: 0, is_reply: false, timestamp: '' });
+            }
+        };
+
+        if (pageType === 'youtube_video') {
+            document.querySelectorAll('ytd-comment-renderer #content-text, ytd-comment-view-model #content-text').forEach(el => {
+                const container = el.closest('ytd-comment-renderer, ytd-comment-view-model');
+                const author = container?.querySelector('#author-text span')?.innerText || '';
+                addComment(el.innerText, cleanText(author));
+            });
+        } else if (pageType === 'tiktok') {
+            document.querySelectorAll('[data-e2e="comment-level-1"] p, [data-e2e="comment-level-1-item"]').forEach(el => {
+                const container = el.closest('[data-e2e="comment-level-1"], [class*="CommentItemContainer"]');
+                const author = container?.querySelector('[data-e2e="comment-username-1"]')?.innerText || '';
+                addComment(el.innerText, cleanText(author));
+            });
+        } else {
+            const commentSelectors = [
+                '[data-testid="comment"]', '.comment-content', '.comment_text',
+                '[data-comment-id]', '.user-comment', '[class*="comment"] p'
+            ];
+            commentSelectors.forEach(sel => {
+                document.querySelectorAll(sel).forEach(el => addComment(el.innerText));
+            });
+        }
+        const finalComments = structuredComments.slice(0, 50);
+
+        return {
+            page_type: pageType,
+            url: location.href,
+            scraped_at: new Date().toISOString(),
+            article: {
+                title: articleTitle.substring(0, 200),
+                author: articleAuthor,
+                published_date: '',
+                body: text,
+                word_count: text.split(/\s+/).filter(Boolean).length,
+            },
+            comments: finalComments,
+            metadata: {
+                domain: domain,
+                comment_count_visible: finalComments.length,
+                comment_count_total: finalComments.length,
+                reactions_total: 0,
+                shares: 0,
+                page_language: document.documentElement.lang || 'vi',
+            },
+            text: text,
+            _flat_comments: finalComments.map(c => c.text),
+            _is_structured: true,
+        };
     } catch (err) {
-        return { text: document.body.innerText.substring(0, 3000), comments: [] };
+        return {
+            text: document.body.innerText.substring(0, 3000),
+            comments: [],
+            _is_structured: false,
+        };
     }
 }
 
@@ -927,7 +1194,7 @@ function autoScrapeContent() {
 // ============================================================================
 
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('[BG] VnContentGuard Pro v4.9 service worker installed');
+    console.log('[BG] VnContentGuard Pro v5.0 service worker installed');
     chrome.action.setBadgeText({ text: '' });
 
     // Initialize weekly report alarm

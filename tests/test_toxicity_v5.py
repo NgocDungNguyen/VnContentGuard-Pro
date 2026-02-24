@@ -1,5 +1,5 @@
 """
-Unit Tests for VnContentGuard Pro v4 - Advanced Toxicity Detection
+Unit Tests for VnContentGuard Pro v5 - Advanced Toxicity Detection
 ===================================================================
 Tests multi-layer toxicity detection system with fallback mechanisms
 """
@@ -12,22 +12,22 @@ import pytest
 # Add src to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.models.toxicity_v4 import ToxicityAnalyzerV4
+from src.models.toxicity_v5 import ToxicityAnalyzerV5
 
 
-class TestToxicityV4Initialization:
+class TestToxicityV5Initialization:
     """Test toxicity analyzer initialization"""
 
     def test_analyzer_initialization(self):
         """Test that analyzer initializes successfully"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         assert analyzer is not None
         assert analyzer.detoxify_model is not None
         assert analyzer.regex_analyzer is not None
 
     def test_detoxify_model_loaded(self):
         """Test that Detoxify model loads"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         assert analyzer.detoxify_model is not None
 
 
@@ -36,7 +36,7 @@ class TestCleanContent:
 
     def test_clean_vietnamese_text(self):
         """Test clean Vietnamese text"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Bài viết rất hay và hữu ích!")
 
         assert result["is_toxic"] == False
@@ -45,7 +45,7 @@ class TestCleanContent:
 
     def test_neutral_news_content(self):
         """Test neutral news content"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Hôm nay trời nắng đẹp, nhiệt độ 25 độ C")
 
         assert result["is_toxic"] == False
@@ -53,7 +53,7 @@ class TestCleanContent:
 
     def test_positive_feedback(self):
         """Test positive feedback"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Thông tin rất bổ ích, cảm ơn bạn nhiều!")
 
         assert result["is_toxic"] == False
@@ -65,7 +65,7 @@ class TestToxicContent:
 
     def test_vietnamese_insult(self):
         """Test Vietnamese insult detection"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Đồ ngu ngốc, mày là thằng đần")
 
         assert result["is_toxic"] == True
@@ -78,7 +78,7 @@ class TestToxicContent:
 
     def test_threat_detection(self):
         """Test threat detection"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Tao sẽ giết mày")
 
         assert result["is_toxic"] == True
@@ -87,7 +87,7 @@ class TestToxicContent:
 
     def test_profanity_detection(self):
         """Test profanity detection"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Đồ chó chết, đụ má mày")
 
         assert result["is_toxic"] == True
@@ -99,7 +99,7 @@ class TestDetectionLayers:
 
     def test_detoxify_layer(self):
         """Test Detoxify layer works"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("You are stupid and ugly")
 
         assert "detoxify" in result["detection_layers"]
@@ -108,7 +108,7 @@ class TestDetectionLayers:
 
     def test_regex_layer(self):
         """Test regex layer works for Vietnamese"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Mày là thằng ngu")
 
         assert "regex" in result["detection_layers"]
@@ -116,7 +116,7 @@ class TestDetectionLayers:
 
     def test_multi_layer_detection(self):
         """Test that both layers can detect toxicity"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Đồ ngu, stupid idiot")
 
         # Should detect in at least one layer
@@ -129,7 +129,7 @@ class TestSeverityLevels:
 
     def test_low_severity(self):
         """Test low severity content"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         # Slightly negative but not toxic
         result = analyzer.analyze("Không hay lắm")
 
@@ -137,14 +137,14 @@ class TestSeverityLevels:
 
     def test_medium_severity(self):
         """Test medium severity"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Mày ngu quá")
 
         assert result["severity"] in ["Low", "Medium", "High"]
 
     def test_high_severity(self):
         """Test high severity"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Đồ chó chết, tao giết mày")
 
         assert result["severity"] in ["High", "Critical"]
@@ -156,7 +156,7 @@ class TestCategories:
 
     def test_categories_present(self):
         """Test that categories are returned"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("You are an idiot")
 
         assert "categories" in result
@@ -164,7 +164,7 @@ class TestCategories:
 
     def test_detoxify_categories(self):
         """Test Detoxify categories"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Stupid ugly person")
 
         if "detoxify" in result["detection_layers"]:
@@ -179,7 +179,7 @@ class TestEdgeCases:
 
     def test_empty_text(self):
         """Test empty text handling"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("")
 
         assert result["is_toxic"] == False
@@ -187,7 +187,7 @@ class TestEdgeCases:
 
     def test_whitespace_only(self):
         """Test whitespace-only text"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("   \n\t  ")
 
         assert result["is_toxic"] == False
@@ -195,7 +195,7 @@ class TestEdgeCases:
 
     def test_very_long_text(self):
         """Test very long text"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         long_text = "Bài viết hay. " * 100
         result = analyzer.analyze(long_text)
 
@@ -204,7 +204,7 @@ class TestEdgeCases:
 
     def test_special_characters(self):
         """Test text with special characters"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Đồ @#$%^& ngu!")
 
         assert result is not None
@@ -216,7 +216,7 @@ class TestBatchAnalysis:
 
     def test_batch_analysis(self):
         """Test analyzing multiple texts"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         texts = ["Bài viết hay", "Đồ ngu", "Thông tin hữu ích"]
 
         results = analyzer.analyze_batch(texts)
@@ -226,7 +226,7 @@ class TestBatchAnalysis:
 
     def test_batch_statistics(self):
         """Test statistics calculation"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         texts = ["Bài viết hay", "Đồ ngu ngốc", "Tao giết mày", "Thông tin tốt"]
 
         results = analyzer.analyze_batch(texts)
@@ -243,7 +243,7 @@ class TestFallbackMechanism:
 
     def test_still_works_if_detoxify_fails(self):
         """Test that analyzer still works if Detoxify fails"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
 
         # Temporarily disable Detoxify
         original_model = analyzer.detoxify_model
@@ -260,7 +260,7 @@ class TestFallbackMechanism:
 
     def test_fallback_to_regex(self):
         """Test fallback to regex when Detoxify unavailable"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         analyzer.detoxify_model = None
 
         result = analyzer.analyze("Mày là thằng ngu")
@@ -275,7 +275,7 @@ class TestResultStructure:
 
     def test_result_has_required_fields(self):
         """Test that result has all required fields"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         result = analyzer.analyze("Test text")
 
         required_fields = [
@@ -293,7 +293,7 @@ class TestResultStructure:
 
     def test_score_range(self):
         """Test that scores are in valid range [0, 1]"""
-        analyzer = ToxicityAnalyzerV4()
+        analyzer = ToxicityAnalyzerV5()
         texts = ["Clean text", "Đồ ngu", "Very toxic shit fuck"]
 
         for text in texts:
