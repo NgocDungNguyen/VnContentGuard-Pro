@@ -1468,6 +1468,9 @@ function renderV5Results(data, urlInfo) {
 
     console.log("✅ v5 results rendered");
 
+    // ===== 2.1 — OVERLAY CONTROLS (Content Script) =====
+    renderOverlayControls(data, urlInfo);
+
     // ===== v5.0 — SHOW FEEDBACK SECTION (after results) =====
     const feedbackSection = document.getElementById('feedbackSection');
     if (feedbackSection && !isOffline) {
@@ -1487,8 +1490,99 @@ function renderV5Results(data, urlInfo) {
     }
 }
 
+/**
+ * 2.1 Content Script Overlay — Toggle controls card injected into popup results.
+ * Shows/hides the floating risk badge on the active page via content.js.
+ */
+async function renderOverlayControls(data, urlInfo) {
+    // Find or create the overlay card
+    let card = document.getElementById('overlayControlCard');
+    if (!card) {
+        card = document.createElement('div');
+        card.id = 'overlayControlCard';
+        card.style.cssText = 'margin-top: 10px;';
+        // Inject after results container (append to #results)
+        const resultsEl = document.getElementById('results');
+        if (resultsEl) resultsEl.appendChild(card);
+        else return;
+    }
+
+    // Read stored toggle state
+    const stored = await chrome.storage.local.get(['overlayEnabled']);
+    let enabled = stored.overlayEnabled !== false;
+
+    const renderCard = () => {
+        const modeTag = data.analysis_mode === 'unified' ? ' ⚡ Unified' : data.was_fallback ? ' (fallback)' : '';
+        const pageType = data.page_metadata?.page_type || '';
+        const pageTypeLabel = { facebook_post: '📘 Facebook', news_article: '📰 Báo', youtube_video: '▶ YouTube', tiktok: '🎵 TikTok', generic: '🌐 Web' }[pageType] || '';
+
+        card.innerHTML = `
+            <div class="card" style="border-left: 4px solid #9b59b6; padding: 10px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <div style="font-weight: 700; font-size: 12px; color: #2c3e50;">
+                        🔍 Overlay trang${modeTag ? `<span style="font-weight:400; color:#9b59b6; font-size:10px;"> ${modeTag}</span>` : ''}
+                    </div>
+                    ${pageTypeLabel ? `<span style="font-size: 10px; background: #f0eaf8; color: #8e44ad; padding: 2px 6px; border-radius: 4px;">${pageTypeLabel}</span>` : ''}
+                </div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button id="overlayToggleBtn" class="${enabled ? 'btn-primary' : 'btn-secondary'}" style="flex:1; padding: 7px; margin: 0; font-size: 11px;">
+                        ${enabled ? '👁 Ẩn Overlay' : '👁 Hiện Overlay'}
+                    </button>
+                    <button id="overlayJumpBtn" class="btn-secondary" style="flex:1; padding: 7px; font-size: 11px;" title="Cuộn đến bình luận độc hại đầu tiên">
+                        💬 BL độc hại
+                    </button>
+                </div>
+                ${data.page_metadata ? `
+                <div style="margin-top: 8px; font-size: 10px; color: #7f8c8d; display: flex; gap: 8px; flex-wrap: wrap;">
+                    ${data.page_metadata.comment_count_total ? `<span>💬 ${data.page_metadata.comment_count_total} BL</span>` : ''}
+                    ${data.page_metadata.reactions_total ? `<span>❤ ${data.page_metadata.reactions_total} react</span>` : ''}
+                    ${data.page_metadata.shares ? `<span>↗ ${data.page_metadata.shares} share</span>` : ''}
+                    ${data.page_metadata.page_language ? `<span>🌐 ${data.page_metadata.page_language}</span>` : ''}
+                </div>` : ''}
+            </div>
+        `;
+
+        // Toggle handler
+        card.querySelector('#overlayToggleBtn').addEventListener('click', async () => {
+            enabled = !enabled;
+            await chrome.storage.local.set({ overlayEnabled: enabled });
+
+            // Send to content script
+            try {
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (tab?.id) {
+                    await chrome.tabs.sendMessage(tab.id, {
+                        type: 'TOGGLE_OVERLAY',
+                        enabled,
+                    }).catch(() => {
+                        // Content script not loaded — reload it
+                        chrome.scripting?.executeScript?.({
+                            target: { tabId: tab.id },
+                            files: ['content.js'],
+                        });
+                    });
+                }
+            } catch (_) {}
+
+            renderCard(); // Re-render with updated button state
+        });
+
+        // Jump to first toxic comment
+        card.querySelector('#overlayJumpBtn').addEventListener('click', async () => {
+            try {
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                if (tab?.id) {
+                    chrome.tabs.sendMessage(tab.id, { type: 'SHOW_OVERLAY', data }).catch(() => {});
+                }
+            } catch (_) {}
+            window.close(); // Close popup so user can see the page
+        });
+    };
+
+    renderCard();
+}
+
 function renderV2Results(data, urlInfo) {
-    const fake = data.fake_check || {};
     const sentiment = data.sentiment || { label: "Neutral", score: 0 };
     const toxicity = data.toxicity || { total: 0, toxic_count: 0, results: [] };
 

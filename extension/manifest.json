@@ -17,7 +17,49 @@
     "https://*.facebook.com/*",
     "https://*.vnexpress.net/*",
     "https://*.dantri.com.vn/*",
-    "https://*.tuoitre.vn/*"
+    "https://*.tuoitre.vn/*",
+    "https://*.thanhnien.vn/*",
+    "https://*.24h.com.vn/*",
+    "https://*.vietnamnet.vn/*",
+    "https://*.baomoi.com/*",
+    "https://*.youtube.com/*",
+    "https://*.tiktok.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.facebook.com/*",
+        "https://*.vnexpress.net/*",
+        "https://*.dantri.com.vn/*",
+        "https://*.tuoitre.vn/*",
+        "https://*.thanhnien.vn/*",
+        "https://*.24h.com.vn/*",
+        "https://*.vietnamnet.vn/*",
+        "https://*.baomoi.com/*",
+        "https://*.youtube.com/*",
+        "https://*.tiktok.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content.css", "icons/*"],
+      "matches": [
+        "https://*.facebook.com/*",
+        "https://*.vnexpress.net/*",
+        "https://*.dantri.com.vn/*",
+        "https://*.tuoitre.vn/*",
+        "https://*.thanhnien.vn/*",
+        "https://*.24h.com.vn/*",
+        "https://*.vietnamnet.vn/*",
+        "https://*.baomoi.com/*",
+        "https://*.youtube.com/*",
+        "https://*.tiktok.com/*"
+      ]
+    }
   ],
   "background": {
     "service_worker": "background.js"
