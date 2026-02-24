@@ -1,7 +1,7 @@
 """
-VnContentGuard Pro v4 - Objective Risk Scoring System
+VnContentGuard Pro v5 - Objective Risk Scoring System
 =====================================================
-Comprehensive risk assessment integrating all v4 detection modules:
+Comprehensive risk assessment integrating all v5 detection modules:
 - 40% Fake News Score (fact-checking credibility)
 - 25% Toxicity Score (harmful content detection)
 - 15% Sentiment Score (emotional manipulation detection)
@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class RiskScorerV4:
+class RiskScorerV5:
     """
     Objective Risk Scoring System
 
@@ -41,10 +41,10 @@ class RiskScorerV4:
     def __init__(
         self, sentiment_analyzer=None, toxicity_analyzer=None, fact_checker=None
     ):
-        print("⏳ Initializing Risk Scorer v4...")
+        print("⏳ Initializing Risk Scorer v5...")
 
         # Feature flags
-        self.USE_V4 = os.getenv("USE_V4", "true").lower() == "true"
+        self.USE_V5 = os.getenv("USE_V5", "true").lower() == "true"
         self.use_fact_checking = (
             os.getenv("USE_FACT_CHECKING", "true").lower() == "true"
         )
@@ -56,32 +56,32 @@ class RiskScorerV4:
 
         if not self.sentiment_analyzer:
             try:
-                from .sentiment_v4 import SentimentAnalyzerV4
+                from .sentiment_v5 import SentimentAnalyzerV5
 
-                self.sentiment_analyzer = SentimentAnalyzerV4(use_phobert=False)
-                print("✅ Sentiment v4 loaded")
+                self.sentiment_analyzer = SentimentAnalyzerV5(use_phobert=False)
+                print("✅ Sentiment v5 loaded")
             except Exception as e:
-                print(f"⚠️ Sentiment v4 unavailable: {e}")
+                print(f"⚠️ Sentiment v5 unavailable: {e}")
 
         if not self.toxicity_analyzer:
             try:
-                from .toxicity_v4 import ToxicityAnalyzerV4
+                from .toxicity_v5 import ToxicityAnalyzerV5
 
-                self.toxicity_analyzer = ToxicityAnalyzerV4(use_detoxify=False)
-                print("✅ Toxicity v4 loaded")
+                self.toxicity_analyzer = ToxicityAnalyzerV5(use_detoxify=False)
+                print("✅ Toxicity v5 loaded")
             except Exception as e:
-                print(f"⚠️ Toxicity v4 unavailable: {e}")
+                print(f"⚠️ Toxicity v5 unavailable: {e}")
 
         if not self.fact_checker:
             try:
-                from .fact_checker_v4 import FactCheckerV4
+                from .fact_checker_v5 import FactCheckerV5
 
-                self.fact_checker = FactCheckerV4()
-                print("✅ Fact-Checker v4 loaded")
+                self.fact_checker = FactCheckerV5()
+                print("✅ Fact-Checker v5 loaded")
             except Exception as e:
-                print(f"⚠️ Fact-Checker v4 unavailable: {e}")
+                print(f"⚠️ Fact-Checker v5 unavailable: {e}")
 
-        print("✅ Risk Scorer v4 Ready!")
+        print("✅ Risk Scorer v5 Ready!")
 
     def score(self, text: str, url: Optional[str] = None) -> Dict:
         """
@@ -540,13 +540,13 @@ class RiskScorerV4:
 # Convenience function
 def calculate_risk(text: str, url: Optional[str] = None) -> Dict:
     """Quick risk calculation"""
-    scorer = RiskScorerV4()
+    scorer = RiskScorerV5()
     return scorer.score(text, url)
 
 
 if __name__ == "__main__":
     # Quick test
-    scorer = RiskScorerV4()
+    scorer = RiskScorerV5()
 
     test_cases = [
         ("You won't believe this SHOCKING news! Click here NOW!!!", None),
@@ -555,7 +555,7 @@ if __name__ == "__main__":
         ("This is a neutral informative article about science.", "https://bbc.com"),
     ]
 
-    print("\n🧪 Testing Risk Scorer v4:")
+    print("\n🧪 Testing Risk Scorer v5:")
     for text, url in test_cases:
         result = scorer.score(text, url)
         print(f"\nText: {text[:60]}...")

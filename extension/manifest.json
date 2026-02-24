@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "VnContentGuard Pro v4.9",
-  "version": "4.9.0",
-  "description": "Quét an toàn nội dung tiếng Việt bằng AI — streaming, cảnh báo nội dung, kiểm soát gia đình, blocklist cộng đồng, báo cáo hàng tuần.",
+  "name": "VnContentGuard Pro v5.0",
+  "version": "5.0.0",
+  "description": "Quét an toàn nội dung tiếng Việt bằng AI — phân tích thống nhất, streaming, YouTube/TikTok, overlay nội dung, kiểm soát gia đình, blocklist cộng đồng.",
   "permissions": [
     "activeTab",
     "tabs",

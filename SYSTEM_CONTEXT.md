@@ -1,15 +1,15 @@
 # VNCONTENTGUARD PRO — COMPLETE SYSTEM CONTEXT
 # Paste this file into any new chat so the AI knows exactly what the system is and does.
-# Last updated: February 14, 2026 | Version: 4.9.0
+# Last updated: February 24, 2026 | Version: 5.0.0
 
 ## PROJECT IDENTITY
 - **Name:** VnContentGuard Pro
-- **Purpose:** AI-powered Vietnamese content moderation Chrome Extension + backend with self-learning feedback system
+- **Purpose:** AI-powered Vietnamese content moderation Chrome Extension + backend with unified structured analysis and self-learning feedback system
 - **Repo:** https://github.com/NgocDungNguyen/VnContentGuard-Pro.git
-- **Branch:** `v4-enhancement` (active dev), `main` (production)
+- **Branch:** `v5-enhancement` (active dev), `v4-enhancement` (stable), `main` (production)
 - **Workspace:** `C:\Users\LucyS\Tox`
 - **Language:** Python 3.10 (backend) + JavaScript (Chrome extension)
-- **Version:** 4.9.0
+- **Version:** 5.0.0
 
 ---
 

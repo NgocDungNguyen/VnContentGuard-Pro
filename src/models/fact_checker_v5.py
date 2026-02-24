@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v4 - Fact-Checking System
+VnContentGuard Pro v5 - Fact-Checking System
 =============================================
 Multi-source fact verification system with:
 1. Google Fact Check Tools API - Known fact-checks from multiple organizations
@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class FactCheckerV4:
+class FactCheckerV5:
     """
     Advanced Multi-Source Fact-Checking System
 
@@ -347,13 +347,13 @@ Trả lời ngắn gọn, khách quan, bằng tiếng Việt."""
 # Convenience function
 def check_fact(text: str, url: Optional[str] = None) -> Dict:
     """Quick fact check"""
-    checker = FactCheckerV4()
+    checker = FactCheckerV5()
     return checker.check(text, url)
 
 
 if __name__ == "__main__":
     # Quick test
-    checker = FactCheckerV4()
+    checker = FactCheckerV5()
 
     test_cases = [
         ("Việt Nam có 54 dân tộc", None),
@@ -361,7 +361,7 @@ if __name__ == "__main__":
         ("COVID-19 vaccine causes autism", None),
     ]
 
-    print("\n🧪 Testing Fact-Checker v4:")
+    print("\n🧪 Testing Fact-Checker v5:")
     for text, url in test_cases:
         result = checker.check(text, url)
         print(f"\nClaim: {text}")

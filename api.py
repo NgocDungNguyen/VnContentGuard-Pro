@@ -20,22 +20,22 @@ from pydantic import BaseModel
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from src.models.article_summarizer_v4 import ArticleSummarizer
-from src.models.fact_checker_v4 import FactCheckerV4
+from src.models.article_summarizer_v5 import ArticleSummarizer
+from src.models.fact_checker_v5 import FactCheckerV5
 from src.models.gemini_llm import API_KEY_POOL, MODEL_NAME, APIKeyRotator, GeminiAgent
-from src.models.risk_scorer_v4 import RiskScorerV4
+from src.models.risk_scorer_v5 import RiskScorerV5
 from src.models.sentiment import SentimentAnalyzer
 
-# v4 Enhanced Components
-from src.models.sentiment_v4 import SentimentAnalyzerV4
+# v5 Enhanced Components
+from src.models.sentiment_v5 import SentimentAnalyzerV5
 from src.models.toxicity import ToxicityAnalyzer
-from src.models.toxicity_v4 import ToxicityAnalyzerV4
+from src.models.toxicity_v5 import ToxicityAnalyzerV5
 from src.utils.blocklist import CommunityBlocklist
 from src.utils.cache_manager import CacheManager
 from src.utils.comment_filter import CommentFilter
 from src.utils.feedback_store import FeedbackStore
 
-app = FastAPI(title="VnContentGuard Pro API", version="4.9")
+app = FastAPI(title="VnContentGuard Pro API", version="5.0")
 
 # Enable CORS for Chrome Extension
 app.add_middleware(
@@ -88,17 +88,17 @@ try:
     gemini_agent = GeminiAgent(key_rotator=shared_key_rotator)
     sentiment_engine = SentimentAnalyzer()
 
-    # v4 Enhanced Engines (use fallback mode for faster startup)
-    sentiment_v4_engine = SentimentAnalyzerV4(use_phobert=False)
-    toxicity_v4_engine = ToxicityAnalyzerV4(use_detoxify=False)
-    fact_checker_v4_engine = FactCheckerV4(key_rotator=shared_key_rotator)
-    risk_scorer_v4_engine = RiskScorerV4(
-        sentiment_analyzer=sentiment_v4_engine,
-        toxicity_analyzer=toxicity_v4_engine,
-        fact_checker=fact_checker_v4_engine,
+    # v5 Enhanced Engines (use fallback mode for faster startup)
+    sentiment_v5_engine = SentimentAnalyzerV5(use_phobert=False)
+    toxicity_v5_engine = ToxicityAnalyzerV5(use_detoxify=False)
+    fact_checker_v5_engine = FactCheckerV5(key_rotator=shared_key_rotator)
+    risk_scorer_v5_engine = RiskScorerV5(
+        sentiment_analyzer=sentiment_v5_engine,
+        toxicity_analyzer=toxicity_v5_engine,
+        fact_checker=fact_checker_v5_engine,
     )
 
-    # v4 New Components
+    # v5 New Components
     cache_manager = CacheManager(ttl_seconds=86400)  # 24-hour cache
     comment_filter = CommentFilter()
     article_summarizer = ArticleSummarizer(
@@ -114,7 +114,7 @@ try:
     # Reuse same shared key rotator for batch comment analysis
     batch_key_rotator = shared_key_rotator
 
-    print("✅ AI Server Ready! (v4 with Summary + Batch Analysis)")
+    print("✅ AI Server Ready! (v5 with Unified Analysis + Summary + Batch)")
 except Exception as e:
     print(f"❌ Error during initialization: {e}")
     raise
@@ -311,14 +311,14 @@ def get_domain_feedback(url: str):
 
 
 # ============================================================================
-# v4.9 Streaming Analysis Endpoint (SSE)
+# v5.0 Streaming Analysis Endpoint (SSE)
 # ============================================================================
 
 
-@app.post("/analyze/v4/stream")
-def analyze_content_v4_stream(req: ScanRequest):
+@app.post("/analyze/v5/stream")
+def analyze_content_v5_stream(req: ScanRequest):
     """
-    v4.9 — Streaming analysis endpoint using Server-Sent Events.
+    v5.0 — Streaming analysis endpoint using Server-Sent Events.
     Yields each module result as it completes so the frontend can render progressively.
     """
 
@@ -352,7 +352,7 @@ def analyze_content_v4_stream(req: ScanRequest):
             yield _sse_event(
                 "progress", {"module": "sentiment", "status": "running", "step": "2/6"}
             )
-            sentiment_v4 = {
+            sentiment_v5 = {
                 "label": "Neutral",
                 "confidence": 0.0,
                 "intensity": "Weak",
@@ -360,16 +360,16 @@ def analyze_content_v4_stream(req: ScanRequest):
             }
             if len(req.article_text) > 5:
                 try:
-                    sentiment_v4 = sentiment_v4_engine.analyze(req.article_text[:512])
+                    sentiment_v5 = sentiment_v5_engine.analyze(req.article_text[:512])
                 except Exception as e:
                     print(f"⚠️ [SSE] Sentiment failed: {e}")
-            yield _sse_event("module", {"module": "sentiment_v4", "data": sentiment_v4})
+            yield _sse_event("module", {"module": "sentiment_v5", "data": sentiment_v5})
 
             # Module 3: Toxicity
             yield _sse_event(
                 "progress", {"module": "toxicity", "status": "running", "step": "3/6"}
             )
-            toxicity_v4 = {
+            toxicity_v5 = {
                 "is_toxic": False,
                 "overall_score": 0.0,
                 "severity": "Low",
@@ -378,16 +378,16 @@ def analyze_content_v4_stream(req: ScanRequest):
             }
             if len(req.article_text) > 5:
                 try:
-                    toxicity_v4 = toxicity_v4_engine.analyze(req.article_text[:1000])
+                    toxicity_v5 = toxicity_v5_engine.analyze(req.article_text[:1000])
                 except Exception as e:
                     print(f"⚠️ [SSE] Toxicity failed: {e}")
-            yield _sse_event("module", {"module": "toxicity_v4", "data": toxicity_v4})
+            yield _sse_event("module", {"module": "toxicity_v5", "data": toxicity_v5})
 
             # Module 4: Fact Check
             yield _sse_event(
                 "progress", {"module": "fact_check", "status": "running", "step": "4/6"}
             )
-            fact_check_v4 = {
+            fact_check_v5 = {
                 "score": 50,
                 "verdict": "Unverifiable",
                 "confidence": "Low",
@@ -396,23 +396,23 @@ def analyze_content_v4_stream(req: ScanRequest):
             }
             if len(req.article_text) > 20:
                 try:
-                    fact_check_v4 = fact_checker_v4_engine.check(
+                    fact_check_v5 = fact_checker_v5_engine.check(
                         req.article_text, req.url
                     )
                     # Track Gemini verification call
-                    if fact_check_v4.get("verification_methods"):
+                    if fact_check_v5.get("verification_methods"):
                         request_tracker.increment(1)
                 except Exception as e:
                     print(f"⚠️ [SSE] Fact check failed: {e}")
             yield _sse_event(
-                "module", {"module": "fact_check_v4", "data": fact_check_v4}
+                "module", {"module": "fact_check_v5", "data": fact_check_v5}
             )
 
             # Module 5: Risk Score — use pre-computed modules to avoid contradictions
             yield _sse_event(
                 "progress", {"module": "risk_score", "status": "running", "step": "5/6"}
             )
-            risk_score_v4 = {
+            risk_score_v5 = {
                 "risk_score": 0.0,
                 "risk_level": "Low",
                 "confidence": 0.0,
@@ -422,17 +422,17 @@ def analyze_content_v4_stream(req: ScanRequest):
             }
             if len(req.article_text) > 20:
                 try:
-                    risk_score_v4 = risk_scorer_v4_engine.score_from_results(
+                    risk_score_v5 = risk_scorer_v5_engine.score_from_results(
                         req.article_text,
                         req.url,
-                        sentiment_result=sentiment_v4,
-                        toxicity_result=toxicity_v4,
-                        fact_check_result=fact_check_v4,
+                        sentiment_result=sentiment_v5,
+                        toxicity_result=toxicity_v5,
+                        fact_check_result=fact_check_v5,
                     )
                 except Exception as e:
                     print(f"⚠️ [SSE] Risk score failed: {e}")
             yield _sse_event(
-                "module", {"module": "risk_score_v4", "data": risk_score_v4}
+                "module", {"module": "risk_score_v5", "data": risk_score_v5}
             )
 
             # Module 6: Comments
@@ -448,7 +448,7 @@ def analyze_content_v4_stream(req: ScanRequest):
                 "api_calls_saved": 0,
             }
             if req.comments:
-                comments_analysis = _analyze_comments_v4(
+                comments_analysis = _analyze_comments_v5(
                     req.comments[:50], summary_text, req.url, learning_ctx
                 )
                 # Track Gemini calls for ambiguous comments
@@ -474,12 +474,12 @@ def analyze_content_v4_stream(req: ScanRequest):
 
             # Final complete event
             final = {
-                "version": "4.9",
+                "version": "5.0",
                 "article_summary": article_summary,
-                "sentiment_v4": sentiment_v4,
-                "toxicity_v4": toxicity_v4,
-                "fact_check_v4": fact_check_v4,
-                "risk_score_v4": risk_score_v4,
+                "sentiment_v5": sentiment_v5,
+                "toxicity_v5": toxicity_v5,
+                "fact_check_v5": fact_check_v5,
+                "risk_score_v5": risk_score_v5,
                 "comments_analysis": comments_analysis,
                 "url": req.url,
                 "cache_stats": cache_manager.get_stats(),
@@ -625,27 +625,28 @@ def analyze_content(req: ScanRequest):
 
 
 # ============================================================================
-# v4 Enhanced Analysis Endpoint
+# v5 Enhanced Analysis Endpoint
 # ============================================================================
 
 
-@app.post("/analyze/v4", response_model=dict)
-def analyze_content_v4(req: ScanRequest):
+@app.post("/analyze/v5", response_model=dict)
+def analyze_content_v5(req: ScanRequest):
     """
-    v4 Enhanced full content scan endpoint.
+    v5 Enhanced full content scan endpoint.
 
     New features:
+    - Unified structured analysis (70% fewer API calls)
     - Article summary (AI-generated, cached per URL)
     - Context-aware batch comment analysis (1 API call for N comments)
     - Smart comment filtering (skip obvious toxic/clean/spam)
     - API usage optimization (70-80% fewer Gemini calls)
     """
-    print(f"📥 [v4] Received Scan Request for: {req.url}")
+    print(f"📥 [v5] Received Scan Request for: {req.url}")
     try:
-        # ========== LEARNING CONTEXT (v4.9) ==========
+        # ========== LEARNING CONTEXT (v5.0) ==========
         learning_ctx = feedback_store.get_learning_context(req.url)
         if learning_ctx:
-            print(f"🧠 [v4.9] Learning context loaded for {req.url}")
+            print(f"🧠 [v5.0] Learning context loaded for {req.url}")
 
         # ========== 0. ARTICLE SUMMARY (NEW) ==========
         article_summary = {"summary": "", "method": "none", "cached": False}
@@ -805,11 +806,11 @@ def analyze_content_v4(req: ScanRequest):
         raise HTTPException(status_code=500, detail=f"v4 analysis error: {str(e)}")
 
 
-def _analyze_comments_v4(
+def _analyze_comments_v5(
     comments: List[str], article_summary: str, url: str, learning_ctx: str = ""
 ) -> dict:
     """
-    Context-aware batch comment analysis.
+    Context-aware batch comment analysis (v5).
 
     Steps:
     1. Pre-filter comments into categories (saves ~70% of API calls)

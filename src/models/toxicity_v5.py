@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v4 - Advanced Multi-Layer Toxicity Detection
+VnContentGuard Pro v5 - Advanced Multi-Layer Toxicity Detection
 ================================================================
 Implements 4-layer defense-in-depth toxicity detection:
 1. Regex patterns (500+ Vietnamese patterns) - Fast, offline
@@ -22,7 +22,7 @@ from .toxicity import ToxicityAnalyzer as ToxicityV2
 load_dotenv()
 
 
-class ToxicityAnalyzerV4:
+class ToxicityAnalyzerV5:
     """
     Advanced Multi-Layer Toxicity Detection System
 

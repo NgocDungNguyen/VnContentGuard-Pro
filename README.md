@@ -1,13 +1,13 @@
-# 🛡️ VnContentGuard Pro v3.2
+# 🛡️ VnContentGuard Pro v5.0
 
 **Hệ thống kiểm duyệt nội dung tiếng Việt bằng AI**
 
-[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](https://github.com/NgocDungNguyen/VnContentGuard-Pro)
+[![Version](https://img.shields.io/badge/version-5.0.0-blue.svg)](https://github.com/NgocDungNguyen/VnContentGuard-Pro)
 [![Tests](https://img.shields.io/badge/tests-96%2F96-brightgreen.svg)](tests/)
-[![Python](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> **v3.2:** Giao diện tiếng Việt hoàn chỉnh • Phân tích đa tầng AI • 30 Gemini API keys • Batch processing • Kiểm tra thực tế đa nguồn • Chấm điểm rủi ro khách quan
+> **v5.0:** Phân tích thống nhất (↓70% API calls) • Structured scraping • YouTube & TikTok support • Content overlay • Learning AI • Streaming SSE • Community blocklist • Parental control
 
 ---
 

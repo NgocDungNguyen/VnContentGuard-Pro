@@ -1,5 +1,5 @@
 """
-VnContentGuard Pro v4 - Enhanced Sentiment Analysis
+VnContentGuard Pro v5 - Enhanced Sentiment Analysis
 Uses PhoBERT (Vietnamese BERT) for high-accuracy sentiment detection
 Falls back to keyword-based analysis if PhoBERT unavailable
 """
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 from src.models.sentiment import SentimentAnalyzer as SentimentV2
 
 
-class SentimentAnalyzerV4:
+class SentimentAnalyzerV5:
     """
     Enhanced Vietnamese Sentiment Analysis using PhoBERT.
 
