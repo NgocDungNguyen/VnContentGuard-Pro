@@ -163,7 +163,7 @@ def health_check():
 
 @app.get("/api/stats")
 def api_stats():
-    """v4.9 — API usage statistics, daily usage tracking, and system health."""
+    """v5.0 — API usage statistics, daily usage tracking, and system health."""
     try:
         gemini_status = gemini_agent.get_status()
         feedback_stats = feedback_store.get_stats()
@@ -183,7 +183,7 @@ def api_stats():
         uptime_seconds = int(time.time() - SERVER_START_TIME)
 
         return {
-            "version": "4.9.0",
+            "version": "5.0.0",
             "model": gemini_status.get("model", "unknown"),
             "using_fallback": gemini_status.get("using_fallback", False),
             "api_keys": {
@@ -210,7 +210,7 @@ def api_stats():
             "status": "🟢 Online",
         }
     except Exception as e:
-        return {"version": "4.9.0", "status": "🔴 Error", "error": str(e)}
+        return {"version": "5.0.0", "status": "🔴 Error", "error": str(e)}
 
 
 # ============================================================================
@@ -659,13 +659,13 @@ def analyze_content_v5(req: ScanRequest):
                 )
                 summary_text = article_summary.get("summary", "")
                 print(
-                    f"✅ [v4] Summary: {article_summary['method']} ({len(summary_text)} chars)"
+                    f"✅ [v5] Summary: {article_summary['method']} ({len(summary_text)} chars)"
                 )
             except Exception as e:
-                print(f"⚠️  [v4] Summary failed: {e}")
+                print(f"⚠️  [v5] Summary failed: {e}")
 
-        # ========== 1. SENTIMENT ANALYSIS v4 (PhoBERT) ==========
-        sentiment_v4 = {
+        # ========== 1. SENTIMENT ANALYSIS v5 (PhoBERT) ==========
+        sentiment_v5 = {
             "label": "Neutral",
             "confidence": 0.0,
             "intensity": "Weak",
@@ -674,13 +674,13 @@ def analyze_content_v5(req: ScanRequest):
 
         if len(req.article_text) > 5:
             try:
-                sentiment_v4 = sentiment_v4_engine.analyze(req.article_text[:512])
+                sentiment_v5 = sentiment_v5_engine.analyze(req.article_text[:512])
                 print(
-                    f"✅ [v4] Sentiment: {sentiment_v4['overall']} (confidence: {sentiment_v4['confidence']:.2f})"
+                    f"✅ [v5] Sentiment: {sentiment_v5['overall']} (confidence: {sentiment_v5['confidence']:.2f})"
                 )
             except Exception as e:
-                print(f"⚠️  [v4] Sentiment analysis failed: {e}")
-                sentiment_v4 = {
+                print(f"⚠️  [v5] Sentiment analysis failed: {e}")
+                sentiment_v5 = {
                     "label": "Neutral",
                     "confidence": 0.0,
                     "intensity": "Weak",
@@ -688,11 +688,11 @@ def analyze_content_v5(req: ScanRequest):
                 }
         else:
             print(
-                f"⚠️  [v4] Article too short for sentiment ({len(req.article_text)} chars)"
+                f"⚠️  [v5] Article too short for sentiment ({len(req.article_text)} chars)"
             )
 
-        # ========== 2. Toxicity Detection v4 (4-layer, article body) ==========
-        toxicity_v4 = {
+        # ========== 2. Toxicity Detection v5 (4-layer, article body) ==========
+        toxicity_v5 = {
             "is_toxic": False,
             "overall_score": 0.0,
             "severity": "Low",
@@ -702,15 +702,15 @@ def analyze_content_v5(req: ScanRequest):
 
         if len(req.article_text) > 5:
             try:
-                toxicity_v4 = toxicity_v4_engine.analyze(req.article_text[:1000])
+                toxicity_v5 = toxicity_v5_engine.analyze(req.article_text[:1000])
                 print(
-                    f"✅ [v4] Toxicity: {toxicity_v4['severity']} (score: {toxicity_v4['overall_score']:.2f})"
+                    f"✅ [v5] Toxicity: {toxicity_v5['severity']} (score: {toxicity_v5['overall_score']:.2f})"
                 )
             except Exception as e:
-                print(f"⚠️  [v4] Toxicity detection failed: {e}")
+                print(f"⚠️  [v5] Toxicity detection failed: {e}")
 
-        # ========== 3. FACT-CHECKING v4 (Multi-source) ==========
-        fact_check_v4 = {
+        # ========== 3. FACT-CHECKING v5 (Multi-source) ==========
+        fact_check_v5 = {
             "score": 50,
             "verdict": "Unverifiable",
             "confidence": "Low",
@@ -720,20 +720,20 @@ def analyze_content_v5(req: ScanRequest):
 
         if len(req.article_text) > 20:
             try:
-                fact_check_v4 = fact_checker_v4_engine.check(req.article_text, req.url)
+                fact_check_v5 = fact_checker_v5_engine.check(req.article_text, req.url)
                 print(
-                    f"✅ [v4] Fact Check: {fact_check_v4['verdict']} (credibility: {fact_check_v4['score']})"
+                    f"✅ [v5] Fact Check: {fact_check_v5['verdict']} (credibility: {fact_check_v5['score']})"
                 )
             except Exception as e:
-                print(f"⚠️  [v4] Fact-checking failed: {e}")
+                print(f"⚠️  [v5] Fact-checking failed: {e}")
                 error_msg = str(e).lower()
                 if "429" in str(e) or "quota" in error_msg:
-                    fact_check_v4["verdict"] = "Quota Exceeded"
+                    fact_check_v5["verdict"] = "Quota Exceeded"
                 else:
-                    fact_check_v4["verdict"] = "Service Unavailable"
+                    fact_check_v5["verdict"] = "Service Unavailable"
 
-        # ========== 4. RISK SCORING v4 (Comprehensive) ==========
-        risk_score_v4 = {
+        # ========== 4. RISK SCORING v5 (Comprehensive) ==========
+        risk_score_v5 = {
             "risk_score": 0.0,
             "risk_level": "Low",
             "confidence": 0.0,
@@ -744,14 +744,14 @@ def analyze_content_v5(req: ScanRequest):
 
         if len(req.article_text) > 20:
             try:
-                risk_score_v4 = risk_scorer_v4_engine.score(req.article_text, req.url)
+                risk_score_v5 = risk_scorer_v5_engine.score(req.article_text, req.url)
                 print(
-                    f"✅ [v4] Risk Score: {risk_score_v4['risk_score']:.1f}/100 ({risk_score_v4['risk_level']})"
+                    f"✅ [v5] Risk Score: {risk_score_v5['risk_score']:.1f}/100 ({risk_score_v5['risk_level']})"
                 )
             except Exception as e:
-                print(f"⚠️  [v4] Risk scoring failed: {e}")
+                print(f"⚠️  [v5] Risk scoring failed: {e}")
 
-        # ========== 5. COMMENTS ANALYSIS (v4 - Context-Aware Batch) ==========
+        # ========== 5. COMMENTS ANALYSIS (v5 - Context-Aware Batch) ==========
         comments_analysis = {
             "total": 0,
             "toxic_count": 0,
@@ -762,27 +762,27 @@ def analyze_content_v5(req: ScanRequest):
         }
 
         if req.comments:
-            comments_analysis = _analyze_comments_v4(
+            comments_analysis = _analyze_comments_v5(
                 req.comments[:50], summary_text, req.url, learning_ctx
             )
 
-        # ========== 6. BLOCKLIST CHECK (v4.9) ==========
+        # ========== 6. BLOCKLIST CHECK (v5.0) ==========
         blocklist_info = {
             "is_blocked": community_blocklist.is_blocked(req.url),
             "report_count": community_blocklist.get_domain_report_count(req.url),
         }
 
-        # ========== 7. DOMAIN FEEDBACK (v4.9) ==========
+        # ========== 7. DOMAIN FEEDBACK (v5.0) ==========
         domain_feedback = feedback_store.get_domain_feedback(req.url)
 
-        # ========== 8. COMPILE v4.9 RESPONSE ==========
+        # ========== 8. COMPILE v5.0 RESPONSE ==========
         response = {
-            "version": "4.9",
+            "version": "5.0",
             "article_summary": article_summary,
-            "sentiment_v4": sentiment_v4,
-            "toxicity_v4": toxicity_v4,
-            "fact_check_v4": fact_check_v4,
-            "risk_score_v4": risk_score_v4,
+            "sentiment_v5": sentiment_v5,
+            "toxicity_v5": toxicity_v5,
+            "fact_check_v5": fact_check_v5,
+            "risk_score_v5": risk_score_v5,
             "comments_analysis": comments_analysis,
             "url": req.url,
             "cache_stats": cache_manager.get_stats(),
@@ -792,7 +792,7 @@ def analyze_content_v5(req: ScanRequest):
         }
 
         print(
-            f"✅ [v4] Analysis complete. Risk: {risk_score_v4['risk_score']:.1f}/100, "
+            f"✅ [v5] Analysis complete. Risk: {risk_score_v5['risk_score']:.1f}/100, "
             f"Toxics: {comments_analysis['toxic_count']}, "
             f"API saved: {comments_analysis.get('api_calls_saved', 0)}"
         )
@@ -895,10 +895,10 @@ def _analyze_comments_v5(
         regex_result = None
         try:
             if (
-                hasattr(toxicity_v4_engine, "regex_analyzer")
-                and toxicity_v4_engine.regex_analyzer
+                hasattr(toxicity_v5_engine, "regex_analyzer")
+                and toxicity_v5_engine.regex_analyzer
             ):
-                regex_result = toxicity_v4_engine._analyze_regex(comment)
+                regex_result = toxicity_v5_engine._analyze_regex(comment)
         except Exception:
             pass
 
@@ -1207,17 +1207,17 @@ def _fallback_results(comments: List[str]) -> List[dict]:
     """Fallback: REGEX ONLY (no Perspective/Gemini API calls) when AI is unavailable."""
     results = []
     for c in comments:
-        # Use v2 regex engine DIRECTLY — do NOT call toxicity_v4_engine.analyze()
+        # Use v2 regex engine DIRECTLY — do NOT call toxicity_v5_engine.analyze()
         # because that triggers Perspective API + Gemini calls per comment = API storm
         is_toxic = False
         score = 0.0
         severity = "None"
         try:
             if (
-                hasattr(toxicity_v4_engine, "regex_analyzer")
-                and toxicity_v4_engine.regex_analyzer
+                hasattr(toxicity_v5_engine, "regex_analyzer")
+                and toxicity_v5_engine.regex_analyzer
             ):
-                regex_result = toxicity_v4_engine._analyze_regex(c)
+                regex_result = toxicity_v5_engine._analyze_regex(c)
                 if regex_result and regex_result.get("is_toxic"):
                     is_toxic = True
                     score = 0.8
