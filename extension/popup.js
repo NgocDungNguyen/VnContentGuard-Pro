@@ -1104,8 +1104,11 @@ function structuredScrapePageContent() {
             }
 
         } else if (pageType === 'news_article') {
-            if (shareEl) {
-                const m = shareEl.innerText.match(/[\d,]+/);
+            const newsShareEl = document.querySelector(
+                '[class*="share-count"], [class*="shareCount"], .share-count, .txt_share'
+            );
+            if (newsShareEl) {
+                const m = newsShareEl.innerText.match(/[\d,]+/);
                 if (m) shares = parseInt(m[0].replace(/,/g, ''), 10);
             }
         }
@@ -1675,6 +1678,7 @@ function renderV5Results(data, urlInfo) {
 async function renderOverlayControls(data, urlInfo) {
     // Find or create the overlay card
     let card = document.getElementById('overlayControlCard');
+    const isNew = !card;
     if (!card) {
         card = document.createElement('div');
         card.id = 'overlayControlCard';
@@ -1695,14 +1699,14 @@ async function renderOverlayControls(data, urlInfo) {
         const pageTypeLabel = { facebook_post: '📘 Facebook', news_article: '📰 Báo', youtube_video: '▶ YouTube', tiktok: '🎵 TikTok', generic: '🌐 Web' }[pageType] || '';
 
         card.innerHTML = `
-            <div class="card" style="border-left: 4px solid #9b59b6; padding: 10px;">
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <div style="font-weight: 700; font-size: 12px; color: #2c3e50;">
-                        🔍 Overlay trang${modeTag ? `<span style="font-weight:400; color:#9b59b6; font-size:10px;"> ${modeTag}</span>` : ''}
+            <div class="card overlay-ctrl-card">
+                <div class="overlay-ctrl-header">
+                    <div class="overlay-ctrl-title">
+                        🔍 Overlay trang${modeTag ? `<span class="overlay-mode-tag"> ${modeTag}</span>` : ''}
                     </div>
-                    ${pageTypeLabel ? `<span style="font-size: 10px; background: #f0eaf8; color: #8e44ad; padding: 2px 6px; border-radius: 4px;">${pageTypeLabel}</span>` : ''}
+                    ${pageTypeLabel ? `<span class="overlay-page-badge">${pageTypeLabel}</span>` : ''}
                 </div>
-                <div style="display: flex; gap: 8px; align-items: center;">
+                <div class="overlay-ctrl-btns">
                     <button id="overlayToggleBtn" class="${enabled ? 'btn-primary' : 'btn-secondary'}" style="flex:1; padding: 7px; margin: 0; font-size: 11px;">
                         ${enabled ? '👁 Ẩn Overlay' : '👁 Hiện Overlay'}
                     </button>
@@ -1711,7 +1715,7 @@ async function renderOverlayControls(data, urlInfo) {
                     </button>
                 </div>
                 ${data.page_metadata ? `
-                <div style="margin-top: 8px; font-size: 10px; color: #7f8c8d; display: flex; gap: 8px; flex-wrap: wrap;">
+                <div class="overlay-ctrl-meta">
                     ${data.page_metadata.comment_count_total ? `<span>💬 ${data.page_metadata.comment_count_total} BL</span>` : ''}
                     ${data.page_metadata.reactions_total ? `<span>❤ ${data.page_metadata.reactions_total} react</span>` : ''}
                     ${data.page_metadata.shares ? `<span>↗ ${data.page_metadata.shares} share</span>` : ''}
@@ -1725,19 +1729,21 @@ async function renderOverlayControls(data, urlInfo) {
             enabled = !enabled;
             await chrome.storage.local.set({ overlayEnabled: enabled });
 
-            // Send to content script
             try {
                 const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
                 if (tab?.id) {
-                    await chrome.tabs.sendMessage(tab.id, {
+                    chrome.tabs.sendMessage(tab.id, {
                         type: 'TOGGLE_OVERLAY',
                         enabled,
                     }).catch(() => {
-                        // Content script not loaded — reload it
-                        chrome.scripting?.executeScript?.({
-                            target: { tabId: tab.id },
-                            files: ['content.js'],
-                        });
+                        // Content script not loaded — inject then show overlay
+                        if (chrome.scripting && enabled) {
+                            chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] })
+                                .then(() => setTimeout(() => {
+                                    chrome.tabs.sendMessage(tab.id, { type: 'SHOW_OVERLAY', data }).catch(() => {});
+                                }, 600))
+                                .catch(() => {});
+                        }
                     });
                 }
             } catch (_) {}
@@ -1745,7 +1751,7 @@ async function renderOverlayControls(data, urlInfo) {
             renderCard(); // Re-render with updated button state
         });
 
-        // Jump to first toxic comment
+        // Jump to first toxic comment (also re-shows overlay if dismissed)
         card.querySelector('#overlayJumpBtn').addEventListener('click', async () => {
             try {
                 const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -1758,6 +1764,28 @@ async function renderOverlayControls(data, urlInfo) {
     };
 
     renderCard();
+
+    // Auto-send SHOW_OVERLAY to content script as soon as results appear
+    if (isNew && enabled) {
+        try {
+            const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+            if (tab?.id) {
+                chrome.tabs.sendMessage(tab.id, {
+                    type: 'SHOW_OVERLAY',
+                    data,
+                }).catch(() => {
+                    // Content script not loaded on this page — inject it then retry
+                    if (chrome.scripting) {
+                        chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] })
+                            .then(() => setTimeout(() => {
+                                chrome.tabs.sendMessage(tab.id, { type: 'SHOW_OVERLAY', data }).catch(() => {});
+                            }, 600))
+                            .catch(() => {});
+                    }
+                });
+            }
+        } catch (_) {}
+    }
 }
 
 function renderV2Results(data, urlInfo) {
