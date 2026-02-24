@@ -1,5 +1,5 @@
 /**
- * VnContentGuard Pro v4.9 — Background Service Worker
+ * VnContentGuard Pro v5.0 — Background Service Worker
  * =====================================================
  * Handles API calls in the background so they survive popup close.
  * 
@@ -19,11 +19,11 @@
 
 // API endpoints (cloud)
 const API_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/v4"
+    "https://vncontentguard-pro.onrender.com/analyze/v5"
 ];
 
 const STREAM_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/v4/stream"
+    "https://vncontentguard-pro.onrender.com/analyze/v5/stream"
 ];
 
 // Feedback endpoints
