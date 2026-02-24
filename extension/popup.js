@@ -297,10 +297,10 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
     try {
         console.log(`📍 Scanning: ${tab.url}`);
 
-        // Scrape content
+        // Scrape content — use structured scraper (ARCH-01)
         const scrapeResult = await chrome.scripting.executeScript({
             target: { tabId: tab.id },
-            func: scrapePageContent
+            func: structuredScrapePageContent
         });
 
         if (!scrapeResult || !scrapeResult[0] || !scrapeResult[0].result) {
@@ -309,17 +309,24 @@ document.getElementById('scanBtn').addEventListener('click', async () => {
 
         const scrapedData = scrapeResult[0].result;
         
-        console.log(`📊 Scraped Data:`, {
-            textLength: scrapedData.text.length,
-            commentsCount: scrapedData.comments.length,
-            hasText: scrapedData.text.length > 0
+        // Support both structured (_is_structured) and legacy flat format
+        const textLength = scrapedData._is_structured
+            ? (scrapedData.article?.body?.length || 0)
+            : (scrapedData.text?.length || 0);
+        const commentsCount = scrapedData._is_structured
+            ? (scrapedData.comments?.length || 0)
+            : (scrapedData.comments?.length || 0);
+
+        console.log(`📊 Scraped Data (${scrapedData._is_structured ? 'structured' : 'flat'}):`, {
+            textLength, commentsCount,
+            pageType: scrapedData.page_type || 'unknown'
         });
         
-        if (!scrapedData.text || scrapedData.text.trim().length === 0) {
+        if (textLength < 20 && !(scrapedData.text?.length > 20)) {
             throw new Error("Không tìm thấy nội dung — trang có thể đang tải hoặc trống");
         }
 
-        console.log(`✂️ Scraped: ${scrapedData.text.length} chars, ${scrapedData.comments.length} comments`);
+        console.log(`✂️ Scraped: text=${textLength} chars, ${commentsCount} comments`);
 
         // Store for confirmation
         scannedDataCache = scrapedData;
@@ -349,12 +356,25 @@ function showConfirmation(url, data) {
     // Show URL
     document.getElementById('confirmUrl').textContent = url;
 
-    // Show preview
-    const preview = data.text.substring(0, 200).replace(/\n\n/g, ' ').trim();
-    document.getElementById('confirmPreview').textContent = preview + (data.text.length > 200 ? '...' : '');
+    // Support structured and flat data
+    const previewText = data._is_structured
+        ? (data.article?.title || data.article?.body || data.text || '')
+        : (data.text || '');
+    const commentCount = data._is_structured
+        ? (data.comments?.length || 0)
+        : (data.comments?.length || 0);
 
-    // Show comment count
-    document.getElementById('confirmComments').textContent = data.comments.length;
+    // Show preview
+    const preview = previewText.substring(0, 200).replace(/\n\n/g, ' ').trim();
+    document.getElementById('confirmPreview').textContent = preview + (previewText.length > 200 ? '...' : '');
+
+    // Show comment count + page type badge
+    const pageType = data.page_type || '';
+    const pageLabel = pageType === 'facebook_post' ? ' (Facebook)' :
+                      pageType === 'news_article' ? ' (Báo)' :
+                      pageType === 'youtube_video' ? ' (YouTube)' :
+                      pageType === 'tiktok' ? ' (TikTok)' : '';
+    document.getElementById('confirmComments').textContent = `${commentCount}${pageLabel}`;
 }
 
 document.getElementById('confirmYes').addEventListener('click', async () => {
@@ -365,20 +385,38 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
     btn.textContent = '⏳ Đang gửi...';
 
     try {
-        // Delegate to background service worker (SSE streaming mode v5.0!)
-        // Get tab title for history display
+        // Delegate to background service worker
+        // ARCH-01: Use unified endpoint when structured data is available
         const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
         const pageTitle = activeTab?.title || '';
 
-        const response = await chrome.runtime.sendMessage({
-            type: 'START_SCAN_STREAM',
-            data: {
-                url: currentTabUrl,
-                article_text: scannedDataCache.text,
-                comments: scannedDataCache.comments,
-                pageTitle: pageTitle
-            }
-        });
+        let response;
+
+        if (scannedDataCache._is_structured) {
+            // ARCH-01: Send structured data to /analyze/v5/unified (1 Gemini call)
+            response = await chrome.runtime.sendMessage({
+                type: 'START_SCAN_UNIFIED',
+                data: {
+                    structured: scannedDataCache,
+                    url: currentTabUrl,
+                    // Also include flat format for fallback
+                    article_text: scannedDataCache.text || scannedDataCache.article?.body || '',
+                    comments: scannedDataCache._flat_comments || scannedDataCache.comments?.map(c => c.text) || [],
+                    pageTitle: pageTitle,
+                }
+            });
+        } else {
+            // Legacy flat format → streaming endpoint
+            response = await chrome.runtime.sendMessage({
+                type: 'START_SCAN_STREAM',
+                data: {
+                    url: currentTabUrl,
+                    article_text: scannedDataCache.text,
+                    comments: scannedDataCache.comments,
+                    pageTitle: pageTitle
+                }
+            });
+        }
 
         if (response && response.status === 'started') {
             console.log("✅ Scan delegated to background service worker");
@@ -848,8 +886,284 @@ function scrapePageContent() {
 }
 
 // ============================================================================
-// RESULT RENDERING WITH WARNING MODAL - v5 Enhanced
+// ARCH-01: Structured Scraper — returns rich JSON for unified analysis
+// Self-contained: runs inside chrome.scripting.executeScript
 // ============================================================================
+
+function structuredScrapePageContent() {
+    const hostname = location.hostname;
+    const domain = hostname.replace(/^www\./, '');
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    const cleanText = (raw) => {
+        if (!raw) return '';
+        return raw.trim()
+            .replace(/\s+/g, ' ')
+            .replace(/(\n\s*)+/g, '\n');
+    };
+
+    const detectPageType = () => {
+        if (hostname.includes('facebook.com')) return 'facebook_post';
+        if (hostname.includes('youtube.com')) return 'youtube_video';
+        if (hostname.includes('tiktok.com')) return 'tiktok';
+        if (/vnexpress|dantri|tuoitre|thanhnien|24h|vietnamnet|vov|vtc|zingnews|kenh14/.test(hostname)) return 'news_article';
+        return 'generic';
+    };
+
+    const pageType = detectPageType();
+
+    // ── Article extraction ─────────────────────────────────────────────────
+    let articleTitle = '';
+    let articleAuthor = '';
+    let articleDate = '';
+    let articleBody = '';
+
+    try {
+        if (pageType === 'facebook_post') {
+            // Title: first meaningful line of post
+            const postEl = document.querySelector('[data-testid="post_message"]') ||
+                           document.querySelector('[data-ad-comet-preview="message"]') ||
+                           document.querySelector('div[dir="auto"]');
+            if (postEl) articleBody = cleanText(postEl.innerText).substring(0, 3000);
+
+            // Author: page/profile name
+            const authorEl = document.querySelector('a[href*="profile"] strong') ||
+                             document.querySelector('h3[class*="actor"] a') ||
+                             document.querySelector('[data-testid="actor-name"]') ||
+                             document.querySelector('strong[class*="x1q0g3bu"]');
+            if (authorEl) articleAuthor = cleanText(authorEl.innerText);
+
+            // Date: aria-label on time element
+            const timeEl = document.querySelector('abbr[data-utime], time[datetime], a[role="link"] > span > span[aria-hidden]');
+            if (timeEl) articleDate = timeEl.getAttribute('datetime') || timeEl.getAttribute('data-utime') || timeEl.innerText;
+
+            articleTitle = articleAuthor ? `${articleAuthor}: ${articleBody.substring(0, 80)}` : articleBody.substring(0, 80);
+
+        } else if (pageType === 'news_article') {
+            // Title
+            const titleEl = document.querySelector('h1.title-detail, h1.article-title, h1[class*="title"], h1');
+            if (titleEl) articleTitle = cleanText(titleEl.innerText);
+
+            // Author byline
+            const authorEl = document.querySelector(
+                '.author-name, .byline, .article-author, [class*="author"], [rel="author"], .reporter-name, .txt_author, .article_author'
+            );
+            if (authorEl) articleAuthor = cleanText(authorEl.innerText).substring(0, 100);
+
+            // Date
+            const dateEl = document.querySelector('time[datetime], time[pubdate], .PublishDate, .datePublished, .article-date, [class*="date"], meta[property="article:published_time"]');
+            if (dateEl) articleDate = dateEl.getAttribute('datetime') || dateEl.getAttribute('content') || cleanText(dateEl.innerText);
+
+            // Body: try article selectors then fall back to paragraphs
+            const bodyEl = document.querySelector(
+                'article, .article-body, .content-detail, [class*="article-content"], [class*="news-content"], .fck_detail, .detail-content, main'
+            );
+            if (bodyEl) {
+                articleBody = Array.from(bodyEl.querySelectorAll('p'))
+                    .map(p => cleanText(p.innerText))
+                    .filter(t => t.length > 20)
+                    .join('\n').substring(0, 3000);
+            }
+            if (!articleBody) {
+                articleBody = cleanText(document.body.innerText).substring(0, 3000);
+            }
+
+        } else {
+            // Generic fallback
+            const titleEl = document.querySelector('h1');
+            if (titleEl) articleTitle = cleanText(titleEl.innerText);
+
+            const metaDesc = document.querySelector('meta[name="description"], meta[property="og:description"]');
+            if (metaDesc) articleBody = metaDesc.getAttribute('content') || '';
+            if (!articleBody) articleBody = cleanText(document.body.innerText).substring(0, 3000);
+        }
+    } catch (e) {
+        articleBody = cleanText(document.body.innerText).substring(0, 3000);
+    }
+
+    // ── Reactions & shares (Facebook) ──────────────────────────────────────
+    let reactionsTotal = 0;
+    let shares = 0;
+
+    try {
+        if (pageType === 'facebook_post') {
+            // Reactions
+            const reactionEl = document.querySelector('[aria-label*="reaction"], [data-testid="ufi_reaction_count"] > span');
+            if (reactionEl) {
+                const num = reactionEl.getAttribute('aria-label') || reactionEl.innerText;
+                const match = num.match(/[\d,]+/);
+                if (match) reactionsTotal = parseInt(match[0].replace(/,/g, ''), 10);
+            }
+
+            // Shares
+            const shareEls = document.querySelectorAll('div[role="button"]');
+            shareEls.forEach(el => {
+                const txt = el.innerText || '';
+                if (/^\d[\d,\.Kk]* (share|lượt chia sẻ)/i.test(txt)) {
+                    const m = txt.match(/[\d,\.]+/);
+                    if (m) shares = parseFloat(m[0].replace(/,/g, ''));
+                }
+            });
+        } else if (pageType === 'news_article') {
+            // Social share counts (e.g., VnExpress share bar)
+            const shareEl = document.querySelector('.share-count, [class*="share-num"], .social-count');
+            if (shareEl) {
+                const m = shareEl.innerText.match(/[\d,]+/);
+                if (m) shares = parseInt(m[0].replace(/,/g, ''), 10);
+            }
+        }
+    } catch (e) { /* ignore */ }
+
+    // ── Comments extraction (structured) ──────────────────────────────────
+    const structuredComments = [];
+    const seenTexts = new Set();
+
+    try {
+        if (pageType === 'facebook_post') {
+            // Comment containers: each [data-testid="comment"] or ul[class*="comment"]
+            const commentContainers = document.querySelectorAll(
+                '[aria-label*="Comment"], [data-testid="comment"], div[class*="Comment"]'
+            );
+
+            commentContainers.forEach((container) => {
+                // Author
+                const authorEl = container.querySelector('a[href*="profile"] strong, a[href*="/"] > span[class*="x1q0g3bu"]');
+                const author = authorEl ? cleanText(authorEl.innerText) : '';
+
+                // Text
+                const textEl = container.querySelector('[data-testid="comment_text"] > span, div[dir="auto"] > span');
+                const text = textEl ? cleanText(textEl.innerText) : cleanText(container.innerText);
+                if (!text || text.length < 3 || text.length > 500) return;
+                if (seenTexts.has(text)) return;
+                seenTexts.add(text);
+
+                // Reactions on comment
+                let reactions = 0;
+                const reactionEl = container.querySelector('[aria-label*="reaction"], span[class*="reaction"]');
+                if (reactionEl) {
+                    const m = (reactionEl.getAttribute('aria-label') || reactionEl.innerText).match(/[\d,]+/);
+                    if (m) reactions = parseInt(m[0].replace(/,/g, ''), 10);
+                }
+
+                // Is reply? (nested inside another comment)
+                const isReply = container.closest('[data-testid="comment"]') !== container;
+
+                structuredComments.push({ text, author, reactions, is_reply: isReply, timestamp: '' });
+            });
+
+            // Fallback: grab texts from [data-testid="comment_text"]
+            if (structuredComments.length === 0) {
+                document.querySelectorAll('[data-testid="comment_text"] span, [data-ad-comet-preview="comment_body"] span').forEach(el => {
+                    const text = cleanText(el.innerText);
+                    if (!text || text.length < 3 || text.length > 500) return;
+                    if (seenTexts.has(text)) return;
+                    seenTexts.add(text);
+                    structuredComments.push({ text, author: '', reactions: 0, is_reply: false, timestamp: '' });
+                });
+            }
+
+        } else if (pageType === 'news_article') {
+            // VnExpress, DanTri, TuoiTre comment schemas
+            const selectors = [
+                '.comment-item .content-comment p',
+                '.comment-item .comment_body',
+                '.comment_pos .comment_text',
+                '.comment-content .txt-content',
+                '.cmt-item .nd_body',
+                '[class*="comment"] p',
+                'li.comment span.comment-text',
+            ];
+
+            for (const sel of selectors) {
+                const els = document.querySelectorAll(sel);
+                if (els.length > 0) {
+                    els.forEach(el => {
+                        const text = cleanText(el.innerText);
+                        if (!text || text.length < 3 || text.length > 500) return;
+                        if (seenTexts.has(text)) return;
+                        seenTexts.add(text);
+
+                        // Try to get author from parent
+                        const container = el.closest('li, div[class*="comment"]');
+                        const authorEl = container ? container.querySelector('[class*="author"], [class*="user"], .fullname, b') : null;
+                        const author = authorEl ? cleanText(authorEl.innerText) : '';
+
+                        // Likes on comment
+                        let reactions = 0;
+                        if (container) {
+                            const likeEl = container.querySelector('[class*="like"], [class*="vote"]');
+                            if (likeEl) {
+                                const m = likeEl.innerText.match(/\d+/);
+                                if (m) reactions = parseInt(m[0], 10);
+                            }
+                        }
+                        structuredComments.push({ text, author, reactions, is_reply: false, timestamp: '' });
+                    });
+                    break; // Found a working selector
+                }
+            }
+        } else {
+            // Generic: any paragraph-in-comment pattern
+            document.querySelectorAll('[class*="comment"] p, [id*="comment"] p').forEach(el => {
+                const text = cleanText(el.innerText);
+                if (!text || text.length < 3 || text.length > 500) return;
+                if (seenTexts.has(text)) return;
+                seenTexts.add(text);
+                structuredComments.push({ text, author: '', reactions: 0, is_reply: false, timestamp: '' });
+            });
+        }
+    } catch (e) { /* ignore comment errors */ }
+
+    // Cap at 50 comments
+    const finalComments = structuredComments.slice(0, 50);
+
+    // ── Word count ──────────────────────────────────────────────────────────
+    const wordCount = articleBody ? articleBody.split(/\s+/).filter(Boolean).length : 0;
+
+    // ── Flat backward-compatible fallback ───────────────────────────────────
+    // Old /analyze/v5 still works with this
+    const flatText = [articleTitle, articleBody].filter(Boolean).join('\n').trim() || cleanText(document.body.innerText).substring(0, 5000);
+    const flatComments = finalComments.map(c => c.text);
+
+    // ── Total comment count on page ─────────────────────────────────────────
+    let commentCountTotal = finalComments.length;
+    try {
+        const countEl = document.querySelector('[class*="comment-count"], [class*="comment-total"], .txt_comment_list_title');
+        if (countEl) {
+            const m = countEl.innerText.match(/\d+/);
+            if (m) commentCountTotal = parseInt(m[0], 10);
+        }
+    } catch (e) { /* ignore */ }
+
+    return {
+        // ── ARCH-01 structured data ──
+        page_type: pageType,
+        url: location.href,
+        scraped_at: new Date().toISOString(),
+        article: {
+            title: articleTitle.substring(0, 200),
+            author: articleAuthor.substring(0, 100),
+            published_date: articleDate.substring(0, 50),
+            body: articleBody,
+            word_count: wordCount,
+        },
+        comments: finalComments,
+        metadata: {
+            domain: domain,
+            comment_count_visible: finalComments.length,
+            comment_count_total: commentCountTotal,
+            reactions_total: reactionsTotal,
+            shares: shares,
+            page_language: document.documentElement.lang || 'vi',
+        },
+        // ── Backward-compatible flat format ──
+        text: flatText,
+        _flat_comments: flatComments,
+        _is_structured: true,
+    };
+}
+
+
 
 function renderResults(data, urlInfo) {
     // Check if v5 or v2 response
