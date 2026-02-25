@@ -1,0 +1,229 @@
+══════════════════════════════════════════════════════════════════
+ VNCONTENTGUARD PRO v6.0 — CHROME WEB STORE DESCRIPTION
+══════════════════════════════════════════════════════════════════
+
+── SHORT DESCRIPTION (max 132 chars) ────────────────────────────
+
+[TIẾNG VIỆT]
+Phân tích an toàn nội dung tiếng Việt bằng Gemini AI: độc hại, cảm xúc, kiểm tra thực tế, chống lừa đảo, kiểm soát hàng loạt.
+
+[ENGLISH]
+Vietnamese content safety analyzer powered by Gemini AI: toxicity, sentiment, fact-check, scam detection, bulk analysis & parental control.
+
+── FULL DESCRIPTION (Vietnamese) ────────────────────────────────
+
+🛡️ VnContentGuard Pro v6.0 — Bảo vệ bạn khỏi nội dung độc hại trên Internet tiếng Việt
+
+VnContentGuard Pro là tiện ích Chrome mạnh nhất hiện tại cho người dùng Việt Nam, sử dụng Google Gemini AI để phân tích toàn diện nội dung trên Facebook, YouTube, TikTok và các trang báo lớn. Chỉ với một click, bạn biết ngay bài viết/video đang đọc có an toàn không.
+
+─────────────────────────────────
+✨ TÍNH NĂNG NỔI BẬT v6.0
+─────────────────────────────────
+
+🔬 Phân tích AI thống nhất (ARCH-01)
+Thay vì 5 lần gọi API riêng lẻ, v6.0 dùng 1 lần Gemini duy nhất cho toàn bộ phân tích — kết quả nhanh gấp 3-5x, chính xác hơn và tiết kiệm tài nguyên.
+
+😡 Phát hiện nội dung độc hại
+Nhận diện ngôn ngữ thù địch, tấn công cá nhân, phân biệt vùng miền, kích động bạo lực bằng mô hình đa lớp được huấn luyện trên tiếng Việt.
+
+💬 Phân tích cảm xúc
+Tích cực / Tiêu cực / Trung tính — kèm điểm tin cậy và giải thích nguyên nhân cụ thể cho từng nội dung.
+
+✅ Kiểm tra thực tế (Fact Check)
+Đối chiếu nội dung với Google Fact Check API và nguồn tin chính thống để đánh dấu tin giả, tin sai lệch, thông tin chưa được xác minh.
+
+📰 Tóm tắt bài viết bằng AI
+Đọc ngay bản tóm tắt 3-5 dòng của mọi bài báo, bài đăng Facebook dài — không cần đọc hết nội dung gốc.
+
+🎯 Điểm rủi ro tổng thể (0–100)
+Đánh giá rủi ro tổng hợp từ tất cả yếu tố: độc hại, tin giả, nguồn không đáng tin, spam. Màu xanh = an toàn, vàng = cẩn thận, đỏ = nguy hiểm.
+
+🔍 AI giải thích minh bạch (v6.3)
+Bằng chứng cụ thể được tô sáng trực tiếp trong văn bản — bạn thấy chính xác câu/từ nào khiến AI đưa ra kết luận đó.
+
+🏠 Phân tích hàng loạt — Bulk Mode (v6.13)
+Dán nhiều URL cùng lúc và phân tích tất cả trong một lần. Xem bảng tổng hợp kết quả, so sánh mức độ rủi ro của nhiều nguồn cùng lúc.
+
+🚨 Phát hiện lừa đảo & báo cáo URL (v6.12)
+AI tự động nhận diện dấu hiệu lừa đảo (giả mạo ngân hàng, thương mại điện tử, trúng thưởng giả). Nút báo cáo 1-click để ghi nhận URL đáng ngờ vào cộng đồng.
+
+📐 Hiệu chỉnh điểm số cá nhân (v6.9)
+Không đồng ý với kết quả AI? Kéo thanh điều chỉnh và AI tự học từ phản hồi của bạn để cải thiện cho lần sau (Re-Ranker model).
+
+🕵️ Phát hiện chế độ ẩn danh (v6.6)
+Cảnh báo khi nội dung được truy cập qua chế độ Incognito — hành vi thường gặp ở tài khoản spam, bot và tài khoản ảo.
+
+🌐 Danh sách đen/trắng tên miền (v6.2)
+Tự quản lý danh sách domain đáng tin (whitelist) và domain nguy hiểm (blacklist). Extension tự động cảnh báo khi bạn vào trang trong blacklist.
+
+🔔 Thông báo thời gian thực
+Nhận badge màu + thông báo Chrome ngay khi phát hiện nội dung rủi ro cao mà không cần mở popup.
+
+📺 Hỗ trợ đầy đủ YouTube & TikTok
+Trích xuất tiêu đề, kênh, mô tả và bình luận của video để phân tích toàn diện — không chỉ URL.
+
+🎭 Overlay trực tiếp trên trang (Content Script)
+Huy hiệu điểm rủi ro nổi ngay trên trang web, tô đỏ bình luận độc hại kèm tooltip giải thích. Kéo thả vị trí, hỗ trợ dark mode tự động.
+
+📡 Streaming tiến trình thời gian thực
+Xem tiến trình phân tích theo từng bước thay vì chờ màn hình trắng — biết ngay đang ở bước nào.
+
+👨‍👩‍👧 Kiểm soát nội dung cho trẻ em
+Thiết lập mã PIN để chặn xem nội dung có điểm rủi ro cao. Bảo vệ trẻ em tự động mà không cần giám sát thủ công.
+
+🚫 Danh sách chặn cộng đồng
+Hệ thống blocklist cộng đồng tự động cập nhật — website/tài khoản đã bị nhiều người báo cáo sẽ bị cảnh báo ngay khi truy cập.
+
+📊 Báo cáo an toàn hàng tuần
+Tổng hợp thống kê các trang bạn đã truy cập trong tuần: bao nhiêu nội dung an toàn, bao nhiêu rủi ro, xu hướng theo ngày.
+
+💾 Lịch sử quét & xuất báo cáo
+Xem lại lịch sử quét của bạn và xuất báo cáo PDF/JSON khi cần.
+
+📴 Chế độ offline
+500+ mẫu regex tiếng Việt chạy hoàn toàn offline khi mất kết nối — vẫn phát hiện được nội dung độc hại cơ bản.
+
+🌙 Giao diện Dark Mode
+Hỗ trợ light/dark mode đầy đủ, tự động theo cài đặt hệ thống.
+
+─────────────────────────────────
+🌐 TRANG WEB HỖ TRỢ
+─────────────────────────────────
+✅ Facebook.com
+✅ VnExpress.net
+✅ Dantri.com.vn
+✅ Tuoitre.vn
+✅ Thanhnien.vn
+✅ 24h.com.vn
+✅ Vietnamnet.vn
+✅ Baomoi.com
+✅ YouTube.com
+✅ TikTok.com
++ Bất kỳ trang web nào qua chế độ thủ công
+
+─────────────────────────────────
+🔒 QUYỀN RIÊNG TƯ & BẢO MẬT
+─────────────────────────────────
+• Không lưu trữ nội dung bạn quét lên server bên ngoài
+• Chỉ gửi văn bản đến Gemini AI của Google để phân tích (giống Google Translate)
+• Lịch sử quét được lưu hoàn toàn local trên thiết bị của bạn (Chrome Storage)
+• Không theo dõi, không quảng cáo, không thu thập dữ liệu cá nhân
+• Mã nguồn mở: https://github.com/NgocDungNguyen/VnContentGuard-Pro
+
+─────────────────────────────────
+🚀 ĐIỂM MỚI TRONG v6.0
+─────────────────────────────────
+• ✨ Phân tích hàng loạt nhiều URL (v6.13)
+• 🚨 Phát hiện & báo cáo URL lừa đảo (v6.12)
+• 📐 Hiệu chỉnh điểm + AI tự học (v6.9)
+• 🔍 Bằng chứng AI minh bạch (v6.3)
+• 🕵️ Phát hiện Incognito (v6.6)
+• 🌐 Blacklist/Whitelist tên miền tùy chỉnh (v6.2)
+• ⚡ Nhanh hơn 70%: 1 lần gọi AI thay vì 5 lần (ARCH-01)
+
+─────────────────────────────────
+📋 YÊU CẦU HỆ THỐNG
+─────────────────────────────────
+• Chrome 120 trở lên (hoặc Edge, Brave dựa trên Chromium)
+• Kết nối Internet (cho tính năng AI — Gemini API)
+• Không cần cài đặt thêm gì — hoạt động ngay sau khi cài
+
+── FULL DESCRIPTION (English) ───────────────────────────────────
+
+🛡️ VnContentGuard Pro v6.0 — Vietnamese Content Safety Analyzer
+
+The most comprehensive AI-powered content moderation extension for Vietnamese internet users. VnContentGuard Pro uses Google Gemini AI to analyze Facebook posts, YouTube videos, TikTok content, and Vietnamese news articles in real time — with a single click.
+
+─────────────────────────────────
+✨ KEY FEATURES v6.0
+─────────────────────────────────
+
+🔬 Unified AI Analysis (ARCH-01)
+Single Gemini API call handles all 6 analysis modules simultaneously — 3-5x faster than previous versions, more coherent results.
+
+😡 Toxicity Detection
+Multi-layer model identifies hate speech, personal attacks, regional discrimination, and incitement to violence in Vietnamese text.
+
+💬 Sentiment Analysis
+Positive / Negative / Neutral classification with confidence score and specific explanation for each piece of content.
+
+✅ Fact Checking
+Cross-references content with Google Fact Check API and authoritative sources to flag misinformation, fake news, and unverified claims.
+
+📰 AI Article Summarization
+Get a 3-5 line summary of any long article or Facebook post — powered by Gemini, cached for instant re-reads.
+
+🎯 Overall Risk Score (0–100)
+Composite risk rating combining toxicity, misinformation, source credibility, and spam signals. Green = safe, yellow = caution, red = danger.
+
+🔍 Explainable AI — Evidence Spans (v6.3)
+Specific passages are highlighted directly in the text so you see exactly which words/phrases triggered the AI's conclusion.
+
+🏠 Bulk Analysis Mode (v6.13)
+Paste multiple URLs at once and analyze them all in one batch. View a summary table comparing risk levels across sources.
+
+🚨 Scam Detection & URL Reporting (v6.12)
+AI automatically detects scam indicators (fake bank pages, fake e-commerce, fake lottery). One-click reporting to submit suspicious URLs to the community database.
+
+📐 Personal Score Correction + Re-Ranker (v6.9)
+Disagree with the AI result? Drag the correction slider and the Re-Ranker model learns from your feedback for future analyses.
+
+🕵️ Incognito Mode Detection (v6.6)
+Warns when content is accessed through incognito browsing — a common pattern for spam accounts and bots.
+
+🌐 Domain Blacklist / Whitelist (v6.2)
+Manage your own list of trusted (whitelist) and dangerous (blacklist) domains. Automatic warnings on blacklisted sites.
+
+🔔 Real-time Notifications
+Colored badge + Chrome notification on detection of high-risk content — no need to open popup.
+
+📺 Full YouTube & TikTok Support
+Extracts title, channel, description, and comments from videos for comprehensive analysis.
+
+🎭 On-page Overlay (Content Script)
+Floating risk badge on the webpage itself, toxic comments highlighted in red with tooltip explanations. Draggable, collapsible, dark mode aware.
+
+📡 Real-time Streaming Progress
+Watch analysis progress step by step instead of staring at a blank screen.
+
+👨‍👩‍👧 Parental Control
+PIN-protected blocking of high-risk content. Protects children automatically without manual supervision.
+
+🚫 Community Blocklist
+Auto-updated community blocklist — sites/accounts reported by multiple users trigger automatic warnings.
+
+📊 Weekly Safety Report
+Weekly summary of visited sites: how many safe, how many risky, daily trends.
+
+📴 Offline Mode
+500+ Vietnamese regex patterns run fully offline when connectivity is lost.
+
+─────────────────────────────────
+🌐 SUPPORTED SITES
+─────────────────────────────────
+Facebook, VnExpress, Dân Trí, Tuổi Trẻ, Thanh Niên, 24h, VietnamNet, BáoMới, YouTube, TikTok + any page via manual mode.
+
+─────────────────────────────────
+🔒 PRIVACY
+─────────────────────────────────
+• Content is only sent to Google's Gemini API (same as Google Translate)
+• Scan history stored locally on your device only
+• No tracking, no ads, no personal data collection
+• Open source: https://github.com/NgocDungNguyen/VnContentGuard-Pro
+
+─────────────────────────────────
+🚀 WHAT'S NEW IN v6.0
+─────────────────────────────────
+• ✨ Bulk URL analysis (v6.13)
+• 🚨 Scam detection & URL reporting (v6.12)
+• 📐 Score correction + AI self-learning (v6.9)
+• 🔍 Transparent AI evidence (v6.3)
+• 🕵️ Incognito detection (v6.6)
+• 🌐 Custom domain blacklist/whitelist (v6.2)
+• ⚡ 70% faster: 1 AI call instead of 5 (ARCH-01)
+
+──────────────────────────────────────────────────────────────────
+ STORE CATEGORY:  Productivity  |  Language: Vietnamese (vi)
+ KEYWORDS: content moderation, toxic comments, fact check, Vietnamese AI, 
+           kiểm duyệt nội dung, phát hiện tin giả, bảo vệ trẻ em
+──────────────────────────────────────────────────────────────────
