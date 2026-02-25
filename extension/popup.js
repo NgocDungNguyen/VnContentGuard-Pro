@@ -3,17 +3,21 @@
  * ========================================
  * - Delegates API calls to background.js (survives popup close)
  * - Resumes scan state on popup reopen
- * - Scan history support
+ * - Scan history + comparison mode
  * - Dark mode support
- * - Export report support
- * - Auto-scan toggle
+ * - Export report (PDF/HTML)
+ * - Auto-scan for supported sites
  * - Offline regex mode with instant partial results
- * - Comparison mode
- * - User feedback loop with learning
- * - SSE Streaming results (1.5)
- * - Community report & blocklist (4.1)
- * - Parental control UI (4.2)
- * - Weekly safety report (4.4)
+ * - SSE Streaming results (v6)
+ * - Community report & blocklist (v6)
+ * - Parental control + Domain Blacklist/Whitelist (v6)
+ * - Weekly safety report (v6)
+ * - Unified single-pass AI analysis (v6 ARCH-01)
+ * - Explainable AI — evidence spans (v6.3)
+ * - Incognito detection (v6.6)
+ * - Score Correction + Re-Ranker (v6.9)
+ * - Scam URL reporting (v6.12)
+ * - Bulk analysis mode (v6.13)
  */
 
 let currentResultsData = null;
@@ -36,10 +40,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
         document.getElementById('status').textContent = 'Sẵn sàng quét';
 
-        // Check blocklist for current URL (4.1)
+        // Check blocklist for current URL (v6)
         checkBlocklistStatus(tab.url);
 
-        // Fetch and display system stats (3.4)
+        // Fetch and display system stats (v6)
         loadUsageDashboard();
 
         // Apply saved dark mode preference
@@ -173,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         feedbackSubmit.addEventListener('click', submitFeedbackWithCorrection);
     }
 
-    // v6.0 — Report page button handler (4.1)
+    // v6 — Report page button handler
     const reportPageBtn = document.getElementById('reportPageBtn');
     if (reportPageBtn) {
         reportPageBtn.addEventListener('click', toggleReportPanel);
@@ -184,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         reportSubmitBtn.addEventListener('click', submitPageReport);
     }
 
-    // v6.0 — Weekly report button handler (4.4)
+    // v6 — Weekly report button handler
     const weeklyReportBtn = document.getElementById('weeklyReportBtn');
     if (weeklyReportBtn) {
         weeklyReportBtn.addEventListener('click', () => {
@@ -192,7 +196,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v6.0 — Parental control button handler (4.2)
+    // v6 — Parental control button handler
     const parentalBtn = document.getElementById('parentalBtn');
     if (parentalBtn) {
         parentalBtn.addEventListener('click', toggleParentalPanel);
@@ -341,7 +345,7 @@ function startPollingForResults(url) {
         } else if (status.status === 'scanning') {
             document.getElementById('status').textContent = status.progress || 'Đang phân tích...';
 
-            // Update streaming progress bar if available (1.5)
+            // Update streaming progress bar if available (v6)
             if (status.stream_modules && Object.keys(status.stream_modules).length > 0) {
                 const count = Object.keys(status.stream_modules).length;
                 updateStreamProgress(count, status.stream_modules);
@@ -1418,9 +1422,9 @@ function structuredScrapePageContent() {
 
 
 function renderResults(data, urlInfo) {
-    // Check if v6 or v2 response
-    const isV6 = data.version === "3.0" || data.version === "5.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "6.0" || data.sentiment_v6;
-    
+    // All responses from v6 endpoint include sentiment_v6 or version="6.0"
+    const isV6 = !!(data.sentiment_v6 || data.version === "6.0");
+
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
     document.getElementById('errorBox').classList.add('hidden');
@@ -1461,7 +1465,7 @@ function renderV6Results(data, urlInfo) {
         learningIndicator.classList.add('hidden');
     }
 
-    // Show blocklist warning if applicable (4.1)
+    // Show blocklist warning if applicable (v6)
     const blockWarning = document.getElementById('blocklistWarning');
     if (blockWarning && data.blocklist_info && data.blocklist_info.is_blocked) {
         blockWarning.classList.remove('hidden');
@@ -1474,7 +1478,7 @@ function renderV6Results(data, urlInfo) {
     // Feature 6.12 — Show scam prompt if AI detected scam indicators
     renderScamPrompt(data.scam_detection, urlInfo || currentTabUrl);
 
-    // ===== 0. ARTICLE SUMMARY (NEW in v5) =====
+    // ===== 0. ARTICLE SUMMARY (v6 — AI-generated, cached) =====
     const summaryCard = document.getElementById('summaryCard');
     const summaryRaw = articleSummary?.summary || articleSummary?.text || '';
     const summaryContent = truncateSummary(summaryRaw, 5);
@@ -1723,7 +1727,7 @@ function renderV6Results(data, urlInfo) {
         document.getElementById('recommendationsCard').style.display = 'none';
     }
 
-    console.log("✅ v5 results rendered");
+    console.log("✅ v6 results rendered");
 
     // ===== 2.1 — OVERLAY CONTROLS (Content Script) =====
     renderOverlayControls(data, urlInfo);
@@ -1751,7 +1755,7 @@ function renderV6Results(data, urlInfo) {
 }
 
 /**
- * 2.1 Content Script Overlay — Toggle controls card injected into popup results.
+ * v6 Content Script Overlay — Toggle controls card injected into popup results.
  * Shows/hides the floating risk badge on the active page via content.js.
  */
 async function renderOverlayControls(data, urlInfo) {
@@ -1871,7 +1875,7 @@ function renderV2Results(data, urlInfo) {
     const sentiment = data.sentiment || { label: "Neutral", score: 0 };
     const toxicity = data.toxicity || { total: 0, toxic_count: 0, results: [] };
 
-    // Clear v5-specific elements
+    // Clear previous-version elements
     document.getElementById('riskScore').textContent = 'Chế độ v2';
     document.getElementById('riskLevel').textContent = 'Đang dùng API v2';
     document.getElementById('riskBreakdown').innerHTML = '';
@@ -2217,7 +2221,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function exportReport(data, url) {
-    const isSupported = data.version === "3.0" || data.version === "5.0" || data.version === "3.1" || data.version === "4.0" || data.version === "4.5" || data.version === "4.9" || data.version === "6.0" || data.sentiment_v6;
+    const isSupported = !!(data.sentiment_v6 || data.version === "6.0");
     if (!isSupported) return;
 
     const sentiment = data.sentiment_v6 || {};

@@ -8,16 +8,16 @@ importScripts('domain_control.js');
  * 
  * Responsibilities:
  * 1. Receive scan requests from popup via chrome.runtime.sendMessage
- * 2. Execute API call (try local → cloud fallback) + SSE streaming (1.5)
+ * 2. Execute API call (try local → cloud fallback) + SSE streaming (v6)
  * 3. Save results to chrome.storage.local
  * 4. Update badge with risk score
  * 5. Notify popup when done (if still open)
  * 6. Auto-scan supported sites when toggle is ON
- * 7. 🔔 Notification system (3.5)
- * 8. 🚩 Community Blocklist checking (4.1)
- * 9. 🔒 Parental Control interception (4.2)
- * 10. ⚠️ Browser Content Warning redirect (4.3)
- * 11. 📊 Weekly Safety Report via alarms (4.4)
+ * 7. 🔔 Notification system (v6)
+ * 8. 🚩 Community Blocklist checking (v6)
+ * 9. 🔒 Parental Control interception (v6)
+ * 10. ⚠️ Browser Content Warning redirect (v6)
+ * 11. 📊 Weekly Safety Report via alarms (v6)
  */
 
 // API endpoints (cloud)
@@ -344,7 +344,7 @@ async function handleScan(data) {
 
         console.log(`[BG] Scan completed for: ${url}`);
 
-        // 7. Send notification if high risk (3.5)
+        // 7. Send notification if high risk (v6)
         sendRiskNotification(url, riskScore, riskLevel);
 
     } catch (err) {
@@ -1020,7 +1020,7 @@ async function checkBlocklist(url) {
 }
 
 // ============================================================================
-// PARENTAL CONTROL — Feature 4.2 (v6.0)
+// PARENTAL CONTROL — Feature v6 (v6.0)
 // ============================================================================
 
 async function setParentalControl(enabled, pin, threshold) {
