@@ -2114,7 +2114,7 @@ function showWarningModal(fake, sentiment, toxicity) {
 }
 
 // ============================================================================
-// SCAN HISTORY — Feature 1.1
+// SCAN HISTORY
 // ============================================================================
 
 async function toggleHistory() {
@@ -2217,7 +2217,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ============================================================================
-// EXPORT REPORT — Feature 1.2
+// EXPORT REPORT
 // ============================================================================
 
 function exportReport(data, url) {
@@ -2361,7 +2361,7 @@ function exportReport(data, url) {
 }
 
 // ============================================================================
-// USER FEEDBACK — Feature 3.3 (v6.0)
+// USER FEEDBACK (v6.0)
 // ============================================================================
 
 let feedbackRating = null;
@@ -2437,7 +2437,7 @@ async function submitFeedbackToBackend(rating, correction) {
 }
 
 // ============================================================================
-// COMPARISON MODE — Feature 2.5 (v6.0)
+// COMPARISON MODE (v6.0)
 // ============================================================================
 
 async function toggleComparePanel() {
@@ -2606,7 +2606,7 @@ function getDomain(url) {
 }
 
 // ============================================================================
-// STREAMING PROGRESS — Feature 1.5 (v6.0)
+// STREAMING PROGRESS (v6.0)
 // ============================================================================
 
 const MODULE_NAMES = {
@@ -2634,7 +2634,7 @@ function updateStreamProgress(count, modules) {
 }
 
 // ============================================================================
-// BLOCKLIST CHECK — Feature 4.1 (v6.0)
+// BLOCKLIST CHECK (v6.0)
 // ============================================================================
 
 async function checkBlocklistStatus(url) {
@@ -2652,7 +2652,7 @@ async function checkBlocklistStatus(url) {
 }
 
 // ============================================================================
-// REPORT PAGE — Feature 4.1 (v6.0)
+// REPORT PAGE (v6.0)
 // ============================================================================
 
 function toggleReportPanel() {
@@ -2729,7 +2729,7 @@ async function submitPageReport() {
 }
 
 // ============================================================================
-// PARENTAL CONTROL — Feature 4.2 (v6.0)
+// PARENTAL CONTROL (v6.0)
 // ============================================================================
 
 function toggleParentalPanel() {
@@ -2930,7 +2930,7 @@ async function renderIncognitoLog() {
 }
 
 // ============================================================================
-// API USAGE DASHBOARD — Feature 3.4 (v6.0)
+// API USAGE DASHBOARD (v6.0)
 // ============================================================================
 
 async function loadUsageDashboard() {

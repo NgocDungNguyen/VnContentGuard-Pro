@@ -686,7 +686,7 @@ async function checkAndReportScam(scanResults, url) {
 }
 
 // ============================================================================
-// SSE STREAMING SCAN — Feature 1.5 (v6.0)
+// SSE STREAMING SCAN (v6.0)
 // ============================================================================
 
 async function handleStreamScan(data) {
@@ -831,7 +831,7 @@ function buildResultFromModules(modules) {
 }
 
 // ============================================================================
-// NOTIFICATION SYSTEM — Feature 3.5 (v6.0)
+// NOTIFICATION SYSTEM (v6.0)
 // ============================================================================
 
 function sendRiskNotification(url, riskScore, riskLevel) {
@@ -886,7 +886,7 @@ chrome.notifications.onClicked.addListener((notifId) => {
 });
 
 // ============================================================================
-// COMMUNITY REPORT — Feature 4.1 (v6.0)
+// COMMUNITY REPORT (v6.0)
 // ============================================================================
 
 async function submitReport(data) {
@@ -984,7 +984,7 @@ chrome.tabs.onCreated.addListener(async (tab) => {
 });
 
 // ============================================================================
-// COMMUNITY BLOCKLIST — Feature 4.1 (v6.0)
+// COMMUNITY BLOCKLIST (v6.0)
 // ============================================================================
 
 async function refreshBlocklist(force = false) {
@@ -1092,7 +1092,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
 });
 
 // ============================================================================
-// WEEKLY SAFETY REPORT — Feature 4.4 (v6.0)
+// WEEKLY SAFETY REPORT (v6.0)
 // ============================================================================
 
 // Set up weekly alarm
@@ -1144,7 +1144,7 @@ chrome.notifications.onButtonClicked.addListener((notifId, btnIdx) => {
 });
 
 // ============================================================================
-// SYSTEM STATS — Feature 3.4 (v6.0)
+// SYSTEM STATS (v6.0)
 // ============================================================================
 
 async function fetchSystemStats() {
@@ -1188,7 +1188,7 @@ async function submitFeedback(data) {
 }
 
 // ============================================================================
-// AUTO-SCAN — Feature 1.3 (v6.0)
+// AUTO-SCAN (v6.0)
 // ============================================================================
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
