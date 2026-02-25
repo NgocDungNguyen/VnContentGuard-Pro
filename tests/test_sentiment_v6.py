@@ -1,4 +1,4 @@
-"""
+﻿"""
 Unit Tests for VnContentGuard Pro v5 - Sentiment Analysis
 Tests PhoBERT model and keyword fallback
 """
@@ -11,16 +11,16 @@ import pytest
 # Add project root to path
 sys.path.insert(0, "c:\\Users\\LucyS\\Tox")
 
-from src.models.sentiment_v5 import SentimentAnalyzerV5
+from src.models.sentiment_v6 import SentimentAnalyzerV6
 
 
-class TestSentimentAnalyzerV5:
-    """Test suite for SentimentAnalyzerV5"""
+class TestSentimentAnalyzerV6:
+    """Test suite for SentimentAnalyzerV6"""
 
     @pytest.fixture
     def analyzer(self):
         """Create analyzer instance for testing"""
-        return SentimentAnalyzerV5()
+        return SentimentAnalyzerV6()
 
     # ==================== Basic Tests ====================
 
@@ -134,7 +134,7 @@ class TestSentimentAnalyzerV5:
     def test_fallback_on_phobert_error(self):
         """Test that keyword fallback works when PhoBERT fails"""
         # Create analyzer with PhoBERT disabled
-        analyzer = SentimentAnalyzerV5(use_phobert=False)
+        analyzer = SentimentAnalyzerV6(use_phobert=False)
 
         text = "Bài viết hay quá!"
         result = analyzer.analyze(text)
@@ -144,7 +144,7 @@ class TestSentimentAnalyzerV5:
 
     def test_fallback_returns_valid_result(self):
         """Test that fallback returns complete result structure"""
-        analyzer = SentimentAnalyzerV5(use_phobert=False)
+        analyzer = SentimentAnalyzerV6(use_phobert=False)
 
         text = "Sản phẩm tệ lắm"
         result = analyzer.analyze(text)
@@ -194,7 +194,7 @@ class TestSentimentV5VsV2:
         from src.models.sentiment import SentimentAnalyzer as V2
 
         v2 = V2()
-        v5 = SentimentAnalyzerV5()
+        v5 = SentimentAnalyzerV6()
 
         # Clear positive case
         text = "Sản phẩm tuyệt vời, rất hài lòng, chất lượng xuất sắc!"
@@ -215,7 +215,7 @@ class TestSentimentV5VsV2:
         from src.models.sentiment import SentimentAnalyzer as V2
 
         v2 = V2()
-        v5 = SentimentAnalyzerV5()
+        v5 = SentimentAnalyzerV6()
 
         test_cases = [
             ("Rất tốt và hay", "Positive"),

@@ -1,21 +1,21 @@
-﻿#  VnContentGuard Pro v5.0
+﻿#  VnContentGuard Pro v6.0
 
 **Hệ thống kiểm duyệt nội dung tiếng Việt bằng AI  Phiên bản đầy đủ tính năng**
 
-[![Version](https://img.shields.io/badge/version-5.0.0-purple.svg)](https://github.com/NgocDungNguyen/VnContentGuard-Pro)
+[![Version](https://img.shields.io/badge/version-6.0.0-purple.svg)](https://github.com/NgocDungNguyen/VnContentGuard-Pro)
 [![Tests](https://img.shields.io/badge/tests-96%2F96-brightgreen.svg)](tests/)
 [![Python](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Deploy](https://img.shields.io/badge/deploy-Render-46E3B7.svg)](https://vncontentguard-pro.onrender.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-> **v5.0:** Unified AI (70% API calls)  Structured scraping  YouTube & TikTok  Content overlay  SSE streaming  Community blocklist  Parental control
+> **v6.0:** Unified AI (70% API calls)  Structured scraping  YouTube & TikTok  Content overlay  SSE streaming  Community blocklist  Parental control
 
 ---
 
-##  Tính năng chính (v5.0)
+##  Tính năng chính (v6.0)
 
 ###  ARCH-01  Phân tích thống nhất (Unified Analysis)
-Thay vì gọi AI 3-5 lần riêng lẻ, v5.0 dùng **1 lần gọi Gemini duy nhất** cho toàn bộ phân tích:
+Thay vì gọi AI 3-5 lần riêng lẻ, v6.0 dùng **1 lần gọi Gemini duy nhất** cho toàn bộ phân tích:
 - Cảm xúc  Độc hại  Kiểm tra thực tế  Tóm tắt  Rủi ro  Bình luận
 - Giảm 70-80% số lần gọi API  độ trễ từ 30-60s xuống còn 5-15s
 - Endpoint: `POST /analyze/v5/unified`
@@ -40,7 +40,7 @@ Thay vì gọi AI 3-5 lần riêng lẻ, v5.0 dùng **1 lần gọi Gemini duy n
 
 ---
 
-##  Kiến trúc v5.0
+##  Kiến trúc v6.0
 
 ```
 Chrome Extension (Manifest V3)
@@ -126,7 +126,7 @@ pytest tests/test_toxicity_v5.py -v
 
 ##  Lịch sử phiên bản
 
-### v5.0.0 (February 2026)  HIỆN TẠI
+### v6.0.0 (February 2026)  HIỆN TẠI
 - ARCH-01 Unified single-pass Gemini (70-80% API calls)
 - Structured scraping: Facebook, news, YouTube, TikTok
 - Content Script Overlay  floating badge, comment highlights

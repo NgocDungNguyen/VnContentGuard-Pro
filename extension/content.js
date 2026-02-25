@@ -1,4 +1,4 @@
-/**
+﻿/**
  * VnContentGuard Pro v5.0 — Content Script Overlay (2.1)
  * Injects floating risk badge + highlights toxic comments directly on the page.
  * Activated by SHOW_OVERLAY message from background.js.
@@ -50,7 +50,7 @@
     function renderOverlay(results) {
         removeOverlay(); // clean up any previous overlay first
 
-        const risk = results?.risk_score_v5 || results?.risk_assessment || {};
+        const risk = results?.risk_score_v6 || results?.risk_assessment || {};
         const riskScore = risk.risk_score ?? risk.score ?? 0;
         const riskLevel = risk.risk_level || risk.level || classifyRisk(riskScore);
         const riskCategory = risk.risk_category || risk.category || '';
@@ -134,8 +134,8 @@
 
     function buildBadgeDetails(results) {
         const lines = [];
-        const sentiment = results?.sentiment_v5 || {};
-        const factCheck = results?.fact_check_v5 || results?.fact_check || {};
+        const sentiment = results?.sentiment_v6 || {};
+        const factCheck = results?.fact_check_v6 || results?.fact_check || {};
         const comments = results?.comments_analysis || [];
         const toxicCount = comments.filter(c => c.is_toxic || c.toxicity_score > 0.5).length;
 

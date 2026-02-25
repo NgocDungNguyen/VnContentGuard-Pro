@@ -1,5 +1,5 @@
-"""
-VnContentGuard Pro v5 - Advanced Multi-Layer Toxicity Detection
+﻿"""
+VnContentGuard Pro v6 - Advanced Multi-Layer Toxicity Detection
 ================================================================
 Implements 4-layer defense-in-depth toxicity detection:
 1. Regex patterns (500+ Vietnamese patterns) - Fast, offline
@@ -22,7 +22,7 @@ from .toxicity import ToxicityAnalyzer as ToxicityV2
 load_dotenv()
 
 
-class ToxicityAnalyzerV5:
+class ToxicityAnalyzerV6:
     """
     Advanced Multi-Layer Toxicity Detection System
 
@@ -36,7 +36,7 @@ class ToxicityAnalyzerV5:
     """
 
     def __init__(self, use_detoxify: bool = False):
-        print("⏳ Initializing Advanced Toxicity Detection v5...")
+        print("⏳ Initializing Advanced Toxicity Detection v6...")
 
         # Layer 1: v2 Regex patterns (fallback)
         try:
@@ -76,7 +76,7 @@ class ToxicityAnalyzerV5:
                 "⚠️ Layer 4: Gemini AI disabled (enable with USE_GEMINI_TOXICITY=true)"
             )
 
-        print("✅ Toxicity Analyzer v5 Ready!")
+        print("✅ Toxicity Analyzer v6 Ready!")
 
     def analyze(self, text: str) -> Dict:
         """
@@ -394,13 +394,13 @@ class ToxicityAnalyzerV5:
 # Convenience function
 def analyze_toxicity(text: str) -> Dict:
     """Quick toxicity analysis"""
-    analyzer = ToxicityAnalyzerV5()
+    analyzer = ToxicityAnalyzerV6()
     return analyzer.analyze(text)
 
 
 if __name__ == "__main__":
     # Quick test
-    analyzer = ToxicityAnalyzerV5()
+    analyzer = ToxicityAnalyzerV6()
 
     test_cases = [
         "Bài viết rất hay và hữu ích!",  # Clean
@@ -409,7 +409,7 @@ if __name__ == "__main__":
         "Thông tin rất bổ ích, cảm ơn bạn",  # Clean
     ]
 
-    print("\n🧪 Testing Toxicity Analyzer v5:")
+    print("\n🧪 Testing Toxicity Analyzer v6:")
     for text in test_cases:
         result = analyzer.analyze(text)
         print(f"\nText: {text}")

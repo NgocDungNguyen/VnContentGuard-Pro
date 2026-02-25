@@ -1,5 +1,5 @@
-"""
-VnContentGuard Pro v5 — Unified Single-Pass AI Analyzer
+﻿"""
+VnContentGuard Pro v6 - Unified Single-Pass AI Analyzer
 ========================================================
 ARCH-01: Single Gemini call that handles summary, sentiment, fact-check,
 article toxicity, all ambiguous comments, and overall risk in one shot.
@@ -65,7 +65,7 @@ class UnifiedAnalyzer:
               Each: {index, text, reactions}  (index = position in original list)
 
         Returns:
-            Complete analysis dict matching the v5 response structure.
+            Complete analysis dict matching the v6 response structure.
             Falls back gracefully if Gemini call fails.
         """
         prompt = self._build_prompt(structured_data, precomputed, ambiguous_comments)

@@ -1,4 +1,4 @@
-# VnContentGuard Pro v5.0 — Chrome Web Store Listing
+﻿# VnContentGuard Pro v6.0 — Chrome Web Store Listing
 
 ---
 
@@ -12,12 +12,12 @@ Quét an toàn nội dung tiếng Việt bằng AI — phân tích thống nhấ
 
 ## Full Description
 
-🛡️ **VnContentGuard Pro v5.0** — Hệ thống kiểm duyệt nội dung tiếng Việt thế hệ mới, được hỗ trợ bởi Gemini AI.
+🛡️ **VnContentGuard Pro v6.0** — Hệ thống kiểm duyệt nội dung tiếng Việt thế hệ mới, được hỗ trợ bởi Gemini AI.
 
 ### ✨ Tính năng nổi bật
 
 **⚡ Phân tích thống nhất (ARCH-01)**
-Thay vì gọi AI 3-5 lần riêng lẻ, v5.0 chỉ dùng 1 lần gọi Gemini duy nhất — giảm 70-80% lượng API call, độ trễ từ 30-60 giây xuống còn 5-15 giây.
+Thay vì gọi AI 3-5 lần riêng lẻ, v6.0 chỉ dùng 1 lần gọi Gemini duy nhất — giảm 70-80% lượng API call, độ trễ từ 30-60 giây xuống còn 5-15 giây.
 
 **🔍 Overlay trực tiếp trên trang**
 Huy hiệu rủi ro nổi xuất hiện ngay trên trang web sau mỗi lần quét. Kéo thả được, thu gọn/mở rộng, hỗ trợ dark mode tự động. Tô đỏ bình luận độc hại với tooltip giải thích.
@@ -61,7 +61,7 @@ Extension kết nối đến API server được host sẵn tại `vncontentguar
 
 ## Version History
 
-**v5.0.0** (February 2026) — Phiên bản hiện tại
+**v6.0.0** (February 2026) — Phiên bản hiện tại
 - ARCH-01: Unified single-pass Gemini analysis
 - Structured scraping: Facebook, news, YouTube, TikTok
 - Content Script Overlay: floating badge, comment highlights

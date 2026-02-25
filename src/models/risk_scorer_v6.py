@@ -1,7 +1,7 @@
 ﻿"""
-VnContentGuard Pro v5 - Objective Risk Scoring System
+VnContentGuard Pro v6 - Objective Risk Scoring System
 =====================================================
-Comprehensive risk assessment integrating all v5 detection modules:
+Comprehensive risk assessment integrating all v6 detection modules:
 - 40% Fake News Score (fact-checking credibility)
 - 25% Toxicity Score (harmful content detection)
 - 15% Sentiment Score (emotional manipulation detection)
@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class RiskScorerV5:
+class RiskScorerV6:
     """
     Objective Risk Scoring System
 
@@ -41,10 +41,10 @@ class RiskScorerV5:
     def __init__(
         self, sentiment_analyzer=None, toxicity_analyzer=None, fact_checker=None
     ):
-        print("⏳ Initializing Risk Scorer v5...")
+        print("⏳ Initializing Risk Scorer v6...")
 
         # Feature flags
-        self.USE_V5 = os.getenv("USE_V5", "true").lower() == "true"
+        self.USE_V6 = os.getenv("USE_V6", "true").lower() == "true"
         self.use_fact_checking = (
             os.getenv("USE_FACT_CHECKING", "true").lower() == "true"
         )
@@ -56,32 +56,32 @@ class RiskScorerV5:
 
         if not self.sentiment_analyzer:
             try:
-                from .sentiment_v5 import SentimentAnalyzerV5
+                from .sentiment_v6 import SentimentAnalyzerV6
 
-                self.sentiment_analyzer = SentimentAnalyzerV5(use_phobert=False)
-                print("✅ Sentiment v5 loaded")
+                self.sentiment_analyzer = SentimentAnalyzerV6(use_phobert=False)
+                print("✅ Sentiment v6 loaded")
             except Exception as e:
-                print(f"⚠️ Sentiment v5 unavailable: {e}")
+                print(f"⚠️ Sentiment v6 unavailable: {e}")
 
         if not self.toxicity_analyzer:
             try:
-                from .toxicity_v5 import ToxicityAnalyzerV5
+                from .toxicity_v6 import ToxicityAnalyzerV6
 
-                self.toxicity_analyzer = ToxicityAnalyzerV5(use_detoxify=False)
-                print("✅ Toxicity v5 loaded")
+                self.toxicity_analyzer = ToxicityAnalyzerV6(use_detoxify=False)
+                print("✅ Toxicity v6 loaded")
             except Exception as e:
-                print(f"⚠️ Toxicity v5 unavailable: {e}")
+                print(f"⚠️ Toxicity v6 unavailable: {e}")
 
         if not self.fact_checker:
             try:
-                from .fact_checker_v5 import FactCheckerV5
+                from .fact_checker_v6 import FactCheckerV6
 
-                self.fact_checker = FactCheckerV5()
-                print("✅ Fact-Checker v5 loaded")
+                self.fact_checker = FactCheckerV6()
+                print("✅ Fact-Checker v6 loaded")
             except Exception as e:
-                print(f"⚠️ Fact-Checker v5 unavailable: {e}")
+                print(f"⚠️ Fact-Checker v6 unavailable: {e}")
 
-        print("✅ Risk Scorer v5 Ready!")
+        print("✅ Risk Scorer v6 Ready!")
 
     def score(self, text: str, url: Optional[str] = None) -> Dict:
         """
@@ -133,7 +133,7 @@ class RiskScorerV5:
 
             results["evidence"].append(
                 {
-                    "module": "Phân tích cảm xúc v5",
+                    "module": "Phân tích cảm xúc v6",
                     "finding": f"{sentiment_label} (độ tin cậy {sentiment_result.get('confidence', 0)*100:.0f}%)",
                     "risk_contribution": f"{sentiment_risk}/100",
                 }
@@ -150,7 +150,7 @@ class RiskScorerV5:
 
             results["evidence"].append(
                 {
-                    "module": "Phát hiện độc hại v5",
+                    "module": "Phát hiện độc hại v6",
                     "finding": f"Mức độ: {toxicity_result['severity']} (Điểm: {toxicity_result['overall_score']:.2f})",
                     "risk_contribution": f"{toxicity_risk}/100",
                 }
@@ -172,7 +172,7 @@ class RiskScorerV5:
 
             results["evidence"].append(
                 {
-                    "module": "Kiểm tra thực tế v5",
+                    "module": "Kiểm tra thực tế v6",
                     "finding": f"{fact_result['verdict']} (độ tin cậy {fact_result['confidence']})",
                     "risk_contribution": f"{credibility_risk}/100",
                 }
@@ -195,7 +195,7 @@ class RiskScorerV5:
 
                 results["evidence"].append(
                     {
-                        "module": "Phân tích nguồn v5",
+                        "module": "Phân tích nguồn v6",
                         "finding": f"{source_result['verdict']} (Điểm: {source_result['reputation_score']}/100)",
                         "risk_contribution": f"{source_risk}/100",
                     }
@@ -333,7 +333,7 @@ class RiskScorerV5:
             )
             results["evidence"].append(
                 {
-                    "module": "Phân tích cảm xúc v5",
+                    "module": "Phân tích cảm xúc v6",
                     "finding": f"{sentiment_label} (độ tin cậy {sentiment_result.get('confidence', 0)*100:.0f}%)",
                     "risk_contribution": f"{sentiment_risk}/100",
                 }
@@ -346,7 +346,7 @@ class RiskScorerV5:
             results["breakdown"]["toxicity_component"] = toxicity_risk * 0.25
             results["evidence"].append(
                 {
-                    "module": "Phát hiện độc hại v5",
+                    "module": "Phát hiện độc hại v6",
                     "finding": f"Mức độ: {toxicity_result.get('severity', 'None')} (Điểm: {toxicity_result.get('overall_score', 0):.2f})",
                     "risk_contribution": f"{toxicity_risk}/100",
                 }
@@ -365,7 +365,7 @@ class RiskScorerV5:
             results["breakdown"]["fake_news_component"] = credibility_risk * 0.40
             results["evidence"].append(
                 {
-                    "module": "Kiểm tra thực tế v5",
+                    "module": "Kiểm tra thực tế v6",
                     "finding": f"{fact_check_result.get('verdict', 'Unknown')} (độ tin cậy {fact_check_result.get('confidence', 'Low')})",
                     "risk_contribution": f"{credibility_risk}/100",
                 }
@@ -384,7 +384,7 @@ class RiskScorerV5:
                 results["breakdown"]["source_component"] = source_risk * 0.10
                 results["evidence"].append(
                     {
-                        "module": "Phân tích nguồn v5",
+                        "module": "Phân tích nguồn v6",
                         "finding": f"{source_result['verdict']} (Điểm: {source_result['reputation_score']}/100)",
                         "risk_contribution": f"{source_risk}/100",
                     }
@@ -540,13 +540,13 @@ class RiskScorerV5:
 # Convenience function
 def calculate_risk(text: str, url: Optional[str] = None) -> Dict:
     """Quick risk calculation"""
-    scorer = RiskScorerV5()
+    scorer = RiskScorerV6()
     return scorer.score(text, url)
 
 
 if __name__ == "__main__":
     # Quick test
-    scorer = RiskScorerV5()
+    scorer = RiskScorerV6()
 
     test_cases = [
         ("You won't believe this SHOCKING news! Click here NOW!!!", None),
@@ -555,7 +555,7 @@ if __name__ == "__main__":
         ("This is a neutral informative article about science.", "https://bbc.com"),
     ]
 
-    print("\n🧪 Testing Risk Scorer v5:")
+    print("\n🧪 Testing Risk Scorer v6:")
     for text, url in test_cases:
         result = scorer.score(text, url)
         print(f"\nText: {text[:60]}...")
