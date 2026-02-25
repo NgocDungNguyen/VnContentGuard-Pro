@@ -1452,7 +1452,8 @@ function renderV6Results(data, urlInfo) {
 
     // ===== 0. ARTICLE SUMMARY (NEW in v5) =====
     const summaryCard = document.getElementById('summaryCard');
-    const summaryContent = articleSummary?.summary || articleSummary?.text || '';
+    const summaryRaw = articleSummary?.summary || articleSummary?.text || '';
+    const summaryContent = truncateSummary(summaryRaw, 5);
     if (summaryContent) {
         summaryCard.style.display = 'block';
         document.getElementById('summaryText').textContent = summaryContent;
@@ -3057,6 +3058,27 @@ function renderEvidenceTags(evidenceSpans) {
 // ============================================================================
 // SHARED HELPERS
 // ============================================================================
+
+/**
+ * Trim a summary string to at most `maxSentences` complete sentences.
+ * A sentence ends with . ! ? or Vietnamese ellipsis …
+ * If the text is already short enough it is returned as-is.
+ */
+function truncateSummary(text, maxSentences = 5) {
+    if (!text) return '';
+    // Split on sentence-ending punctuation followed by whitespace or end-of-string
+    const sentenceEnds = /[.!?…]+(?:\s|$)/g;
+    const sentences = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = sentenceEnds.exec(text)) !== null) {
+        sentences.push(text.slice(lastIndex, match.index + match[0].length).trim());
+        lastIndex = match.index + match[0].length;
+        if (sentences.length >= maxSentences) break;
+    }
+    if (sentences.length === 0) return text; // no sentence endings found — return as-is
+    return sentences.join(' ');
+}
 
 function escapeHtml(str) {
     if (!str) return '';

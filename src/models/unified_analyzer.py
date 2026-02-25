@@ -190,7 +190,7 @@ Lượt chia sẻ: {shares}    Tương tác: {reactions_total}
 Trả về JSON với CÁC TRƯỜNG SAU (không thêm text ngoài JSON):
 
 {{
-  "summary": "Tóm tắt 2-3 câu ngắn gọn về nội dung bài viết",
+  "summary": "Tóm tắt TỐI ĐA 4 câu ngắn (mỗi câu ≤40 từ). KHÔNG vượt quá 300 từ. Chỉ nêu ý chính, không liệt kê chi tiết.",
 
   "sentiment": {{
     "overall": "Positive|Negative|Neutral|Mixed",
