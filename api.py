@@ -141,6 +141,7 @@ class ScanRequest(BaseModel):
 # ARCH-01: Structured Scan Models (v6 Unified Analysis)
 # ============================================================================
 
+
 class StructuredArticle(BaseModel):
     title: str = ""
     author: str = ""
@@ -171,7 +172,10 @@ class StructuredScanRequest(BaseModel):
     ARCH-01: Structured page data from structuredScrape() in popup.js.
     Enables single-pass unified Gemini analysis (70-80% fewer API calls).
     """
-    page_type: str = "generic"  # facebook_post|news_article|youtube_video|tiktok|generic
+
+    page_type: str = (
+        "generic"  # facebook_post|news_article|youtube_video|tiktok|generic
+    )
     url: str
     scraped_at: str = ""
     article: StructuredArticle = StructuredArticle()
@@ -360,6 +364,7 @@ def get_domain_feedback(url: str):
 # Feature 6.2 — Seed Blacklist Endpoint
 # ============================================================================
 
+
 @app.get("/api/blacklist/seed")
 def get_blacklist_seed():
     """Feature 6.2 — Return curated seed list of harmful Vietnamese domains.
@@ -368,30 +373,93 @@ def get_blacklist_seed():
     """
     seed_domains = [
         # Adult / NSFW
-        "xvideos.com", "xnxx.com", "pornhub.com", "xhamster.com", "redtube.com",
-        "youporn.com", "tube8.com", "spankbang.com", "txxx.com", "tnaflix.com",
-        "beeg.com", "drtuber.com", "nuvid.com", "hclips.com", "4tube.com",
-        "vporn.com", "fuq.com", "xtube.com", "slutload.com", "3movs.com",
-        "faphouse.com", "sexhd.xxx", "porntrex.com", "fapvid.com",
-        "phimset.com", "xemphim18.com", "phimsex.cc", "phimsexviet.org",
-        "xem18.com", "18sex.vn", "truyen18.net", "truyen-sex.net",
+        "xvideos.com",
+        "xnxx.com",
+        "pornhub.com",
+        "xhamster.com",
+        "redtube.com",
+        "youporn.com",
+        "tube8.com",
+        "spankbang.com",
+        "txxx.com",
+        "tnaflix.com",
+        "beeg.com",
+        "drtuber.com",
+        "nuvid.com",
+        "hclips.com",
+        "4tube.com",
+        "vporn.com",
+        "fuq.com",
+        "xtube.com",
+        "slutload.com",
+        "3movs.com",
+        "faphouse.com",
+        "sexhd.xxx",
+        "porntrex.com",
+        "fapvid.com",
+        "phimset.com",
+        "xemphim18.com",
+        "phimsex.cc",
+        "phimsexviet.org",
+        "xem18.com",
+        "18sex.vn",
+        "truyen18.net",
+        "truyen-sex.net",
         # Gambling / Ca do
-        "bet188.com", "88bet.com", "fb88.com", "bk8.com", "m88.com",
-        "w88.com", "188bet.com", "12bet.com", "fun88.com", "dafabet.com",
-        "188.com", "bet365.com", "casino.vn", "casinovn.com", "betwin.vn",
-        "lode88.com", "lo-de.net", "xoso.com.vn", "xsmb.info", "vietlott.xyz",
-        "daga.live", "gamenhanh.com", "taixiu.com", "tanchuong.com",
-        "gowin.io", "1xbet.com", "22bet.com", "melbet.com",
+        "bet188.com",
+        "88bet.com",
+        "fb88.com",
+        "bk8.com",
+        "m88.com",
+        "w88.com",
+        "188bet.com",
+        "12bet.com",
+        "fun88.com",
+        "dafabet.com",
+        "188.com",
+        "bet365.com",
+        "casino.vn",
+        "casinovn.com",
+        "betwin.vn",
+        "lode88.com",
+        "lo-de.net",
+        "xoso.com.vn",
+        "xsmb.info",
+        "vietlott.xyz",
+        "daga.live",
+        "gamenhanh.com",
+        "taixiu.com",
+        "tanchuong.com",
+        "gowin.io",
+        "1xbet.com",
+        "22bet.com",
+        "melbet.com",
         # Scam / Lua dao
-        "kiemtienonline.vip", "lamgiau.vn", "dautuvang.com", "binaryoption.vn",
-        "forex-viet.com", "coinfast.vn", "bitcoin-viet.net", "dautu24h.net",
-        "thuhappassive.com", "thuhap-passiveincome.com", "vieclamtainha.net",
-        "vieclam247.net", "nhacaiso1.com", "topnhacai.com",
+        "kiemtienonline.vip",
+        "lamgiau.vn",
+        "dautuvang.com",
+        "binaryoption.vn",
+        "forex-viet.com",
+        "coinfast.vn",
+        "bitcoin-viet.net",
+        "dautu24h.net",
+        "thuhappassive.com",
+        "thuhap-passiveincome.com",
+        "vieclamtainha.net",
+        "vieclam247.net",
+        "nhacaiso1.com",
+        "topnhacai.com",
         # Malware / Phishing
-        "update-flash.com", "flashplayer-vn.com", "antivirus-vn.com",
-        "win-prizes.vn", "congratulation-gift.com", "survey-reward.vn",
+        "update-flash.com",
+        "flashplayer-vn.com",
+        "antivirus-vn.com",
+        "win-prizes.vn",
+        "congratulation-gift.com",
+        "survey-reward.vn",
         # Hate / Extremist
-        "bacviet.org", "bacviet.net", "rfavietnam.com",
+        "bacviet.org",
+        "bacviet.net",
+        "rfavietnam.com",
     ]
 
     deduped = sorted(set(seed_domains))
@@ -1344,7 +1412,7 @@ def analyze_unified_v6(req: StructuredScanRequest):
 
     Accepts fully structured page data from structuredScrape() and runs:
     1. Parallel pre-processing (regex, keywords, source check) — 0 Gemini calls
-    2. Smart comment filtering — skip obvious toxic/clean/spam  
+    2. Smart comment filtering — skip obvious toxic/clean/spam
     3. Single unified Gemini call — summary + sentiment + fact check + comments + risk
     4. Fallback to sequential pipeline if unified call fails
 
@@ -1369,8 +1437,11 @@ def analyze_unified_v6(req: StructuredScanRequest):
 
         # 1a. Regex toxicity on article body
         regex_toxicity = {
-            "is_toxic": False, "overall_score": 0.0, "severity": "Low",
-            "categories": {}, "matched_patterns": []
+            "is_toxic": False,
+            "overall_score": 0.0,
+            "severity": "Low",
+            "categories": {},
+            "matched_patterns": [],
         }
         if len(article_body) > 5:
             try:
@@ -1380,7 +1451,9 @@ def analyze_unified_v6(req: StructuredScanRequest):
 
         # 1b. Keyword sentiment on article
         keyword_sentiment = {
-            "overall": "Neutral", "confidence": 0.0, "intensity": "Weak"
+            "overall": "Neutral",
+            "confidence": 0.0,
+            "intensity": "Weak",
         }
         if len(article_body) > 5:
             try:
@@ -1391,10 +1464,7 @@ def analyze_unified_v6(req: StructuredScanRequest):
         # 1c. Source credibility from fact_checker's source_analyzer
         source_credibility = {"reputation_score": 50, "verdict": "Chưa biết"}
         try:
-            if (
-                fact_checker_v6_engine.source_analyzer
-                and url
-            ):
+            if fact_checker_v6_engine.source_analyzer and url:
                 sc = fact_checker_v6_engine.source_analyzer.analyze(url)
                 if sc:
                     source_credibility = sc
@@ -1404,20 +1474,28 @@ def analyze_unified_v6(req: StructuredScanRequest):
         # 1d. Google Fact Check API (via fact_checker)
         factcheck_api_results = []
         try:
-            if len(full_article_text) > 20 and hasattr(fact_checker_v6_engine, "_check_google_factcheck"):
-                factcheck_api_results = fact_checker_v6_engine._check_google_factcheck(
-                    full_article_text[:500]
-                ) or []
+            if len(full_article_text) > 20 and hasattr(
+                fact_checker_v6_engine, "_check_google_factcheck"
+            ):
+                factcheck_api_results = (
+                    fact_checker_v6_engine._check_google_factcheck(
+                        full_article_text[:500]
+                    )
+                    or []
+                )
         except Exception as e:
             print(f"⚠️ [unified] GoogleFactCheck API failed: {e}")
 
         # 1e. NewsData (cross-reference)
         newsdata_results = []
         try:
-            if len(full_article_text) > 20 and hasattr(fact_checker_v6_engine, "_check_newsdata"):
-                newsdata_results = fact_checker_v6_engine._check_newsdata(
-                    full_article_text[:200]
-                ) or []
+            if len(full_article_text) > 20 and hasattr(
+                fact_checker_v6_engine, "_check_newsdata"
+            ):
+                newsdata_results = (
+                    fact_checker_v6_engine._check_newsdata(full_article_text[:200])
+                    or []
+                )
         except Exception as e:
             print(f"⚠️ [unified] NewsData failed: {e}")
 
@@ -1447,13 +1525,15 @@ def analyze_unified_v6(req: StructuredScanRequest):
         ambiguous_comments = []
         for text in filter_result.get("ambiguous", []):
             sc = text_to_struct.get(text)
-            ambiguous_comments.append({
-                "index": len(ambiguous_comments) + 1,
-                "text": text,
-                "author": sc.author if sc else "",
-                "reactions": sc.reactions if sc else 0,
-                "is_reply": sc.is_reply if sc else False,
-            })
+            ambiguous_comments.append(
+                {
+                    "index": len(ambiguous_comments) + 1,
+                    "text": text,
+                    "author": sc.author if sc else "",
+                    "reactions": sc.reactions if sc else 0,
+                    "is_reply": sc.is_reply if sc else False,
+                }
+            )
 
         obvious_toxic_texts = filter_result.get("obvious_toxic", [])
         obvious_clean_texts = filter_result.get("obvious_clean", [])
@@ -1483,16 +1563,18 @@ def analyze_unified_v6(req: StructuredScanRequest):
                 "word_count": req.article.word_count or len(article_body.split()),
             },
             "metadata": {
-                "domain": req.metadata.domain or (
-                    url.split("/")[2] if "//" in url else url
-                ),
+                "domain": req.metadata.domain
+                or (url.split("/")[2] if "//" in url else url),
                 "reactions_total": req.metadata.reactions_total,
                 "shares": req.metadata.shares,
-                "comment_count_visible": req.metadata.comment_count_visible or len(req.comments),
+                "comment_count_visible": req.metadata.comment_count_visible
+                or len(req.comments),
             },
         }
 
-        ai_result = unified_analyzer.analyze(structured_dict, precomputed, ambiguous_comments)
+        ai_result = unified_analyzer.analyze(
+            structured_dict, precomputed, ambiguous_comments
+        )
         print(f"   Unified Gemini: {time.time()-t1:.1f}s")
         was_fallback = ai_result.get("_fallback", False)
 
@@ -1505,41 +1587,47 @@ def analyze_unified_v6(req: StructuredScanRequest):
         # Obvious toxic (pre-classified, no AI needed)
         for text in obvious_toxic_texts:
             sc = text_to_struct.get(text)
-            all_comment_results.append({
-                "comment": text[:200],
-                "is_toxic": True,
-                "severity": "High",
-                "score": 0.9,
-                "sentiment": "negative",
-                "method": "regex_filter",
-                "reason": "Xác định là độc hại (regex)",
-                "categories": {},
-                "reactions": sc.reactions if sc else 0,
-                "author": sc.author if sc else "",
-            })
+            all_comment_results.append(
+                {
+                    "comment": text[:200],
+                    "is_toxic": True,
+                    "severity": "High",
+                    "score": 0.9,
+                    "sentiment": "negative",
+                    "method": "regex_filter",
+                    "reason": "Xác định là độc hại (regex)",
+                    "categories": {},
+                    "reactions": sc.reactions if sc else 0,
+                    "author": sc.author if sc else "",
+                }
+            )
 
         # AI-analyzed ambiguous comments
         ai_comment_map = {c["index"]: c for c in ai_result.get("comments", [])}
         for ac in ambiguous_comments:
             ai_data = ai_comment_map.get(ac["index"], {})
-            all_comment_results.append({
-                "comment": ac["text"][:200],
-                "is_toxic": ai_data.get("is_toxic", False),
-                "severity": ai_data.get("severity", "None"),
-                "score": 0.8 if ai_data.get("is_toxic") else 0.1,
-                "sentiment": ai_data.get("sentiment", "neutral"),
-                "method": "unified_ai" if not was_fallback else "fallback",
-                "reason": ai_data.get("reason", ""),
-                "categories": {cat: 0.8 for cat in ai_data.get("categories", [])},
-                "reactions": ac.get("reactions", 0),
-                "author": ac.get("author", ""),
-                "evidence_spans": ai_data.get("evidence_spans", []),   # Feature 6.3
-            })
+            all_comment_results.append(
+                {
+                    "comment": ac["text"][:200],
+                    "is_toxic": ai_data.get("is_toxic", False),
+                    "severity": ai_data.get("severity", "None"),
+                    "score": 0.8 if ai_data.get("is_toxic") else 0.1,
+                    "sentiment": ai_data.get("sentiment", "neutral"),
+                    "method": "unified_ai" if not was_fallback else "fallback",
+                    "reason": ai_data.get("reason", ""),
+                    "categories": {cat: 0.8 for cat in ai_data.get("categories", [])},
+                    "reactions": ac.get("reactions", 0),
+                    "author": ac.get("author", ""),
+                    "evidence_spans": ai_data.get("evidence_spans", []),  # Feature 6.3
+                }
+            )
 
         # Build comments_analysis (matches /analyze/v6 format)
         toxic_comments = [c for c in all_comment_results if c["is_toxic"]]
         total_analyzed = len(req.comments)
-        toxic_pct = (len(toxic_comments) / total_analyzed * 100) if total_analyzed > 0 else 0.0
+        toxic_pct = (
+            (len(toxic_comments) / total_analyzed * 100) if total_analyzed > 0 else 0.0
+        )
 
         comments_analysis = {
             "total": total_analyzed,
@@ -1565,8 +1653,12 @@ def analyze_unified_v6(req: StructuredScanRequest):
 
         # Build sentiment_v6 compatible dict
         sentiment_v6_result = {
-            "overall": ai_sentiment.get("overall", keyword_sentiment.get("overall", "Neutral")),
-            "confidence": ai_sentiment.get("confidence", keyword_sentiment.get("confidence", 0.0)),
+            "overall": ai_sentiment.get(
+                "overall", keyword_sentiment.get("overall", "Neutral")
+            ),
+            "confidence": ai_sentiment.get(
+                "confidence", keyword_sentiment.get("confidence", 0.0)
+            ),
             "intensity": ai_sentiment.get("intensity", "Weak"),
             "method": "unified_ai" if not was_fallback else "keyword_fallback",
             "reasoning": ai_sentiment.get("reasoning", ""),
@@ -1575,22 +1667,38 @@ def analyze_unified_v6(req: StructuredScanRequest):
 
         # Build toxicity_v6 compatible dict
         toxicity_v6_result = {
-            "is_toxic": ai_article_tox.get("is_toxic", regex_toxicity.get("is_toxic", False)),
-            "overall_score": ai_article_tox.get("score", regex_toxicity.get("overall_score", 0.0)),
-            "severity": ai_article_tox.get("severity", regex_toxicity.get("severity", "Low")),
+            "is_toxic": ai_article_tox.get(
+                "is_toxic", regex_toxicity.get("is_toxic", False)
+            ),
+            "overall_score": ai_article_tox.get(
+                "score", regex_toxicity.get("overall_score", 0.0)
+            ),
+            "severity": ai_article_tox.get(
+                "severity", regex_toxicity.get("severity", "Low")
+            ),
             "categories": {cat: 0.8 for cat in ai_article_tox.get("categories", [])},
-            "detection_layers": ["regex", "unified_ai"] if not was_fallback else ["regex"],
+            "detection_layers": (
+                ["regex", "unified_ai"] if not was_fallback else ["regex"]
+            ),
             "reasoning": ai_article_tox.get("reasoning", ""),
         }
 
         # Build fact_check_v6 compatible dict
         fact_check_v6_result = {
-            "score": ai_fact_check.get("score", source_credibility.get("reputation_score", 50)),
-            "verdict": ai_fact_check.get("verdict", source_credibility.get("verdict", "Unverifiable")),
+            "score": ai_fact_check.get(
+                "score", source_credibility.get("reputation_score", 50)
+            ),
+            "verdict": ai_fact_check.get(
+                "verdict", source_credibility.get("verdict", "Unverifiable")
+            ),
             "confidence": ai_fact_check.get("confidence", "Low"),
             "evidence": ai_fact_check.get("evidence", []),
             "key_claims": ai_fact_check.get("key_claims", []),
-            "verification_methods": ["unified_ai", "source_credibility"] if not was_fallback else ["source_credibility"],
+            "verification_methods": (
+                ["unified_ai", "source_credibility"]
+                if not was_fallback
+                else ["source_credibility"]
+            ),
         }
 
         # Build risk_score_v6 compatible dict
@@ -1653,8 +1761,11 @@ def analyze_unified_v6(req: StructuredScanRequest):
     except Exception as e:
         print(f"❌ [unified] Critical Error: {e}")
         import traceback
+
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"v6 unified analysis error: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"v6 unified analysis error: {str(e)}"
+        )
 
 
 # ============================================================================
