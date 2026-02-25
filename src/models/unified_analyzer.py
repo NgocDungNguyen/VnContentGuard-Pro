@@ -214,7 +214,10 @@ Trả về JSON với CÁC TRƯỜNG SAU (không thêm text ngoài JSON):
       "severity": "None|Low|Medium|High|Critical",
       "sentiment": "positive|negative|neutral|mixed",
       "categories": [],
-      "reason": "Giải thích ngắn 1 câu"
+      "reason": "Giải thích ngắn 1 câu",
+      "evidence_spans": [
+        {{"text": "đoạn văn bản cụ thể gây độc hại", "reason": "Lý do ngắn", "severity": "high|medium|low"}}
+      ]
     }}
   ],
 
@@ -233,6 +236,7 @@ LƯU Ý QUAN TRỌNG:
 - risk_assessment.score: 0-100 (0 = an toàn, 100 = cực kỳ nguy hiểm)
 - Xem xét ảnh hưởng của bình luận với nhiều tương tác (👍 cao) đến đánh giá tổng thể
 - Nếu bình luận nói "tin giả" hoặc "sai thông tin" với nhiều tương tác → tăng skepticism trong fact_check
+- evidence_spans: chỉ điền khi is_toxic=true; mỗi span là đoạn trích CHÍNH XÁC từ bình luận (<60 ký tự), kèm lý do và mức độ (high/medium/low). Để trống [] nếu không có nội dung độc hại.
 - Chỉ trả về JSON thuần túy, không có markdown, không có text giải thích ngoài JSON"""
 
         return prompt
@@ -343,8 +347,14 @@ LƯU Ý QUAN TRỌNG:
                     "severity": "None",
                     "sentiment": "neutral",
                     "categories": [],
-                    "reason": "(not analyzed)"
+                    "reason": "(not analyzed)",
+                    "evidence_spans": []
                 })
+
+        # Ensure every comment has evidence_spans key (Feature 6.3)
+        for c in data["comments"]:
+            if "evidence_spans" not in c:
+                c["evidence_spans"] = []
 
         # Sort by index
         data["comments"].sort(key=lambda x: x.get("index", 0))

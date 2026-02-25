@@ -1,4 +1,7 @@
-﻿/**
+﻿// ─── Import domain control module (Feature 6.2) ───────────────────────────
+importScripts('domain_control.js');
+
+/**
  * VnContentGuard Pro v6.0 — Background Service Worker
  * =====================================================
  * Handles API calls in the background so they survive popup close.
@@ -81,6 +84,9 @@ const AUTO_SCAN_DOMAINS = [
 // Auto-scan rate limit: 1 scan per URL per 30 minutes
 const AUTO_SCAN_COOLDOWN_MS = 30 * 60 * 1000;
 const autoScanTimestamps = {};
+
+// Feature 6.6 — Incognito log (in-memory, also persisted to storage)
+let incognitoLog = [];
 
 // ============================================================================
 // MESSAGE HANDLER — Receives requests from popup.js
@@ -168,6 +174,67 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (message.type === 'GET_STATS') {
         fetchSystemStats().then(result => sendResponse(result));
+        return true;
+    }
+
+    // ── Feature 6.2 — Domain Blacklist / Whitelist ────────────────────────────
+    if (message.type === 'GET_DOMAIN_BLACKLIST') {
+        DomainControl.getBlacklist().then(list => sendResponse({ list }));
+        return true;
+    }
+    if (message.type === 'GET_DOMAIN_WHITELIST') {
+        DomainControl.getWhitelist().then(list => sendResponse({ list }));
+        return true;
+    }
+    if (message.type === 'ADD_TO_BLACKLIST') {
+        DomainControl.addToBlacklist(message.domain).then(r => sendResponse(r));
+        return true;
+    }
+    if (message.type === 'REMOVE_FROM_BLACKLIST') {
+        DomainControl.removeFromBlacklist(message.domain).then(r => sendResponse(r));
+        return true;
+    }
+    if (message.type === 'ADD_TO_WHITELIST') {
+        DomainControl.addToWhitelist(message.domain).then(r => sendResponse(r));
+        return true;
+    }
+    if (message.type === 'REMOVE_FROM_WHITELIST') {
+        DomainControl.removeFromWhitelist(message.domain).then(r => sendResponse(r));
+        return true;
+    }
+    if (message.type === 'IMPORT_DOMAIN_LIST') {
+        DomainControl.importFromText(message.listType, message.text, message.replace || false)
+            .then(r => sendResponse(r));
+        return true;
+    }
+    if (message.type === 'EXPORT_DOMAIN_LIST') {
+        DomainControl.exportToText(message.listType).then(text => sendResponse({ text }));
+        return true;
+    }
+    if (message.type === 'LOAD_SEED_BLACKLIST') {
+        DomainControl.loadSeedBlacklist().then(r => sendResponse(r));
+        return true;
+    }
+
+    // ── Feature 6.6 — Incognito Log ───────────────────────────────────────────
+    if (message.type === 'GET_INCOGNITO_LOG') {
+        chrome.storage.local.get(['incognitoLog', 'incognitoBlockMode'], (d) => {
+            sendResponse({
+                log: d.incognitoLog || [],
+                mode: d.incognitoBlockMode || 'off'
+            });
+        });
+        return true;
+    }
+    if (message.type === 'CLEAR_INCOGNITO_LOG') {
+        incognitoLog = [];
+        chrome.storage.local.set({ incognitoLog: [] });
+        sendResponse({ ok: true });
+        return true;
+    }
+    if (message.type === 'SET_INCOGNITO_MODE') {
+        chrome.storage.local.set({ incognitoBlockMode: message.mode });
+        sendResponse({ ok: true, mode: message.mode });
         return true;
     }
 });
@@ -790,6 +857,78 @@ async function submitReport(data) {
     }
     return { status: 'error', message: 'Không thể gửi báo cáo' };
 }
+
+// ============================================================================
+// FEATURE 6.2 — DOMAIN BLACKLIST/WHITELIST INTERCEPT (fast, before page load)
+// ============================================================================
+
+chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
+    if (details.frameId !== 0 || !details.url) return;
+    if (details.url.startsWith('chrome') || details.url.startsWith('about')) return;
+    // Don't intercept our own extension pages
+    if (details.url.startsWith(chrome.runtime.getURL(''))) return;
+
+    try {
+        const { parentalEnabled } = await chrome.storage.local.get(['parentalEnabled']);
+        if (!parentalEnabled) return;
+
+        const blocked = await DomainControl.isBlacklisted(details.url);
+        if (blocked) {
+            const blockUrl = chrome.runtime.getURL('block.html') +
+                `?reason=blacklist&blockedUrl=${encodeURIComponent(details.url)}`;
+            chrome.tabs.update(details.tabId, { url: blockUrl });
+        }
+    } catch (err) {
+        console.log('[BG] Blacklist intercept error:', err.message);
+    }
+});
+
+// ============================================================================
+// FEATURE 6.6 — INCOGNITO MODE DETECTION
+// ============================================================================
+
+chrome.tabs.onCreated.addListener(async (tab) => {
+    if (!tab.incognito) return;
+
+    try {
+        const { incognitoBlockMode } = await chrome.storage.local.get(['incognitoBlockMode']);
+        const mode = incognitoBlockMode || 'off';
+        if (mode === 'off') return;
+
+        // Log the event
+        const entry = {
+            time: new Date().toISOString(),
+            tabId: tab.id,
+            url: tab.pendingUrl || tab.url || '(mới mở)',
+        };
+        incognitoLog.unshift(entry);
+        if (incognitoLog.length > 50) incognitoLog = incognitoLog.slice(0, 50);
+
+        // Persist log
+        const data = await chrome.storage.local.get(['incognitoLog']);
+        const stored = data.incognitoLog || [];
+        stored.unshift(entry);
+        await chrome.storage.local.set({ incognitoLog: stored.slice(0, 50) });
+
+        // Notify via system notification
+        chrome.notifications.create('incognito_' + Date.now(), {
+            type: 'basic',
+            iconUrl: 'icons/icon.png',
+            title: '🕵️ VnContentGuard — Chế độ ẩn danh',
+            message: 'Phát hiện tab ẩn danh mới. ' +
+                (mode === 'block_all' ? 'Đã chặn theo cài đặt phụ huynh.' : 'Đã ghi nhật ký.'),
+            priority: 1,
+        });
+
+        if (mode === 'block_all') {
+            const blockUrl = chrome.runtime.getURL('block.html') +
+                `?reason=incognito&blockedUrl=${encodeURIComponent(tab.pendingUrl || tab.url || '')}`;
+            chrome.tabs.update(tab.id, { url: blockUrl });
+        }
+    } catch (err) {
+        console.log('[BG] Incognito detect error:', err.message);
+    }
+});
 
 // ============================================================================
 // COMMUNITY BLOCKLIST — Feature 4.1 (v6.0)

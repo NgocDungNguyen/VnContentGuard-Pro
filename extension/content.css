@@ -269,3 +269,59 @@
     margin-top: 4px;
     text-align: right;
 }
+
+/* ───────────────────────────────────────────────────────────────────────
+   Feature 6.3 — Explainable AI Evidence Spans (in-page highlighting)
+   ─────────────────────────────────────────────────────────────────────── */
+
+.vcg-evidence-span {
+    border-radius: 3px;
+    padding: 0px 2px;
+    cursor: help;
+    font-style: normal !important;
+}
+
+.vcg-evidence-high {
+    background-color: rgba(231, 76, 60, 0.30) !important;
+    border-bottom: 2px solid #e74c3c;
+    color: inherit !important;
+}
+
+.vcg-evidence-medium {
+    background-color: rgba(243, 156, 18, 0.30) !important;
+    border-bottom: 2px solid #f39c12;
+    color: inherit !important;
+}
+
+.vcg-evidence-low {
+    background-color: rgba(52, 152, 219, 0.25) !important;
+    border-bottom: 2px solid #3498db;
+    color: inherit !important;
+}
+
+/* Tooltip on hover (uses CSS title attribute tooltip; custom if needed) */
+.vcg-evidence-span::before {
+    content: attr(title);
+    position: absolute;
+    background: rgba(0,0,0,0.80);
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(-120%);
+    transition: opacity 0.2s;
+    z-index: 9999;
+    max-width: 250px;
+    white-space: normal;
+}
+
+.vcg-evidence-span:hover {
+    position: relative;
+}
+
+.vcg-evidence-span:hover::before {
+    opacity: 1;
+}

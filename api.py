@@ -357,6 +357,53 @@ def get_domain_feedback(url: str):
 
 
 # ============================================================================
+# Feature 6.2 — Seed Blacklist Endpoint
+# ============================================================================
+
+@app.get("/api/blacklist/seed")
+def get_blacklist_seed():
+    """Feature 6.2 — Return curated seed list of harmful Vietnamese domains.
+    Includes adult content, gambling, scam, & malware domains.
+    The extension merges this into the user's local blacklist on first load.
+    """
+    seed_domains = [
+        # Adult / NSFW
+        "xvideos.com", "xnxx.com", "pornhub.com", "xhamster.com", "redtube.com",
+        "youporn.com", "tube8.com", "spankbang.com", "txxx.com", "tnaflix.com",
+        "beeg.com", "drtuber.com", "nuvid.com", "hclips.com", "4tube.com",
+        "vporn.com", "fuq.com", "xtube.com", "slutload.com", "3movs.com",
+        "faphouse.com", "sexhd.xxx", "porntrex.com", "fapvid.com",
+        "phimset.com", "xemphim18.com", "phimsex.cc", "phimsexviet.org",
+        "xem18.com", "18sex.vn", "truyen18.net", "truyen-sex.net",
+        # Gambling / Ca do
+        "bet188.com", "88bet.com", "fb88.com", "bk8.com", "m88.com",
+        "w88.com", "188bet.com", "12bet.com", "fun88.com", "dafabet.com",
+        "188.com", "bet365.com", "casino.vn", "casinovn.com", "betwin.vn",
+        "lode88.com", "lo-de.net", "xoso.com.vn", "xsmb.info", "vietlott.xyz",
+        "daga.live", "gamenhanh.com", "taixiu.com", "tanchuong.com",
+        "gowin.io", "1xbet.com", "22bet.com", "melbet.com",
+        # Scam / Lua dao
+        "kiemtienonline.vip", "lamgiau.vn", "dautuvang.com", "binaryoption.vn",
+        "forex-viet.com", "coinfast.vn", "bitcoin-viet.net", "dautu24h.net",
+        "thuhappassive.com", "thuhap-passiveincome.com", "vieclamtainha.net",
+        "vieclam247.net", "nhacaiso1.com", "topnhacai.com",
+        # Malware / Phishing
+        "update-flash.com", "flashplayer-vn.com", "antivirus-vn.com",
+        "win-prizes.vn", "congratulation-gift.com", "survey-reward.vn",
+        # Hate / Extremist
+        "bacviet.org", "bacviet.net", "rfavietnam.com",
+    ]
+
+    deduped = sorted(set(seed_domains))
+    return {
+        "domains": deduped,
+        "count": len(deduped),
+        "version": "6.0",
+        "description": "Danh sach den mac dinh - noi dung nguoi lon, co bac, lua dao, phan mem doc hai.",
+    }
+
+
+# ============================================================================
 # v6.0 Streaming Analysis Endpoint (SSE)
 # ============================================================================
 
@@ -1486,6 +1533,7 @@ def analyze_unified_v6(req: StructuredScanRequest):
                 "categories": {cat: 0.8 for cat in ai_data.get("categories", [])},
                 "reactions": ac.get("reactions", 0),
                 "author": ac.get("author", ""),
+                "evidence_spans": ai_data.get("evidence_spans", []),   # Feature 6.3
             })
 
         # Build comments_analysis (matches /analyze/v6 format)

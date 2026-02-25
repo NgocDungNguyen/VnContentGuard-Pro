@@ -61,6 +61,7 @@
       ]
     }
   ],
+  "incognito": "spanning",
   "background": {
     "service_worker": "background.js"
   },

@@ -209,6 +209,56 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('parentalThresholdVal').textContent = e.target.value;
         });
     }
+
+    // ── Feature 6.2 — Domain Blacklist / Whitelist UI ──────────────────────
+
+    // Tab switching
+    document.getElementById('blacklistTabBtn')?.addEventListener('click', () => switchDomainTab('blacklist'));
+    document.getElementById('whitelistTabBtn')?.addEventListener('click', () => switchDomainTab('whitelist'));
+
+    // Add buttons
+    document.getElementById('blacklistAddBtn')?.addEventListener('click', () => addDomainToList('blacklist'));
+    document.getElementById('whitelistAddBtn')?.addEventListener('click', () => addDomainToList('whitelist'));
+
+    // Enter key in inputs
+    document.getElementById('blacklistInput')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addDomainToList('blacklist');
+    });
+    document.getElementById('whitelistInput')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addDomainToList('whitelist');
+    });
+
+    // Import / Export
+    document.getElementById('blacklistImportBtn')?.addEventListener('click', () => importDomainList('blacklist'));
+    document.getElementById('blacklistExportBtn')?.addEventListener('click', () => exportDomainList('blacklist'));
+    document.getElementById('whitelistImportBtn')?.addEventListener('click', () => importDomainList('whitelist'));
+    document.getElementById('whitelistExportBtn')?.addEventListener('click', () => exportDomainList('whitelist'));
+
+    // Load seed blacklist
+    document.getElementById('loadSeedBlacklistBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('loadSeedBlacklistBtn');
+        if (btn) { btn.disabled = true; btn.textContent = '⏳...'; }
+        const r = await chrome.runtime.sendMessage({ type: 'LOAD_SEED_BLACKLIST' });
+        if (btn) { btn.disabled = false; btn.textContent = '🌐 Tải mặc định'; }
+        if (r?.ok) {
+            showStatusMessage(`✅ Tải ${r.total} tên miền thành công!`);
+            await loadDomainLists();
+        } else {
+            showStatusMessage('❌ ' + (r?.error || 'Lỗi không xác định'));
+        }
+    });
+
+    // ── Feature 6.6 — Incognito Log UI ────────────────────────────────────
+
+    document.getElementById('incognitoLogBtn')?.addEventListener('click', () => {
+        const panel = document.getElementById('incognitoLogPanel');
+        if (panel) { panel.classList.toggle('hidden'); renderIncognitoLog(); }
+    });
+    document.getElementById('incognitoLogClearBtn')?.addEventListener('click', async () => {
+        await chrome.runtime.sendMessage({ type: 'CLEAR_INCOGNITO_LOG' });
+        document.getElementById('incognitoLogCount').textContent = '0';
+        document.getElementById('incognitoLogList').innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Nhật ký trống.</div>';
+    });
 });
 
 // ============================================================================
@@ -1606,8 +1656,9 @@ function renderV6Results(data, urlInfo) {
                             <span style="font-size: 10px; color: ${sevColor}; font-weight: bold;">${sevLabel} - ${(tc.score * 100).toFixed(0)}%</span>
                             <span style="font-size: 9px; color: #999; background: #f0f0f0; padding: 1px 5px; border-radius: 8px;">${methodBadge}</span>
                         </div>
-                        <div style="font-size: 11px; margin-top: 3px;">"${(tc.comment || '').substring(0, 120)}${(tc.comment || '').length > 120 ? '...' : ''}"</div>
+                        <div style="font-size: 11px; margin-top: 3px;">${highlightEvidenceInText(tc.comment || '', tc.evidence_spans || [])}</div>
                         ${tc.reason ? `<div style="font-size: 10px; color: #666; font-style: italic; margin-top: 3px;">💡 ${tc.reason}</div>` : ''}
+                        ${renderEvidenceTags(tc.evidence_spans || [])}
                     </div>
                 `;
             }
@@ -2674,6 +2725,19 @@ function toggleParentalPanel() {
                 if (pin) pin.value = response.pin;
             }
         });
+
+        // Load incognito mode setting + log count
+        chrome.runtime.sendMessage({ type: 'GET_INCOGNITO_LOG' }, (r) => {
+            if (r) {
+                const sel = document.getElementById('incognitoBlockMode');
+                if (sel) sel.value = r.mode || 'off';
+                const badge = document.getElementById('incognitoLogCount');
+                if (badge) badge.textContent = r.log.length;
+            }
+        });
+
+        // Load domain lists for 6.2
+        loadDomainLists();
     } else {
         panel.classList.add('hidden');
         if (currentResultsData) document.getElementById('results').classList.remove('hidden');
@@ -2684,24 +2748,153 @@ async function saveParentalSettings() {
     const enabled = document.getElementById('parentalToggle')?.checked || false;
     const pin = document.getElementById('parentalPinInput')?.value || '0000';
     const threshold = parseInt(document.getElementById('parentalThreshold')?.value || '70');
+    const incognitoMode = document.getElementById('incognitoBlockMode')?.value || 'off';
 
     if (pin.length < 4) {
         alert('Mã PIN phải từ 4 ký tự trở lên.');
         return;
     }
 
-    const result = await chrome.runtime.sendMessage({
-        type: 'SET_PARENTAL_CONTROL',
-        enabled: enabled,
-        pin: pin,
-        threshold: threshold
-    });
+    // Save parental + incognito mode in parallel
+    await Promise.all([
+        chrome.runtime.sendMessage({
+            type: 'SET_PARENTAL_CONTROL',
+            enabled: enabled,
+            pin: pin,
+            threshold: threshold
+        }),
+        chrome.runtime.sendMessage({ type: 'SET_INCOGNITO_MODE', mode: incognitoMode })
+    ]);
 
     const statusEl = document.getElementById('status');
     if (statusEl) {
         statusEl.textContent = enabled ? `🔒 Kiểm soát gia đình: BẬT (ngưỡng ${threshold})` : '🔓 Kiểm soát gia đình: TẮT';
         setTimeout(() => { statusEl.textContent = 'Sẵn sàng quét'; }, 3000);
     }
+}
+
+// ============================================================================
+// FEATURE 6.2 — DOMAIN BLACKLIST / WHITELIST (v6.0)
+// ============================================================================
+
+function switchDomainTab(tab) {
+    document.getElementById('blacklistTab').classList.toggle('hidden', tab !== 'blacklist');
+    document.getElementById('whitelistTab').classList.toggle('hidden', tab !== 'whitelist');
+    document.getElementById('blacklistTabBtn').classList.toggle('active', tab === 'blacklist');
+    document.getElementById('whitelistTabBtn').classList.toggle('active', tab === 'whitelist');
+}
+
+async function loadDomainLists() {
+    const [bl, wl] = await Promise.all([
+        chrome.runtime.sendMessage({ type: 'GET_DOMAIN_BLACKLIST' }),
+        chrome.runtime.sendMessage({ type: 'GET_DOMAIN_WHITELIST' })
+    ]);
+    renderDomainList('blacklist', bl?.list || []);
+    renderDomainList('whitelist', wl?.list || []);
+}
+
+function renderDomainList(listType, list) {
+    const container = document.getElementById(listType === 'blacklist' ? 'blacklistItems' : 'whitelistItems');
+    if (!container) return;
+
+    if (!list.length) {
+        container.innerHTML = `<div class="domain-list-empty">Chưa có tên miền nào.</div>`;
+        return;
+    }
+
+    container.innerHTML = list.map(domain => `
+        <div class="domain-item">
+            <span class="domain-item-text">${escapeHtml(domain)}</span>
+            <button class="domain-item-remove" data-domain="${escapeHtml(domain)}"
+                    data-list="${listType}" title="Xóa">✕</button>
+        </div>
+    `).join('');
+
+    // Attach remove handlers
+    container.querySelectorAll('.domain-item-remove').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const domain = btn.dataset.domain;
+            const msgType = listType === 'blacklist' ? 'REMOVE_FROM_BLACKLIST' : 'REMOVE_FROM_WHITELIST';
+            await chrome.runtime.sendMessage({ type: msgType, domain });
+            await loadDomainLists();
+        });
+    });
+}
+
+async function addDomainToList(listType) {
+    const inputId = listType === 'blacklist' ? 'blacklistInput' : 'whitelistInput';
+    const input = document.getElementById(inputId);
+    const raw = input?.value?.trim();
+    if (!raw) return;
+
+    const msgType = listType === 'blacklist' ? 'ADD_TO_BLACKLIST' : 'ADD_TO_WHITELIST';
+    const result = await chrome.runtime.sendMessage({ type: msgType, domain: raw });
+
+    if (result?.ok) {
+        if (input) input.value = '';
+        await loadDomainLists();
+    } else {
+        showStatusMessage('⚠️ ' + (result?.error || 'Không thể thêm tên miền'));
+    }
+}
+
+async function importDomainList(listType) {
+    const text = prompt(`Nhập danh sách tên miền (mỗi dòng một tên):\nVD: xvideos.com\ncasino.vn`);
+    if (!text) return;
+    const result = await chrome.runtime.sendMessage({
+        type: 'IMPORT_DOMAIN_LIST',
+        listType,
+        text,
+        replace: false
+    });
+    if (result?.ok) {
+        showStatusMessage(`✅ Đã thêm ${result.added} tên miền (tổng: ${result.total})`);
+        await loadDomainLists();
+    }
+}
+
+async function exportDomainList(listType) {
+    const result = await chrome.runtime.sendMessage({ type: 'EXPORT_DOMAIN_LIST', listType });
+    if (!result?.text) {
+        showStatusMessage('Danh sách trống, không có gì để xuất.');
+        return;
+    }
+    const blob = new Blob([result.text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vcg-${listType}-${new Date().toISOString().slice(0,10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ============================================================================
+// FEATURE 6.6 — INCOGNITO LOG (v6.0)
+// ============================================================================
+
+async function renderIncognitoLog() {
+    const result = await chrome.runtime.sendMessage({ type: 'GET_INCOGNITO_LOG' });
+    const log = result?.log || [];
+    const container = document.getElementById('incognitoLogList');
+    if (!container) return;
+
+    const badge = document.getElementById('incognitoLogCount');
+    if (badge) badge.textContent = log.length;
+
+    if (!log.length) {
+        container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Nhật ký trống.</div>';
+        return;
+    }
+
+    container.innerHTML = log.map(entry => {
+        const d = new Date(entry.time);
+        const timeStr = d.toLocaleTimeString('vi-VN') + ' ' + d.toLocaleDateString('vi-VN');
+        const urlShort = entry.url ? entry.url.substring(0, 50) : '(mới mở)';
+        return `<div class="incognito-log-entry">
+            <span class="incognito-log-time">🕵️ ${timeStr}</span>
+            <span class="incognito-log-url">${escapeHtml(urlShort)}</span>
+        </div>`;
+    }).join('');
 }
 
 // ============================================================================
@@ -2801,4 +2994,84 @@ function formatUptime(seconds) {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     return m > 0 ? `${h}h${m}m` : `${h}h`;
+}
+
+// ============================================================================
+// FEATURE 6.3 — EXPLAINABLE AI EVIDENCE HELPERS
+// ============================================================================
+
+/**
+ * Wraps matching toxic-span text occurrences within `commentText` with
+ * <mark class="evidence-mark {severity}"> tags for in-popup highlighting.
+ * Returns an HTML string safe for innerHTML (comment text is HTML-escaped
+ * first, then spans are injected).
+ */
+function highlightEvidenceInText(commentText, evidenceSpans) {
+    // Cap comment display at 180 chars
+    const displayText = commentText.substring(0, 180) + (commentText.length > 180 ? '…' : '');
+    if (!evidenceSpans || evidenceSpans.length === 0) {
+        return `"${escapeHtml(displayText)}"`;
+    }
+
+    // Build a plain-text version and find spans to highlight
+    // Work on the display-capped version
+    let result = escapeHtml(displayText);
+
+    // Sort spans longest-first to avoid nested replacements
+    const sorted = [...evidenceSpans].sort((a, b) => (b.text || '').length - (a.text || '').length);
+
+    sorted.forEach(span => {
+        const raw = span.text;
+        if (!raw || raw.length < 3) return;
+        const sev = (span.severity || 'medium').toLowerCase();
+        const escapedSpan = escapeHtml(raw);
+        const title = escapeHtml(span.reason || '');
+        // Replace first occurrence only in the working string
+        const idx = result.indexOf(escapedSpan);
+        if (idx !== -1) {
+            result = result.substring(0, idx)
+                + `<mark class="evidence-mark ${sev}" title="${title}">${escapedSpan}</mark>`
+                + result.substring(idx + escapedSpan.length);
+        }
+    });
+
+    return `"${result}"`;
+}
+
+/**
+ * Renders a row of pill badges, one per evidence span,
+ * for display below a toxic comment.
+ */
+function renderEvidenceTags(evidenceSpans) {
+    if (!evidenceSpans || evidenceSpans.length === 0) return '';
+    const pills = evidenceSpans.slice(0, 5).map(span => {
+        const sev  = (span.severity || 'medium').toLowerCase();
+        const icon = sev === 'high' ? '🔴' : sev === 'medium' ? '🟠' : '🔵';
+        const text = escapeHtml((span.text || '').substring(0, 30));
+        const tip  = escapeHtml(span.reason || '');
+        return `<span class="evidence-tag ${sev}" title="${tip}">${icon} ${text}</span>`;
+    }).join('');
+    return `<div class="evidence-tags">${pills}</div>`;
+}
+
+// ============================================================================
+// SHARED HELPERS
+// ============================================================================
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function showStatusMessage(msg, durationMs = 3000) {
+    const el = document.getElementById('status');
+    if (!el) return;
+    const prev = el.textContent;
+    el.textContent = msg;
+    setTimeout(() => { if (el.textContent === msg) el.textContent = prev; }, durationMs);
 }

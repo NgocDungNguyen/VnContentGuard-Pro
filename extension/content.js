@@ -213,6 +213,11 @@
             el.setAttribute('data-vcg-toxic', '1');
             highlightedEls.push(el);
 
+            // Feature 6.3 — Highlight individual evidence spans within the element
+            if (matchedResult.evidence_spans && matchedResult.evidence_spans.length > 0) {
+                highlightEvidenceSpans(el, matchedResult.evidence_spans);
+            }
+
             // Build tooltip
             const tooltip = buildCommentTooltip(matchedResult);
             el.parentElement?.style && (el.parentElement.style.position = 'relative');
@@ -222,6 +227,56 @@
             // Hover events
             el.addEventListener('mouseenter', () => tooltip.style.display = 'block');
             el.addEventListener('mouseleave', () => tooltip.style.display = 'none');
+        });
+    }
+
+    // ─── Feature 6.3: Evidence Span DOM Highlighting ─────────────────────────
+    /**
+     * Walk text nodes inside `container` and wrap occurrences of each
+     * evidence span's text with a coloured <span> for in-page highlighting.
+     */
+    function highlightEvidenceSpans(container, spans) {
+        if (!spans || !spans.length) return;
+
+        spans.forEach(span => {
+            const target = span.text;
+            if (!target || target.length < 3) return;
+            const sev = (span.severity || 'medium').toLowerCase();
+            const reason = span.reason || '';
+
+            // TreeWalker to visit all text nodes
+            const walker = document.createTreeWalker(
+                container,
+                NodeFilter.SHOW_TEXT,
+                null
+            );
+
+            const textNodes = [];
+            let node;
+            while ((node = walker.nextNode())) {
+                textNodes.push(node);
+            }
+
+            textNodes.forEach(textNode => {
+                const idx = textNode.nodeValue.indexOf(target);
+                if (idx === -1) return;
+
+                const parent = textNode.parentNode;
+                if (!parent || parent.classList?.contains('vcg-evidence-span')) return;
+
+                // Split text node around the match
+                const before = document.createTextNode(textNode.nodeValue.substring(0, idx));
+                const after  = document.createTextNode(textNode.nodeValue.substring(idx + target.length));
+                const mark   = document.createElement('mark');
+                mark.className = `vcg-evidence-span vcg-evidence-${sev}`;
+                mark.title = reason;
+                mark.textContent = target;
+
+                parent.insertBefore(before, textNode);
+                parent.insertBefore(mark,   textNode);
+                parent.insertBefore(after,  textNode);
+                parent.removeChild(textNode);
+            });
         });
     }
 
