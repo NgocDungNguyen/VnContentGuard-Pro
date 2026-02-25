@@ -1,5 +1,5 @@
-"""
-VnContentGuard Pro v5 - Source Credibility Analyzer
+﻿"""
+VnContentGuard Pro v6 - Source Credibility Analyzer
 ====================================================
 Analyze domain/URL credibility using multiple signals:
 1. Domain age (older = more credible)
@@ -33,7 +33,7 @@ class SourceAnalyzer:
     """
 
     def __init__(self):
-        print("⏳ Initializing Source Analyzer v5...")
+        print("⏳ Initializing Source Analyzer v6...")
 
         # Vietnamese credible news sources (whitelist)
         self.trusted_domains = {
@@ -74,7 +74,7 @@ class SourceAnalyzer:
             r".*-free\.com$",
         ]
 
-        print("✅ Source Analyzer v5 Ready!")
+        print("✅ Source Analyzer v6 Ready!")
 
     def analyze(self, url: str) -> Optional[Dict]:
         """
@@ -266,7 +266,7 @@ if __name__ == "__main__":
         "https://vietnamnet.vn/tin-tuc",
     ]
 
-    print("\n🧪 Testing Source Analyzer v5:")
+    print("\n🧪 Testing Source Analyzer v6:")
     for url in test_urls:
         result = analyzer.analyze(url)
         if result:

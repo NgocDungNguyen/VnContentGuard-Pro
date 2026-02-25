@@ -1,8 +1,8 @@
-"""
+﻿"""
 Tests for VnContentGuard Pro v5 - Fact-Checking System
 =======================================================
 Comprehensive tests for:
-- FactCheckerV5
+- FactCheckerV6
 - SourceAnalyzer
 - NewsAggregator
 """
@@ -16,19 +16,19 @@ import pytest
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.models.fact_checker_v5 import FactCheckerV5, check_fact
-from src.models.news_aggregator_v5 import NewsAggregator, search_news
-from src.models.source_analyzer_v5 import SourceAnalyzer, analyze_source
+from src.models.fact_checker_v6 import FactCheckerV6, check_fact
+from src.models.news_aggregator_v6 import NewsAggregator, search_news
+from src.models.source_analyzer_v6 import SourceAnalyzer, analyze_source
 
-# ==================== FactCheckerV5 Tests ====================
+# ==================== FactCheckerV6 Tests ====================
 
 
-class TestFactCheckerV5:
-    """Test suite for FactCheckerV5"""
+class TestFactCheckerV6:
+    """Test suite for FactCheckerV6"""
 
     def setup_method(self):
         """Setup before each test"""
-        self.checker = FactCheckerV5()
+        self.checker = FactCheckerV6()
 
     def test_initialization(self):
         """Test fact checker initializes correctly"""
@@ -36,7 +36,7 @@ class TestFactCheckerV5:
         assert hasattr(self.checker, "check")
         assert hasattr(self.checker, "source_analyzer")
         assert hasattr(self.checker, "gemini_client")
-        print("✅ FactCheckerV5 initialization test passed")
+        print("✅ FactCheckerV6 initialization test passed")
 
     def test_empty_input(self):
         """Test handling of empty input"""
@@ -421,7 +421,7 @@ class TestIntegration:
 
     def test_full_pipeline_with_url(self):
         """Test full fact-checking pipeline with URL"""
-        checker = FactCheckerV5()
+        checker = FactCheckerV6()
 
         result = checker.check(
             text="Technology news update", url="https://vnexpress.net"
@@ -442,7 +442,7 @@ class TestIntegration:
     def test_components_integration(self):
         """Test that all components work together"""
         # Initialize all components
-        checker = FactCheckerV5()
+        checker = FactCheckerV6()
         analyzer = SourceAnalyzer()
         aggregator = NewsAggregator()
 

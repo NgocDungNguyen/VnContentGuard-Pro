@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -6,7 +6,7 @@
 </head>
 <body>
     <div class="container">
-        <!-- v5 HEADER BAR -->
+        <!-- v6 HEADER BAR -->
         <div class="header-bar">
             <h2>🛡️ VnContentGuard Pro</h2>
             <div class="header-actions">
@@ -76,7 +76,7 @@
             </div>
         </div>
 
-        <!-- v5 SCAN HISTORY PANEL -->
+        <!-- v6 SCAN HISTORY PANEL -->
         <div id="historyPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #9b59b6;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -87,7 +87,7 @@
             </div>
         </div>
 
-        <!-- v5 COMPARISON MODE PANEL -->
+        <!-- v6 COMPARISON MODE PANEL -->
         <div id="comparePanel" class="hidden">
             <div class="card" style="border-left: 4px solid #e67e22;">
                 <h3>📊 So sánh 2 trang</h3>
@@ -120,13 +120,15 @@
             </div>
         </div>
 
-        <!-- PARENTAL CONTROL PANEL (4.2) -->
+        <!-- PARENTAL CONTROL PANEL (4.2 + 6.2 + 6.6) -->
         <div id="parentalPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #8e44ad;">
-                <h3>🔒 Kiểm soát gia đình</h3>
-                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Tự động chặn trang web có rủi ro cao.</p>
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <label style="font-size: 12px; font-weight: bold;">Bật/Tắt:</label>
+                <h3>🔒 Kiểm soát gia đình v6</h3>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Tự động chặn trang web có rủi ro cao, danh sách đen & phát hiện ẩn danh.</p>
+
+                <!-- Basic settings row -->
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                    <label style="font-size: 12px; font-weight: bold; min-width: 60px;">Bật/Tắt:</label>
                     <label class="switch">
                         <input type="checkbox" id="parentalToggle">
                         <span class="slider"></span>
@@ -134,14 +136,79 @@
                 </div>
                 <div style="margin-bottom: 8px;">
                     <label style="font-size: 11px; color: var(--text-secondary);">Ngưỡng rủi ro (0-100):</label>
-                    <input type="range" id="parentalThreshold" min="30" max="100" value="70" style="width: 100%;">
-                    <span id="parentalThresholdVal" style="font-size: 12px; font-weight: bold;">70</span>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <input type="range" id="parentalThreshold" min="30" max="100" value="70" style="flex: 1;">
+                        <span id="parentalThresholdVal" style="font-size: 12px; font-weight: bold; min-width: 28px;">70</span>
+                    </div>
                 </div>
-                <div style="margin-bottom: 8px;">
+                <div style="margin-bottom: 10px;">
                     <label style="font-size: 11px; color: var(--text-secondary);">Mã PIN (4-6 số):</label>
                     <input type="password" id="parentalPinInput" maxlength="6" placeholder="0000" style="width: 80px; padding: 4px 8px; text-align: center; font-size: 14px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #fff); color: var(--text-primary);">
                 </div>
-                <button id="parentalSaveBtn" class="btn-primary" style="padding: 8px; margin: 0; background: #8e44ad;">💾 Lưu cài đặt</button>
+
+                <!-- ─── Feature 6.6: Incognito detection ─────────────────── -->
+                <div style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-bottom: 10px;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <span style="font-size: 12px; font-weight: bold;">🕵️ Chế độ ẩn danh:</span>
+                        <select id="incognitoBlockMode" style="font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 6px; background: var(--input-bg, #fff); color: var(--text-primary);">
+                            <option value="off">Tắt (không làm gì)</option>
+                            <option value="warn">Cảnh báo + ghi nhật ký</option>
+                            <option value="block_all">Chặn hoàn toàn</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 11px; color: var(--text-secondary);">Nhật ký ẩn danh:</span>
+                        <span id="incognitoLogCount" class="incognito-count-badge">0</span>
+                        <button id="incognitoLogBtn" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;">📋 Xem</button>
+                        <button id="incognitoLogClearBtn" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;">🗑️</button>
+                    </div>
+                    <!-- Incognito log viewer (hidden by default) -->
+                    <div id="incognitoLogPanel" class="hidden incognito-log-panel">
+                        <div id="incognitoLogList" style="max-height: 120px; overflow-y: auto; font-size: 10px;"></div>
+                    </div>
+                </div>
+
+                <button id="parentalSaveBtn" class="btn-primary" style="padding: 8px; margin: 0 0 10px 0; background: #8e44ad;">💾 Lưu cài đặt</button>
+
+                <!-- ─── Feature 6.2: Domain Blacklist / Whitelist tabs ─── -->
+                <div style="border-top: 1px solid var(--border-color); padding-top: 8px;">
+                    <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px;">📋 Quản lý tên miền</div>
+
+                    <!-- Tab switcher -->
+                    <div class="domain-control-tabs">
+                        <button class="domain-tab-btn active" data-tab="blacklist" id="blacklistTabBtn">🚫 Danh sách đen</button>
+                        <button class="domain-tab-btn" data-tab="whitelist" id="whitelistTabBtn">✅ Danh sách trắng</button>
+                    </div>
+
+                    <!-- Blacklist tab -->
+                    <div id="blacklistTab" class="domain-tab-content">
+                        <p style="font-size: 10px; color: var(--text-secondary); margin: 4px 0 6px;">Tên miền bị chặn kỹ năng lực phụ huynh.</p>
+                        <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                            <input type="text" id="blacklistInput" placeholder="vd: xvideos.com" class="domain-input">
+                            <button id="blacklistAddBtn" class="btn-primary" style="padding: 4px 8px; margin: 0; white-space: nowrap;">+ Thêm</button>
+                        </div>
+                        <div id="blacklistItems" class="domain-list"></div>
+                        <div style="display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;">
+                            <button id="blacklistImportBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">📥 Nhập</button>
+                            <button id="blacklistExportBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">📤 Xuất</button>
+                            <button id="loadSeedBlacklistBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">🌐 Tải mặc định</button>
+                        </div>
+                    </div>
+
+                    <!-- Whitelist tab -->
+                    <div id="whitelistTab" class="domain-tab-content hidden">
+                        <p style="font-size: 10px; color: var(--text-secondary); margin: 4px 0 6px;">Tên miền luôn được phép — ghi đè danh sách đen.</p>
+                        <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                            <input type="text" id="whitelistInput" placeholder="vd: wikipedia.org" class="domain-input">
+                            <button id="whitelistAddBtn" class="btn-primary" style="padding: 4px 8px; margin: 0; white-space: nowrap;">+ Thêm</button>
+                        </div>
+                        <div id="whitelistItems" class="domain-list"></div>
+                        <div style="display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;">
+                            <button id="whitelistImportBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">📥 Nhập</button>
+                            <button id="whitelistExportBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">📤 Xuất</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -166,14 +233,14 @@
                 </div>
             </div>
 
-            <!-- v5 ARTICLE SUMMARY -->
+            <!-- v6 ARTICLE SUMMARY -->
             <div class="card summary-card" id="summaryCard" style="display: none;">
                 <h3>📰 Tóm tắt bài viết (AI)</h3>
                 <div id="summaryText" class="card-content summary-text"></div>
                 <div id="summaryMeta" class="summary-meta"></div>
             </div>
 
-            <!-- v5 RISK SCORE -->
+            <!-- v6 RISK SCORE -->
             <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
                 <h3 style="color: white;">📊 Điểm Rủi Ro Tổng Thể</h3>
                 <div id="riskScore" class="card-content" style="font-size: 32px; font-weight: bold; text-align: center; color: white;">-/100</div>
@@ -181,14 +248,14 @@
                 <div id="riskBreakdown" class="details" style="color: rgba(255,255,255,0.9); font-size: 11px;"></div>
             </div>
 
-            <!-- v5 SENTIMENT (Enhanced) -->
+            <!-- v6 SENTIMENT (Enhanced) -->
             <div class="card">
                 <h3>🎭 Phân tích cảm xúc</h3>
                 <div id="sentimentStatus" class="card-content">...</div>
                 <div id="sentimentDetails" class="details" style="margin-top: 8px;"></div>
             </div>
 
-            <!-- v5 TOXICITY (Enhanced) -->
+            <!-- v6 TOXICITY (Enhanced) -->
             <div class="card">
                 <h3>🛡️ Phát hiện nội dung độc hại</h3>
                 <div id="toxicStatus" class="card-content">Đang chờ...</div>
@@ -196,7 +263,7 @@
                 <div id="toxicFindings" class="findings"></div>
             </div>
 
-            <!-- v5 FACT CHECK (Enhanced) -->
+            <!-- v6 FACT CHECK (Enhanced) -->
             <div class="card">
                 <h3>📰 Kiểm tra thực tế (Đa nguồn)</h3>
                 <div id="fakeStatus" class="card-content">Đang chờ...</div>
@@ -204,7 +271,7 @@
                 <div id="fakeEvidence" class="details" style="font-size: 11px; margin-top: 8px;"></div>
             </div>
 
-            <!-- v5 COMMENTS ANALYSIS (Enhanced) -->
+            <!-- v6 COMMENTS ANALYSIS (Enhanced) -->
             <div class="card">
                 <h3>💬 Phân tích bình luận v5</h3>
                 <div id="commentsStatus" class="card-content">Đang chờ...</div>
@@ -212,7 +279,7 @@
                 <div id="commentsDetails" class="details"></div>
             </div>
 
-            <!-- v5 WARNINGS & RECOMMENDATIONS -->
+            <!-- v6 WARNINGS & RECOMMENDATIONS -->
             <div class="card" id="warningsCard" style="display: none; border-left: 4px solid #f39c12;">
                 <h3>⚠️ Cảnh báo</h3>
                 <div id="warningsList" class="details"></div>
@@ -223,7 +290,7 @@
                 <div id="recommendationsList" class="details"></div>
             </div>
 
-            <!-- v5 FEEDBACK SECTION -->
+            <!-- v6 FEEDBACK SECTION -->
             <div id="feedbackSection" class="hidden" style="margin-top: 10px;">
                 <div class="card" style="border-left: 4px solid #9b59b6; padding: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -242,7 +309,7 @@
             </div>
 
             <div style="margin-top: 15px; padding: 10px; background: var(--footer-bg, #f0f0f0); border-radius: 5px; text-align: center;">
-                <div style="font-size: 10px; color: var(--text-secondary, #666); margin-bottom: 8px;">VnContentGuard Pro v5.0 — Gemini AI · Unified Analysis · YouTube/TikTok · Overlay</div>
+                <div style="font-size: 10px; color: var(--text-secondary, #666); margin-bottom: 8px;">VnContentGuard Pro v6.0 — Gemini AI · Unified Analysis · YouTube/TikTok · Overlay</div>
                 <div style="display: flex; gap: 6px;">
                     <button id="exportBtn" class="btn-secondary" style="flex: 1; padding: 8px;">📥 Xuất báo cáo</button>
                     <button id="clearCache" class="btn-secondary" style="flex: 1; padding: 8px;">🗑️ Xóa kết quả</button>

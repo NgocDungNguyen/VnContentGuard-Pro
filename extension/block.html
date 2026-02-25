@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="utf-8">
-    <title>🚫 Bị chặn — Parental Control</title>
+    <title>đŸ« Bá»‹ cháº·n â€” VnContentGuard Pro</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -27,6 +27,13 @@
         h1 { font-size: 22px; color: #e74c3c; margin-bottom: 10px; }
         .msg { font-size: 14px; color: #bdc3c7; line-height: 1.6; margin: 15px 0 25px; }
         .domain { font-size: 16px; color: #e67e22; font-weight: bold; word-break: break-all; }
+        .reason-badge {
+            display: inline-block; padding: 4px 14px; border-radius: 12px;
+            font-size: 12px; font-weight: bold; margin-top: 10px;
+        }
+        .reason-risk      { background: #e74c3c; }
+        .reason-blacklist { background: #8e44ad; }
+        .reason-incognito { background: #2980b9; }
         .pin-section { margin-top: 25px; }
         .pin-section label { font-size: 13px; color: #95a5a6; display: block; margin-bottom: 8px; }
         .pin-input {
@@ -51,58 +58,96 @@
             font-weight: bold; cursor: pointer; transition: all 0.3s;
         }
         .btn-back:hover { background: #229954; }
-        .risk-badge {
-            display: inline-block; padding: 4px 12px; border-radius: 12px;
-            font-size: 12px; font-weight: bold; margin-top: 10px;
-        }
-        .risk-high { background: #e74c3c; }
-        .risk-medium { background: #f39c12; }
+        /* Incognito pages: hide PIN section, no unlock available */
+        .incognito-mode .pin-section { display: none; }
     </style>
 </head>
 <body>
-    <div class="block-container">
-        <div class="icon">🔒</div>
-        <h1>🚫 TRANG BỊ CHẶN</h1>
-        <div class="msg">
-            Chế độ Kiểm soát gia đình (Parental Control) đã chặn trang web này
-            vì phát hiện nội dung không phù hợp.
+    <div class="block-container" id="blockContainer">
+        <div class="icon" id="blockIcon">đŸ”’</div>
+        <h1 id="blockTitle">đŸ« TRANG Bá» CHáº¶N</h1>
+        <div class="msg" id="blockMsg">
+            Cháº¿ Ä‘á»™ Kiá»ƒm soĂ¡t gia Ä‘Ă¬nh (Parental Control) Ä‘Ă£ cháº·n trang web nĂ y.
         </div>
         <div class="domain" id="domainDisplay">-</div>
-        <div class="risk-badge risk-high" id="riskBadge">Rủi ro: Cao</div>
+        <span class="reason-badge reason-risk" id="reasonBadge">Rá»§i ro: Cao</span>
 
-        <button class="btn-back" id="btnBack">🔙 Quay lại an toàn</button>
+        <button class="btn-back" id="btnBack">đŸ”™ Quay láº¡i an toĂ n</button>
 
         <div class="pin-section">
-            <label>🔐 Nhập mã PIN để mở khóa:</label>
-            <input type="password" class="pin-input" id="pinInput" maxlength="6" placeholder="••••">
-            <div class="pin-error" id="pinError">Sai mã PIN. Vui lòng thử lại.</div>
+            <label>đŸ” Nháº­p mĂ£ PIN Ä‘á»ƒ má»Ÿ khĂ³a:</label>
+            <input type="password" class="pin-input" id="pinInput" maxlength="6" placeholder="â€¢â€¢â€¢â€¢">
+            <div class="pin-error" id="pinError">Sai mĂ£ PIN. Vui lĂ²ng thá»­ láº¡i.</div>
             <br>
-            <button class="btn-unlock" id="btnUnlock">Mở khóa</button>
+            <button class="btn-unlock" id="btnUnlock">Má»Ÿ khĂ³a</button>
         </div>
     </div>
 
     <script>
         const params = new URLSearchParams(window.location.search);
-        const targetUrl = params.get('url') || '';
-        const risk = params.get('risk') || 'Cao';
 
+        // Support both ?url= (old) and ?blockedUrl= (new from 6.2/6.6)
+        const targetUrl = params.get('blockedUrl') || params.get('url') || '';
+        const risk      = params.get('risk') || '';
+        const reason    = params.get('reason') || 'risk'; // 'risk' | 'blacklist' | 'incognito'
+
+        // â”€â”€ Display domain â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         try {
             const domain = new URL(targetUrl).hostname.replace('www.', '');
             document.getElementById('domainDisplay').textContent = domain;
-        } catch { document.getElementById('domainDisplay').textContent = targetUrl.substring(0, 50); }
+        } catch {
+            document.getElementById('domainDisplay').textContent = targetUrl.substring(0, 60) || '(Trang khĂ´ng xĂ¡c Ä‘á»‹nh)';
+        }
 
-        document.getElementById('riskBadge').textContent = `Rủi ro: ${risk}`;
+        // â”€â”€ Customise UI per reason â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        const container = document.getElementById('blockContainer');
+        const icon      = document.getElementById('blockIcon');
+        const title     = document.getElementById('blockTitle');
+        const msg       = document.getElementById('blockMsg');
+        const badge     = document.getElementById('reasonBadge');
 
+        if (reason === 'blacklist') {
+            icon.textContent  = 'đŸ«';
+            title.textContent = 'đŸ« TRANG Bá» CHáº¶N Bá»I PHá»¤ HUYNH';
+            msg.textContent   = 'TĂªn miá»n nĂ y náº±m trong danh sĂ¡ch Ä‘en cá»§a Kiá»ƒm soĂ¡t gia Ä‘Ă¬nh. '
+                              + 'Náº¿u báº¡n nghÄ© Ä‘Ă¢y lĂ  nháº§m láº«n, hĂ£y nháº­p mĂ£ PIN Ä‘á»ƒ tiáº¿p tá»¥c.';
+            badge.textContent = 'đŸ« Danh sĂ¡ch Ä‘en';
+            badge.className   = 'reason-badge reason-blacklist';
+
+        } else if (reason === 'incognito') {
+            icon.textContent  = 'đŸ•µï¸';
+            title.textContent = 'đŸ•µï¸ CHáº¾ Äá»˜ áº¨N DANH Bá» Háº N CHáº¾';
+            msg.textContent   = 'Phá»¥ huynh Ä‘Ă£ táº¯t cháº¿ Ä‘á»™ duyá»‡t web áº©n danh. '
+                              + 'Vui lĂ²ng sá»­ dá»¥ng cá»­a sá»• duyá»‡t thĂ´ng thÆ°á»ng.';
+            badge.textContent = 'đŸ•µï¸ áº¨n danh bá»‹ cháº·n';
+            badge.className   = 'reason-badge reason-incognito';
+            container.classList.add('incognito-mode');
+
+        } else {
+            // Default: risk-based parental block
+            badge.textContent = risk ? `Rá»§i ro: ${risk}` : 'Rá»§i ro cao';
+            badge.className   = 'reason-badge reason-risk';
+            msg.textContent   = 'Cháº¿ Ä‘á»™ Kiá»ƒm soĂ¡t gia Ä‘Ă¬nh (Parental Control) Ä‘Ă£ cháº·n trang web nĂ y '
+                              + 'vĂ¬ Ä‘iá»ƒm rá»§i ro vÆ°á»£t ngÆ°á»¡ng cho phĂ©p.';
+        }
+
+        // â”€â”€ Back button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         document.getElementById('btnBack').addEventListener('click', () => {
-            history.back();
+            if (history.length > 1) {
+                history.back();
+            } else {
+                window.close();
+            }
         });
 
+        // â”€â”€ PIN unlock (not shown for incognito mode) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         document.getElementById('btnUnlock').addEventListener('click', () => {
             const pin = document.getElementById('pinInput').value;
             chrome.storage.local.get(['parentalPIN'], (data) => {
                 const storedPIN = data.parentalPIN || '0000';
                 if (pin === storedPIN) {
-                    // Temporarily whitelist for this session
+                    if (!targetUrl) { history.back(); return; }
+                    // Temporarily whitelist this URL for the session
                     chrome.storage.local.get(['parentalBypass'], (d) => {
                         const bypassed = d.parentalBypass || [];
                         bypassed.push(targetUrl);

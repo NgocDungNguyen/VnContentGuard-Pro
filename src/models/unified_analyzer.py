@@ -1,5 +1,5 @@
-"""
-VnContentGuard Pro v5 — Unified Single-Pass AI Analyzer
+﻿"""
+VnContentGuard Pro v6 - Unified Single-Pass AI Analyzer
 ========================================================
 ARCH-01: Single Gemini call that handles summary, sentiment, fact-check,
 article toxicity, all ambiguous comments, and overall risk in one shot.
@@ -65,7 +65,7 @@ class UnifiedAnalyzer:
               Each: {index, text, reactions}  (index = position in original list)
 
         Returns:
-            Complete analysis dict matching the v5 response structure.
+            Complete analysis dict matching the v6 response structure.
             Falls back gracefully if Gemini call fails.
         """
         prompt = self._build_prompt(structured_data, precomputed, ambiguous_comments)
@@ -99,7 +99,7 @@ class UnifiedAnalyzer:
         url = structured_data.get("url", "")
 
         # --- Article section ---
-        article_body = (article.get("body", "") or "")[:self.ARTICLE_MAX_CHARS]
+        article_body = (article.get("body", "") or "")[: self.ARTICLE_MAX_CHARS]
         title = (article.get("title", "") or "").strip()
         author = (article.get("author", "") or "").strip()
         pub_date = (article.get("published_date", "") or "").strip()
@@ -123,7 +123,7 @@ class UnifiedAnalyzer:
         for i, c in enumerate(ambiguous_comments[: self.MAX_COMMENTS_IN_PROMPT], 1):
             reactions = c.get("reactions", 0)
             author_name = c.get("author", "")
-            text = (c.get("text", "") or "")[:self.COMMENT_MAX_CHARS]
+            text = (c.get("text", "") or "")[: self.COMMENT_MAX_CHARS]
             reply_tag = " [reply]" if c.get("is_reply") else ""
             author_display = f", {author_name}" if author_name else ""
             reaction_display = f" (👍{reactions})" if reactions else ""
@@ -131,7 +131,11 @@ class UnifiedAnalyzer:
                 f'{i}. "{text}"{reaction_display}{reply_tag}{author_display}'
             )
 
-        comments_block = "\n".join(comment_lines) if comment_lines else "(không có bình luận cần phân tích)"
+        comments_block = (
+            "\n".join(comment_lines)
+            if comment_lines
+            else "(không có bình luận cần phân tích)"
+        )
 
         # --- FactCheck API evidence ---
         fc_evidence_lines = []
@@ -139,7 +143,11 @@ class UnifiedAnalyzer:
             fc_evidence_lines.append(
                 f'  - "{item.get("claimText", "")}" → {item.get("rating", "Unknown")}'
             )
-        fc_evidence = "\n".join(fc_evidence_lines) if fc_evidence_lines else "  (không có kết quả)"
+        fc_evidence = (
+            "\n".join(fc_evidence_lines)
+            if fc_evidence_lines
+            else "  (không có kết quả)"
+        )
 
         # --- NewsData ---
         nd_lines = []
@@ -214,7 +222,10 @@ Trả về JSON với CÁC TRƯỜNG SAU (không thêm text ngoài JSON):
       "severity": "None|Low|Medium|High|Critical",
       "sentiment": "positive|negative|neutral|mixed",
       "categories": [],
-      "reason": "Giải thích ngắn 1 câu"
+      "reason": "Giải thích ngắn 1 câu",
+      "evidence_spans": [
+        {{"text": "đoạn văn bản cụ thể gây độc hại", "reason": "Lý do ngắn", "severity": "high|medium|low"}}
+      ]
     }}
   ],
 
@@ -233,6 +244,7 @@ LƯU Ý QUAN TRỌNG:
 - risk_assessment.score: 0-100 (0 = an toàn, 100 = cực kỳ nguy hiểm)
 - Xem xét ảnh hưởng của bình luận với nhiều tương tác (👍 cao) đến đánh giá tổng thể
 - Nếu bình luận nói "tin giả" hoặc "sai thông tin" với nhiều tương tác → tăng skepticism trong fact_check
+- evidence_spans: chỉ điền khi is_toxic=true; mỗi span là đoạn trích CHÍNH XÁC từ bình luận (<60 ký tự), kèm lý do và mức độ (high/medium/low). Để trống [] nếu không có nội dung độc hại.
 - Chỉ trả về JSON thuần túy, không có markdown, không có text giải thích ngoài JSON"""
 
         return prompt
@@ -258,7 +270,7 @@ LƯU Ý QUAN TRỌNG:
                 model = genai.GenerativeModel(
                     model_name=model_name,
                     generation_config={
-                        "temperature": 0.1,   # Low temp for consistent JSON
+                        "temperature": 0.1,  # Low temp for consistent JSON
                         "max_output_tokens": 4096,
                         "response_mime_type": "application/json",
                     },
@@ -281,7 +293,7 @@ LƯU Ý QUAN TRỌNG:
                     continue
 
                 if attempt < max_retries - 1:
-                    time.sleep(2 ** attempt)
+                    time.sleep(2**attempt)
                     continue
 
                 return None
@@ -292,6 +304,7 @@ LƯU Ý QUAN TRỌNG:
         """Get current model name from shared gemini_llm state."""
         try:
             from src.models.gemini_llm import MODEL_NAME
+
             return MODEL_NAME
         except Exception:
             return "gemini-2.5-flash-lite"
@@ -323,8 +336,13 @@ LƯU Ý QUAN TRỌNG:
                 return None
 
         # Validate required keys
-        required = ["summary", "sentiment", "fact_check", "article_toxicity",
-                    "risk_assessment"]
+        required = [
+            "summary",
+            "sentiment",
+            "fact_check",
+            "article_toxicity",
+            "risk_assessment",
+        ]
         for key in required:
             if key not in data:
                 print(f"⚠️ [unified] Missing required key: {key}")
@@ -337,14 +355,22 @@ LƯU Ý QUAN TRỌNG:
         existing_indices = {c.get("index") for c in data.get("comments", [])}
         for i in range(1, len(ambiguous_comments) + 1):
             if i not in existing_indices:
-                data["comments"].append({
-                    "index": i,
-                    "is_toxic": False,
-                    "severity": "None",
-                    "sentiment": "neutral",
-                    "categories": [],
-                    "reason": "(not analyzed)"
-                })
+                data["comments"].append(
+                    {
+                        "index": i,
+                        "is_toxic": False,
+                        "severity": "None",
+                        "sentiment": "neutral",
+                        "categories": [],
+                        "reason": "(not analyzed)",
+                        "evidence_spans": [],
+                    }
+                )
+
+        # Ensure every comment has evidence_spans key (Feature 6.3)
+        for c in data["comments"]:
+            if "evidence_spans" not in c:
+                c["evidence_spans"] = []
 
         # Sort by index
         data["comments"].sort(key=lambda x: x.get("index", 0))
@@ -355,9 +381,7 @@ LƯU Ý QUAN TRỌNG:
     # Fallback
     # -------------------------------------------------------------------------
 
-    def _fallback(
-        self, precomputed: Dict, ambiguous_comments: List[Dict]
-    ) -> Dict:
+    def _fallback(self, precomputed: Dict, ambiguous_comments: List[Dict]) -> Dict:
         """
         Return best-effort results from pre-computed data alone (no Gemini).
         Used when the unified call fails completely.
@@ -373,7 +397,9 @@ LƯU Ý QUAN TRỌNG:
 
         # Rough credibility heuristic from source + regex
         source_score = source_cred.get("reputation_score", 50)
-        risk_score = max(0, min(100, int((1 - source_score / 100) * 40 + tox_score * 60)))
+        risk_score = max(
+            0, min(100, int((1 - source_score / 100) * 40 + tox_score * 60))
+        )
 
         # Mark all ambiguous comments as needing manual review
         fallback_comments = [
@@ -455,7 +481,13 @@ if __name__ == "__main__":
         },
     }
     test_precomputed = {
-        "regex_toxicity": {"overall_score": 0.1, "severity": "Low", "is_toxic": False, "categories": {}, "matched_patterns": []},
+        "regex_toxicity": {
+            "overall_score": 0.1,
+            "severity": "Low",
+            "is_toxic": False,
+            "categories": {},
+            "matched_patterns": [],
+        },
         "keyword_sentiment": {"overall": "Neutral", "confidence": 0.6},
         "source_credibility": {"reputation_score": 92, "verdict": "Đáng tin cậy"},
         "factcheck_api_results": [],
