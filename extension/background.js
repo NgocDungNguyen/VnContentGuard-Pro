@@ -604,6 +604,9 @@ async function handleUnifiedScan(data) {
             });
         }
 
+        // 9. Feature 6.12 — Scam auto-report / prompt
+        await checkAndReportScam(results, url);
+
         // 9. Send results to content script for overlay
         try {
             const [tab] = await chrome.tabs.query({ url: url.replace(/#.*$/, '*') });
@@ -629,6 +632,56 @@ async function handleUnifiedScan(data) {
         });
         chrome.action.setBadgeText({ text: '!' });
         chrome.action.setBadgeBackgroundColor({ color: '#e74c3c' });
+    }
+}
+
+// ============================================================================
+// Feature 6.12 — Scam Auto-Report / Prompt
+// ============================================================================
+
+/**
+ * checkAndReportScam — called after unified scan completes.
+ * - confidence >= 0.85 → auto-report silently to /api/report/scam
+ * - confidence 0.65–0.84 → send PROMPT_SCAM_CONFIRM to popup so user can decide
+ */
+async function checkAndReportScam(scanResults, url) {
+    const scam = scanResults?.scam_detection;
+    if (!scam || !scam.is_scam) return;
+
+    const conf = parseFloat(scam.confidence) || 0;
+    if (conf < 0.65) return; // below threshold — ignore
+
+    const BASE = 'https://vncontentguard-pro.onrender.com';
+
+    if (conf >= 0.85) {
+        // Auto-report silently
+        try {
+            await fetch(`${BASE}/api/report/scam`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    url,
+                    scam_type: scam.scam_type || 'unknown',
+                    ai_confidence: conf,
+                    user_confirmed: false,
+                    evidence_phrases: scam.evidence_phrases || [],
+                }),
+            });
+            console.log(`[BG] Auto-reported scam (conf=${conf.toFixed(2)}): ${url}`);
+        } catch (e) {
+            console.warn('[BG] Scam auto-report failed:', e.message);
+        }
+    } else {
+        // Prompt the user via popup message
+        try {
+            chrome.runtime.sendMessage({
+                type: 'PROMPT_SCAM_CONFIRM',
+                scam,
+                url,
+            });
+        } catch (e) {
+            // Popup may be closed — ignore
+        }
     }
 }
 

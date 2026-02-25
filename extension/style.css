@@ -1139,4 +1139,74 @@ body.dark-mode .incognito-log-panel {
 body.dark-mode .domain-item { border-bottom-color: #444; }
 body.dark-mode .evidence-mark.high   { background: rgba(231, 76, 60, 0.35); }
 body.dark-mode .evidence-mark.medium { background: rgba(243,156, 18, 0.35); }
-body.dark-mode .evidence-mark.low    { background: rgba( 52,152,219, 0.30); }
+body.dark-mode .evidence-mark.low    { background: rgba( 52,152,219, 0.30); }   
+
+/* ─── Feature 6.12 — Scam Prompt Card ─────────────── */
+.scam-prompt-card {
+    margin-bottom: 10px;
+    padding: 12px;
+    background: rgba(192, 57, 43, 0.08);
+    border: 1.5px solid #c0392b;
+    border-radius: 8px;
+    animation: scamPulse 1.5s ease-in-out 3;
+}
+@keyframes scamPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(192,57,43,0); }
+    50%      { box-shadow: 0 0 0 5px rgba(192,57,43,0.2); }
+}
+body.dark-mode .scam-prompt-card {
+    background: rgba(192, 57, 43, 0.18);
+    border-color: #e74c3c;
+}
+
+/* ─── Feature 6.9 — Correction Panel ──────────────── */
+.correction-panel {
+    margin-top: 8px;
+}
+.correction-panel input[type="range"] {
+    accent-color: #8e44ad;
+}
+
+/* ─── Feature 6.13 — Bulk Result Table ────────────── */
+.bulk-result-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+}
+.bulk-result-table th {
+    background: var(--header-bg, #f0f0f0);
+    padding: 5px 6px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.bulk-result-table td {
+    padding: 4px 6px;
+    border-bottom: 1px solid var(--border-color, #eee);
+    vertical-align: middle;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.bulk-result-table tr.risk-critical { background: rgba(231,76,60,0.08); }
+.bulk-result-table tr.risk-high     { background: rgba(230,126,34,0.08); }
+.bulk-result-table tr.risk-medium   { background: rgba(243,156,18,0.08); }
+.bulk-result-table tr.risk-low      { background: rgba(39,174,96,0.04); }
+.bulk-risk-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: bold;
+    color: #fff;
+}
+.bulk-risk-badge.critical { background: #e74c3c; }
+.bulk-risk-badge.high     { background: #e67e22; }
+.bulk-risk-badge.medium   { background: #f39c12; color: #333; }
+.bulk-risk-badge.low      { background: #27ae60; }
+body.dark-mode .bulk-result-table th { background: #2d2d2d; }
+body.dark-mode .bulk-result-table td { border-color: #444; }

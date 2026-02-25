@@ -157,6 +157,39 @@ class UnifiedAnalyzer:
             )
         nd_block = "\n".join(nd_lines) if nd_lines else "  (không có bài liên quan)"
 
+        # --- Scam URL pattern pre-check ---
+        import re as _scam_re
+
+        scam_url_flags = []
+        url_lower = url.lower()
+        _scam_url_pats = [
+            (
+                r"(kiemtien|lam-giau|dau-tu|passive.{0,10}income|thu-nhap)",
+                "investment_scam",
+            ),
+            (r"(nhan-qua|trung-thuong|nhan-tien|phan-thuong|mien-phi)", "lottery_scam"),
+            (
+                r"(login|xac-minh|verify|xac-nhan).{0,30}\.(tk|ml|ga|cf|gq|xyz|top)",
+                "phishing",
+            ),
+            (
+                r"(bank|ngan-hang|vietcom|techcom|bidv|agri|vcb).{0,30}(login|pass|xac|otp)",
+                "financial_phishing",
+            ),
+            (
+                r"(update.{0,10}flash|antivirus.{0,10}free|win.{0,10}prize)",
+                "fake_software",
+            ),
+            (
+                r"(giam-can|tang-can|thu-hut|doi-mat|lam-dep).{0,20}(ngay|tuan|nhanh)",
+                "health_scam",
+            ),
+        ]
+        for _pat, _flag in _scam_url_pats:
+            if _scam_re.search(_pat, url_lower):
+                scam_url_flags.append(_flag)
+        scam_url_block = ", ".join(scam_url_flags) if scam_url_flags else "none"
+
         prompt = f"""Bạn là VnContentGuard Pro AI — hệ thống phân tích nội dung tiếng Việt chuyên nghiệp.
 Phân tích TOÀN BỘ nội dung sau trong MỘT lần và trả về JSON DUY NHẤT theo định dạng yêu cầu.
 
@@ -177,6 +210,7 @@ Lượt chia sẻ: {shares}    Tương tác: {reactions_total}
 • Regex toxicity:  điểm={regex_tox.get("overall_score", 0):.2f}, mức={regex_tox.get("severity", "Low")}, mẫu khớp={regex_tox.get("matched_patterns", [])}
 • Keyword sentiment: {kw_sent.get("overall", "Neutral")} (độ tin cậy {kw_sent.get("confidence", 0):.2f})
 • Độ tin cậy nguồn ({domain}): {source_cred.get("reputation_score", 50)}/100 — {source_cred.get("verdict", "Chưa biết")}
+• Scam URL patterns: {scam_url_block}
 • Google Fact Check API:
 {fc_evidence}
 • NewsData.io — bài liên quan:
@@ -235,6 +269,14 @@ Trả về JSON với CÁC TRƯỜNG SAU (không thêm text ngoài JSON):
     "key_factors": ["yếu tố 1", "yếu tố 2"],
     "warnings": ["cảnh báo 1"],
     "recommendations": ["khuyến nghị 1"]
+  }},
+
+  "scam_detection": {{
+    "is_scam": false,
+    "confidence": 0.0,
+    "scam_type": "none|financial_phishing|lottery_scam|fake_government|investment_scam|impersonation|fake_software|health_scam|other",
+    "evidence_phrases": ["đoạn văn bản ngắn làm bằng chứng lừa đảo"],
+    "reasoning": "Giải thích ngắn 1-2 câu"
   }}
 }}
 
@@ -375,6 +417,23 @@ LƯU Ý QUAN TRỌNG:
         # Sort by index
         data["comments"].sort(key=lambda x: x.get("index", 0))
 
+        # Normalize scam_detection (Feature 6.12) — fill defaults if absent
+        if "scam_detection" not in data:
+            data["scam_detection"] = {
+                "is_scam": False,
+                "confidence": 0.0,
+                "scam_type": "none",
+                "evidence_phrases": [],
+                "reasoning": "",
+            }
+        else:
+            sd = data["scam_detection"]
+            sd.setdefault("is_scam", False)
+            sd.setdefault("confidence", 0.0)
+            sd.setdefault("scam_type", "none")
+            sd.setdefault("evidence_phrases", [])
+            sd.setdefault("reasoning", "")
+
         return data
 
     # -------------------------------------------------------------------------
@@ -443,6 +502,13 @@ LƯU Ý QUAN TRỌNG:
                 "key_factors": ["AI analysis unavailable"],
                 "warnings": ["Kết quả sơ bộ — AI không khả dụng"],
                 "recommendations": ["Thử lại sau khi backend phục hồi"],
+            },
+            "scam_detection": {
+                "is_scam": False,
+                "confidence": 0.0,
+                "scam_type": "none",
+                "evidence_phrases": [],
+                "reasoning": "AI analysis unavailable",
             },
             "_fallback": True,
         }

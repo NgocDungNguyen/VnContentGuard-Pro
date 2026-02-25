@@ -259,6 +259,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('incognitoLogCount').textContent = '0';
         document.getElementById('incognitoLogList').innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Nhật ký trống.</div>';
     });
+
+    // ── Feature 6.13 — Bulk Analysis ──────────────────────────────────────
+    document.getElementById('bulkBtn')?.addEventListener('click', toggleBulkPanel);
+    document.getElementById('bulkScanBtn')?.addEventListener('click', runBulkScan);
+    document.getElementById('bulkExportBtn')?.addEventListener('click', exportBulkCsv);
+
+    // ── Feature 6.9 — Score Correction sliders ────────────────────────────
+    document.getElementById('corrRiskSlider')?.addEventListener('input', (e) => {
+        document.getElementById('corrRiskVal').textContent = e.target.value;
+    });
+    document.getElementById('corrToxSlider')?.addEventListener('input', (e) => {
+        document.getElementById('corrToxVal').textContent = e.target.value;
+    });
+    document.getElementById('corrSubmitBtn')?.addEventListener('click', submitCorrection);
+
+    // ── Feature 6.12 — Scam prompt handlers ──────────────────────────────
+    document.getElementById('scamConfirmBtn')?.addEventListener('click', confirmScamReport);
+    document.getElementById('scamDenyBtn')?.addEventListener('click', () => {
+        document.getElementById('scamPromptCard')?.classList.add('hidden');
+        _pendingScam = null;
+    });
 });
 
 // ============================================================================
@@ -1450,6 +1471,9 @@ function renderV6Results(data, urlInfo) {
         blockWarning.classList.add('hidden');
     }
 
+    // Feature 6.12 — Show scam prompt if AI detected scam indicators
+    renderScamPrompt(data.scam_detection, urlInfo || currentTabUrl);
+
     // ===== 0. ARTICLE SUMMARY (NEW in v5) =====
     const summaryCard = document.getElementById('summaryCard');
     const summaryRaw = articleSummary?.summary || articleSummary?.text || '';
@@ -1714,6 +1738,9 @@ function renderV6Results(data, urlInfo) {
         document.getElementById('feedbackUp').disabled = false;
         document.getElementById('feedbackDown').disabled = false;
     }
+
+    // Feature 6.9 — Correction panel (pre-filled with current scores)
+    renderCorrectionPanel(data, urlInfo || currentTabUrl);
 
     // ===== SHOW WARNING MODAL if high risk (after delay) =====
     if (riskValue >= 50) {  // Medium-High or higher (0-100 scale)
@@ -3054,6 +3081,336 @@ function renderEvidenceTags(evidenceSpans) {
     }).join('');
     return `<div class="evidence-tags">${pills}</div>`;
 }
+
+// ============================================================================
+// Feature 6.9 — User Correction + Model Re-Ranking
+// ============================================================================
+
+const CORRECTION_API = 'https://vncontentguard-pro.onrender.com/api/correction';
+
+/**
+ * Populate correction panel with current scan scores and show it.
+ */
+function renderCorrectionPanel(data, url) {
+    const panel = document.getElementById('correctionPanel');
+    if (!panel) return;
+
+    const riskScore = Math.round(data?.risk_score_v6?.risk_score || data?.risk_score || 0);
+    const toxScore  = Math.round((data?.toxicity_v6?.overall_score || 0) * 100);
+
+    const riskSlider = document.getElementById('corrRiskSlider');
+    const toxSlider  = document.getElementById('corrToxSlider');
+    if (riskSlider) { riskSlider.value = riskScore; document.getElementById('corrRiskVal').textContent = riskScore; }
+    if (toxSlider)  { toxSlider.value = toxScore;   document.getElementById('corrToxVal').textContent = toxScore; }
+
+    // Store original values as data attributes for submission
+    panel.dataset.originalRisk = riskScore;
+    panel.dataset.originalTox  = toxScore;
+    panel.dataset.url           = url || currentTabUrl || '';
+
+    panel.classList.remove('hidden');
+
+    // Reset result message
+    const resultEl = document.getElementById('corrResult');
+    if (resultEl) resultEl.classList.add('hidden');
+}
+
+/**
+ * Submit the user's score correction to the API.
+ */
+async function submitCorrection() {
+    const panel = document.getElementById('correctionPanel');
+    if (!panel) return;
+
+    const url              = panel.dataset.url || currentTabUrl || '';
+    const originalRisk     = parseFloat(panel.dataset.originalRisk || '0');
+    const originalTox      = parseFloat(panel.dataset.originalTox  || '0') / 100;
+    const correctedRisk    = parseInt(document.getElementById('corrRiskSlider')?.value || '50', 10);
+    const correctedTox     = parseInt(document.getElementById('corrToxSlider')?.value  || '0', 10) / 100;
+    const reason           = document.getElementById('corrReasonSelect')?.value || 'other';
+
+    const submitBtn = document.getElementById('corrSubmitBtn');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '⏳ Đang gửi...'; }
+
+    try {
+        const resp = await fetch(CORRECTION_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url,
+                domain: '',
+                original_risk_score: originalRisk,
+                corrected_risk_score: correctedRisk,
+                original_toxicity: originalTox,
+                corrected_toxicity: correctedTox,
+                reason,
+                category: 'other',
+                examples: [],
+            }),
+        });
+        const result = await resp.json();
+        const resultEl = document.getElementById('corrResult');
+        if (resultEl) {
+            resultEl.textContent = result.message || '✅ Đã lưu hiệu chỉnh!';
+            resultEl.style.background = 'rgba(39,174,96,0.15)';
+            resultEl.style.color      = '#27ae60';
+            resultEl.classList.remove('hidden');
+        }
+        console.log('[Correction] Submitted:', result);
+    } catch (e) {
+        const resultEl = document.getElementById('corrResult');
+        if (resultEl) {
+            resultEl.textContent = '❌ Gửi thất bại — thử lại sau';
+            resultEl.style.background = 'rgba(231,76,60,0.1)';
+            resultEl.style.color      = '#e74c3c';
+            resultEl.classList.remove('hidden');
+        }
+    } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '📤 Gửi hiệu chỉnh'; }
+    }
+}
+
+// ============================================================================
+// Feature 6.12 — Scam URL Prompt + Reporting
+// ============================================================================
+
+const SCAM_REPORT_API = 'https://vncontentguard-pro.onrender.com/api/report/scam';
+const SCAM_TYPE_LABELS = {
+    financial_phishing: 'Giả mạo ngân hàng / OTP',
+    lottery_scam:       'Lừa đảo trúng thưởng',
+    fake_government:    'Giả mạo cơ quan nhà nước',
+    investment_scam:    'Lừa đảo đầu tư / kiếm tiền online',
+    impersonation:      'Giả mạo thương hiệu',
+    fake_software:      'Phần mềm giả mạo / virus',
+    health_scam:        'Lừa đảo sức khỏe / thuốc giả',
+    other:              'Lừa đảo không xác định',
+};
+
+/** Current scam data stored for confirm/deny handlers */
+let _pendingScam = null;
+
+/**
+ * Show or hide the scam prompt card based on scam_detection data.
+ */
+function renderScamPrompt(scam, url) {
+    const card = document.getElementById('scamPromptCard');
+    if (!card) return;
+
+    if (!scam || !scam.is_scam || parseFloat(scam.confidence || 0) < 0.55) {
+        card.classList.add('hidden');
+        return;
+    }
+
+    _pendingScam = { scam, url: url || currentTabUrl };
+
+    const typeLabel   = SCAM_TYPE_LABELS[scam.scam_type] || scam.scam_type || 'Lừa đảo';
+    const confPct     = Math.round(parseFloat(scam.confidence || 0) * 100);
+    const detailEl    = document.getElementById('scamPromptDetail');
+    const evidenceEl  = document.getElementById('scamEvidenceList');
+    const resultEl    = document.getElementById('scamReportResult');
+
+    if (detailEl) detailEl.textContent = `${typeLabel} — Độ tin cậy AI: ${confPct}%. ${scam.reasoning || ''}`;
+    if (evidenceEl) {
+        const phrases = (scam.evidence_phrases || []).slice(0, 3);
+        evidenceEl.innerHTML = phrases.length
+            ? '🔍 Bằng chứng: ' + phrases.map(p => `<em>"${escapeHtml(p)}"</em>`).join(', ')
+            : '';
+    }
+    if (resultEl) resultEl.classList.add('hidden');
+
+    card.classList.remove('hidden');
+}
+
+/**
+ * Submit scam report (called when user clicks "Xác nhận báo cáo").
+ */
+async function confirmScamReport() {
+    if (!_pendingScam) return;
+    const { scam, url } = _pendingScam;
+
+    const confirmBtn = document.getElementById('scamConfirmBtn');
+    if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = '⏳ Đang báo cáo...'; }
+
+    try {
+        const resp = await fetch(SCAM_REPORT_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url: url || currentTabUrl,
+                scam_type:        scam.scam_type || 'unknown',
+                ai_confidence:    parseFloat(scam.confidence || 0),
+                user_confirmed:   true,
+                evidence_phrases: scam.evidence_phrases || [],
+            }),
+        });
+        const result = await resp.json();
+        const resultEl = document.getElementById('scamReportResult');
+        if (resultEl) {
+            resultEl.textContent   = result.message || `✅ Mã theo dõi: ${result.tracking_id || ''}`;
+            resultEl.style.background = 'rgba(192,57,43,0.12)';
+            resultEl.style.color      = '#c0392b';
+            resultEl.classList.remove('hidden');
+        }
+        // Hide buttons after reporting
+        if (confirmBtn) confirmBtn.style.display = 'none';
+        const denyBtn = document.getElementById('scamDenyBtn');
+        if (denyBtn) denyBtn.textContent = '✖ Đóng';
+        _pendingScam = null;
+        console.log('[Scam] Reported:', result);
+    } catch (e) {
+        const resultEl = document.getElementById('scamReportResult');
+        if (resultEl) {
+            resultEl.textContent = '❌ Báo cáo thất bại — thử lại sau';
+            resultEl.classList.remove('hidden');
+        }
+    } finally {
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = '🚨 Xác nhận báo cáo'; }
+    }
+}
+
+// ============================================================================
+// Feature 6.13 — Bulk Analysis Mode
+// ============================================================================
+
+const BULK_API = 'https://vncontentguard-pro.onrender.com/analyze/v6/bulk';
+
+/** Store last bulk results for CSV export */
+let _lastBulkResults = null;
+
+function toggleBulkPanel() {
+    const panel = document.getElementById('bulkPanel');
+    if (!panel) return;
+
+    const isHidden = panel.classList.contains('hidden');
+    // Hide other panels
+    ['historyPanel','comparePanel','reportPanel','parentalPanel'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+    });
+    if (isHidden) {
+        panel.classList.remove('hidden');
+        document.getElementById('results').classList.add('hidden');
+    } else {
+        panel.classList.add('hidden');
+        if (currentResultsData) document.getElementById('results').classList.remove('hidden');
+    }
+}
+
+async function runBulkScan() {
+    const textarea = document.getElementById('bulkUrlInput');
+    const depthSel = document.getElementById('bulkDepthSelect');
+    const statusEl = document.getElementById('bulkStatus');
+    const resultsEl = document.getElementById('bulkResults');
+    const scanBtn  = document.getElementById('bulkScanBtn');
+
+    if (!textarea || !depthSel) return;
+
+    const urls = textarea.value
+        .split('\n')
+        .map(u => u.trim())
+        .filter(u => u.length > 3);
+
+    if (urls.length === 0) {
+        if (statusEl) { statusEl.textContent = '⚠️ Vui lòng nhập ít nhất 1 URL'; statusEl.classList.remove('hidden'); }
+        return;
+    }
+    if (urls.length > 100) {
+        if (statusEl) { statusEl.textContent = '⚠️ Tối đa 100 URL mỗi lần'; statusEl.classList.remove('hidden'); }
+        return;
+    }
+
+    const depth = depthSel.value || 'quick';
+    if (scanBtn) { scanBtn.disabled = true; scanBtn.textContent = '⏳ Đang phân tích...'; }
+    if (statusEl) { statusEl.textContent = `⏳ Đang phân tích ${urls.length} URL (chế độ ${depth === 'quick' ? 'nhanh' : 'đầy đủ'})...`; statusEl.classList.remove('hidden'); }
+    if (resultsEl) resultsEl.classList.add('hidden');
+
+    try {
+        const resp = await fetch(BULK_API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ urls, scan_depth: depth }),
+        });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = await resp.json();
+        _lastBulkResults = data;
+        renderBulkResults(data);
+        if (statusEl) statusEl.classList.add('hidden');
+    } catch (e) {
+        if (statusEl) { statusEl.textContent = `❌ Lỗi: ${e.message}`; }
+    } finally {
+        if (scanBtn) { scanBtn.disabled = false; scanBtn.textContent = '📊 Bắt đầu phân tích'; }
+    }
+}
+
+function renderBulkResults(data) {
+    const resultsEl = document.getElementById('bulkResults');
+    const summaryEl = document.getElementById('bulkSummaryText');
+    const tbody     = document.getElementById('bulkResultBody');
+    if (!resultsEl || !tbody) return;
+
+    const results = data.results || [];
+    const highRisk = data.high_risk_count || 0;
+
+    if (summaryEl) {
+        summaryEl.textContent = `${results.length} URL — ${highRisk} rủi ro cao`;
+        summaryEl.style.color = highRisk > 0 ? '#e74c3c' : '#27ae60';
+    }
+
+    tbody.innerHTML = '';
+    results.forEach(r => {
+        const risk     = r.risk_score || 0;
+        const level    = (r.risk_level || 'Low').toLowerCase();
+        const blocked  = r.blocklist_blocked ? '🚫' : '✅';
+        const domain   = r.domain || (r.url || '').replace(/^https?:\/\//, '').split('/')[0];
+        const shortUrl = (r.url || '').length > 40 ? (r.url || '').substring(0, 37) + '…' : (r.url || '');
+
+        const row = document.createElement('tr');
+        row.className = `risk-${level}`;
+        row.innerHTML = `
+            <td title="${escapeHtml(r.url || '')}"><a href="${escapeHtml(r.url || '')}" target="_blank" style="color: inherit; text-decoration: none; font-size: 10px;">${escapeHtml(shortUrl)}</a></td>
+            <td><span class="bulk-risk-badge ${level}">${risk}</span></td>
+            <td style="font-size: 10px;">${escapeHtml(r.risk_level || 'Low')}</td>
+            <td style="font-size: 10px;">${risk > 0 ? (r.source_credibility_score || '—') : '—'}</td>
+            <td style="text-align: center;">${blocked}</td>
+        `;
+        tbody.appendChild(row);
+    });
+
+    resultsEl.classList.remove('hidden');
+}
+
+function exportBulkCsv() {
+    if (!_lastBulkResults) return;
+    const rows = [
+        ['URL', 'Domain', 'Risk Score', 'Risk Level', 'Blocked', 'Source Score', 'Scan Depth'],
+        ...(_lastBulkResults.results || []).map(r => [
+            r.url || '',
+            r.domain || '',
+            r.risk_score || 0,
+            r.risk_level || 'Low',
+            r.blocklist_blocked ? 'Yes' : 'No',
+            r.source_credibility_score || '',
+            r.scan_depth || '',
+        ]),
+    ];
+    const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g,'""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `bulk_scan_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+// ============================================================================
+// Feature message listener — handle PROMPT_SCAM_CONFIRM from background
+// ============================================================================
+
+chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === 'PROMPT_SCAM_CONFIRM') {
+        renderScamPrompt(message.scam, message.url);
+    }
+});
 
 // ============================================================================
 // SHARED HELPERS

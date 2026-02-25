@@ -17,6 +17,7 @@
                 <button id="weeklyReportBtn" class="icon-btn" title="Báo cáo hàng tuần">📈</button>
                 <button id="parentalBtn" class="icon-btn" title="Kiểm soát gia đình">🔒</button>
                 <button id="darkModeBtn" class="icon-btn" title="Chế độ tối">🌙</button>
+                <button id="bulkBtn" class="icon-btn" title="Phân tích hàng loạt">📋</button>
             </div>
         </div>
         <div id="status" class="status-badge">Sẵn sàng quét</div>
@@ -98,6 +99,36 @@
                 </div>
                 <button id="compareGoBtn" class="btn-primary" style="padding: 8px; margin: 0;">🔍 So sánh</button>
                 <div id="compareResults" style="margin-top: 10px;"></div>
+            </div>
+        </div>
+
+        <!-- BULK ANALYSIS PANEL (Feature 6.13) -->
+        <div id="bulkPanel" class="hidden">
+            <div class="card" style="border-left: 4px solid #16a085;">
+                <h3>📋 Phân tích hàng loạt</h3>
+                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Nhập tối đa 100 URL (mỗi dòng một URL) để phân tích nhanh hoặc đầy đủ.</p>
+                <textarea id="bulkUrlInput" placeholder="https://example.com&#10;https://news.vn/article" style="width: 100%; height: 100px; font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; resize: vertical; background: var(--input-bg, #fff); color: var(--text-primary); box-sizing: border-box;"></textarea>
+                <div style="display: flex; align-items: center; gap: 8px; margin: 8px 0;">
+                    <label style="font-size: 11px; font-weight: bold;">Chế độ:</label>
+                    <select id="bulkDepthSelect" style="font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 4px 8px; background: var(--input-bg, #fff); color: var(--text-primary);">
+                        <option value="quick">⚡ Nhanh (chỉ tên miền, không cần AI)</option>
+                        <option value="full">🤖 Đầy đủ (tải trang + AI phân tích)</option>
+                    </select>
+                </div>
+                <button id="bulkScanBtn" class="btn-primary" style="padding: 8px; margin: 0 0 8px 0; background: #16a085;">📊 Bắt đầu phân tích</button>
+                <div id="bulkStatus" class="hidden" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px; text-align: center;"></div>
+                <div id="bulkResults" class="hidden">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span id="bulkSummaryText" style="font-size: 12px; font-weight: bold;"></span>
+                        <button id="bulkExportBtn" class="btn-secondary" style="padding: 3px 8px; font-size: 10px;">📥 Xuất CSV</button>
+                    </div>
+                    <div id="bulkTableWrapper" style="overflow-x: auto; max-height: 300px; overflow-y: auto;">
+                        <table id="bulkResultTable" class="bulk-result-table">
+                            <thead><tr><th>URL</th><th>Rủi ro</th><th>Mức độ</th><th>Nguồn</th><th>Chặn</th></tr></thead>
+                            <tbody id="bulkResultBody"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -213,6 +244,23 @@
         </div>
 
         <div id="results" class="hidden">
+            <!-- SCAM PROMPT CARD (Feature 6.12) -->
+            <div id="scamPromptCard" class="hidden scam-prompt-card">
+                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                    <span style="font-size: 28px; line-height: 1;">🦈</span>
+                    <div style="flex: 1;">
+                        <div style="font-weight: bold; font-size: 13px; color: #c0392b; margin-bottom: 4px;">Phát hiện dấu hiệu lừa đảo!</div>
+                        <div id="scamPromptDetail" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;"></div>
+                        <div id="scamEvidenceList" style="font-size: 11px; color: #7f8c8d; margin-bottom: 8px;"></div>
+                        <div style="display: flex; gap: 6px;">
+                            <button id="scamConfirmBtn" class="btn-primary" style="flex: 1; padding: 6px; margin: 0; background: #c0392b; font-size: 11px;">🚨 Xác nhận báo cáo</button>
+                            <button id="scamDenyBtn" class="btn-secondary" style="flex: 1; padding: 6px; font-size: 11px;">✖ Bỏ qua</button>
+                        </div>
+                        <div id="scamReportResult" class="hidden" style="font-size: 11px; text-align: center; margin-top: 6px; padding: 4px; border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- BLOCKLIST WARNING (4.1) -->
             <div id="blocklistWarning" class="hidden" style="margin-bottom: 10px;">
                 <div class="card" style="border-left: 4px solid #e74c3c; background: rgba(231,76,60,0.1);">
@@ -305,6 +353,43 @@
                         <button id="feedbackSubmit" class="btn-primary" style="padding: 6px; margin: 4px 0 0 0; font-size: 11px;">📤 Gửi phản hồi</button>
                     </div>
                     <div id="feedbackThanks" class="hidden" style="text-align: center; color: #27ae60; font-weight: bold; padding: 8px;">🙏 Cảm ơn phản hồi của bạn!</div>
+                </div>
+            </div>
+
+            <!-- CORRECTION PANEL (Feature 6.9) -->
+            <div id="correctionPanel" class="hidden correction-panel">
+                <div class="card" style="border-left: 4px solid #8e44ad; padding: 10px;">
+                    <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px;">📐 Hiệu chỉnh điểm số (6.9)</div>
+                    <p style="font-size: 10px; color: var(--text-secondary); margin-bottom: 8px;">AI chưa đúng? Hiệu chỉnh để cải thiện cho lần sau.</p>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <div style="flex: 1;">
+                            <label style="font-size: 10px; color: var(--text-secondary);">Điểm rủi ro đúng (0-100):</label>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <input type="range" id="corrRiskSlider" min="0" max="100" value="50" style="flex: 1;">
+                                <span id="corrRiskVal" style="font-size: 12px; font-weight: bold; min-width: 24px;">50</span>
+                            </div>
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-size: 10px; color: var(--text-secondary);">Độc hại đúng (0-100):</label>
+                            <div style="display: flex; align-items: center; gap: 6px;">
+                                <input type="range" id="corrToxSlider" min="0" max="100" value="0" style="flex: 1;">
+                                <span id="corrToxVal" style="font-size: 12px; font-weight: bold; min-width: 24px;">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <label style="font-size: 10px; color: var(--text-secondary);">Lý do:</label>
+                        <select id="corrReasonSelect" style="width: 100%; padding: 4px 6px; font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #fff); color: var(--text-primary); margin-top: 3px;">
+                            <option value="too_high">Điểm quá cao</option>
+                            <option value="too_low">Điểm quá thấp</option>
+                            <option value="cultural_context">Ngữ cảnh văn hóa VN</option>
+                            <option value="sarcasm">Châm biếm / mỉa mai</option>
+                            <option value="wrong_category">Sai danh mục</option>
+                            <option value="other">Khác</option>
+                        </select>
+                    </div>
+                    <button id="corrSubmitBtn" class="btn-primary" style="padding: 7px; margin: 0; font-size: 11px; background: #8e44ad;">📤 Gửi hiệu chỉnh</button>
+                    <div id="corrResult" class="hidden" style="font-size: 11px; margin-top: 6px; text-align: center; padding: 4px; border-radius: 4px;"></div>
                 </div>
             </div>
 

@@ -23,6 +23,7 @@ if platform.system() == "Windows":
 from src.models.article_summarizer_v6 import ArticleSummarizer
 from src.models.fact_checker_v6 import FactCheckerV6
 from src.models.gemini_llm import API_KEY_POOL, MODEL_NAME, APIKeyRotator, GeminiAgent
+from src.models.reranker import ScoreReranker
 from src.models.risk_scorer_v6 import RiskScorerV6
 from src.models.sentiment import SentimentAnalyzer
 
@@ -115,10 +116,13 @@ try:
     # v6 ARCH-01: Unified Single-Pass Analyzer
     unified_analyzer = UnifiedAnalyzer(key_rotator=shared_key_rotator)
 
+    # v6.9: Score Re-Ranker (domain-level calibration from user corrections)
+    reranker = ScoreReranker()
+
     # Reuse same shared key rotator for batch comment analysis
     batch_key_rotator = shared_key_rotator
 
-    print("✅ AI Server Ready! (v6 with Unified Analysis + Summary + Batch)")
+    print("✅ AI Server Ready! (v6 with Unified Analysis + Summary + Batch + Reranker)")
 except Exception as e:
     print(f"❌ Error during initialization: {e}")
     raise
@@ -358,6 +362,434 @@ def get_domain_feedback(url: str):
         return feedback_store.get_domain_feedback(url)
     except Exception as e:
         return {"domain": url, "total": 0, "error": str(e)}
+
+
+# ============================================================================
+# Feature 6.9 — User Correction + Model Re-Ranking
+# ============================================================================
+
+
+class CorrectionRequest(BaseModel):
+    """Request model for score correction submission."""
+
+    url: str
+    domain: str = ""
+    original_risk_score: float
+    corrected_risk_score: float
+    original_toxicity: float = 0.0
+    corrected_toxicity: float = 0.0
+    reason: str = ""  # too_high|too_low|cultural_context|sarcasm|wrong_category
+    category: str = "other"  # news|social|video|other
+    examples: List[str] = []  # specific phrases AI got wrong
+
+
+@app.post("/api/correction")
+def submit_correction(req: CorrectionRequest):
+    """Feature 6.9 — Accept user score correction; feeds into domain re-ranker."""
+    try:
+        # Derive domain from URL if not provided
+        domain = req.domain
+        if not domain and req.url:
+            try:
+                from urllib.parse import urlparse
+
+                domain = urlparse(req.url).hostname or req.url
+            except Exception:
+                domain = req.url
+
+        # Record corrections in re-ranker
+        reranker.record_correction(
+            domain, "risk_score", req.original_risk_score, req.corrected_risk_score
+        )
+        if req.corrected_toxicity != req.original_toxicity:
+            reranker.record_correction(
+                domain, "toxicity", req.original_toxicity, req.corrected_toxicity
+            )
+
+        # Also persist to feedback store for learning context
+        try:
+            feedback_store.add_feedback(
+                url=req.url,
+                rating="negative",
+                correction=f"[{req.reason}] Risk corrected from {req.original_risk_score:.0f} to {req.corrected_risk_score:.0f}. Examples: {', '.join(req.examples)}",
+                modules={},
+                scan_results={},
+            )
+        except Exception:
+            pass  # non-critical
+
+        adjustment = reranker.get_adjustment(domain, "risk_score")
+        stats = reranker.get_stats()
+
+        print(
+            f"📐 Correction: {domain} risk {req.original_risk_score:.0f}→"
+            f"{req.corrected_risk_score:.0f} (reason: {req.reason})"
+        )
+        return {
+            "status": "recorded",
+            "domain": domain,
+            "adjustment_now": round(adjustment, 1),
+            "reranker_stats": stats,
+            "message": f"Đã lưu hiệu chỉnh cho {domain}. Các lần quét tiếp theo sẽ được điều chỉnh.",
+        }
+    except Exception as e:
+        print(f"⚠️ Correction error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/reranker/stats")
+def get_reranker_stats():
+    """Feature 6.9 — Return re-ranker statistics."""
+    return reranker.get_stats()
+
+
+# ============================================================================
+# Feature 6.12 — Scam URL Database Contribution
+# ============================================================================
+
+
+class ScamReportRequest(BaseModel):
+    """Request model for scam page report."""
+
+    url: str
+    scam_type: str = (
+        "unknown"  # financial_phishing|lottery_scam|fake_government|investment_scam|impersonation
+    )
+    ai_confidence: float = 0.0
+    user_confirmed: bool = False
+    evidence_phrases: List[str] = []
+
+
+@app.post("/api/report/scam")
+async def report_scam(req: ScamReportRequest):
+    """Feature 6.12 — Report a scam URL to communal blocklist + PhishTank (best-effort)."""
+    import hashlib
+
+    try:
+        url_hash = hashlib.sha256(req.url.encode()).hexdigest()
+        tracking_id = url_hash[:12].upper()
+
+        # Add to community blocklist with scam reason
+        try:
+            community_blocklist.add_report(
+                url=req.url,
+                risk_score=95.0,  # Scam = always high risk
+                reason=f"scam:{req.scam_type}",
+            )
+        except Exception:
+            pass
+
+        # Attempt PhishTank submission (fire-and-forget, optional)
+        submitted_to = ["community_blocklist"]
+        phishtank_key = __import__("os").getenv("PHISHTANK_API_KEY", "")
+        if phishtank_key:
+            try:
+                import requests as _req
+
+                _req.post(
+                    "https://www.phishtank.com/api/",
+                    data={"url": req.url, "app_key": phishtank_key, "format": "json"},
+                    timeout=8,
+                )
+                submitted_to.append("phishtank")
+            except Exception:
+                pass  # non-critical
+
+        # Log scam report to feedback store for analytics
+        try:
+            feedback_store.add_feedback(
+                url=req.url,
+                rating="negative",
+                correction=f"[SCAM:{req.scam_type}] confidence={req.ai_confidence:.0%} user_confirmed={req.user_confirmed} evidence={req.evidence_phrases[:3]}",
+                modules={},
+                scan_results={},
+            )
+        except Exception:
+            pass
+
+        scam_labels = {
+            "financial_phishing": "Giả mạo ngân hàng / OTP",
+            "lottery_scam": "Lừa đảo trúng thưởng",
+            "fake_government": "Giả mạo cơ quan nhà nước",
+            "investment_scam": "Lừa đảo đầu tư",
+            "impersonation": "Giả mạo thương hiệu",
+            "unknown": "Lừa đảo không xác định",
+        }
+
+        print(
+            f"🦈 Scam report: {req.url} ({req.scam_type}) confidence={req.ai_confidence:.0%}"
+        )
+        return {
+            "status": "reported",
+            "tracking_id": tracking_id,
+            "scam_type": scam_labels.get(req.scam_type, req.scam_type),
+            "submitted_to": submitted_to,
+            "user_confirmed": req.user_confirmed,
+            "message": f"Đã báo cáo lừa đảo. Mã theo dõi: {tracking_id}",
+        }
+    except Exception as e:
+        print(f"⚠️ Scam report error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+# ============================================================================
+# Feature 6.13 — Bulk Analysis Mode
+# ============================================================================
+
+
+class BulkScanRequest(BaseModel):
+    """Request model for bulk URL analysis."""
+
+    urls: List[str]  # max 100 URLs
+    scan_depth: str = "quick"  # "quick" = domain-level only | "full" = fetch + AI
+    include_summary: bool = False
+
+
+@app.post("/analyze/v6/bulk")
+async def bulk_analyze(req: BulkScanRequest):
+    """
+    Feature 6.13 — Bulk analysis of up to 100 URLs.
+
+    quick mode: domain credibility + blocklist + URL scam patterns. Very fast, 0 Gemini calls.
+    full  mode: fetch page HTML → extract text → sequential AI analysis (rate-limited).
+    """
+    import asyncio
+    import re as _re
+    from urllib.parse import urlparse
+
+    if len(req.urls) > 100:
+        raise HTTPException(status_code=400, detail="Tối đa 100 URL mỗi lần")
+
+    if not req.urls:
+        return {"total": 0, "high_risk_count": 0, "results": []}
+
+    # ── QUICK MODE: domain-level analysis, no page fetch, no Gemini ─────────
+    async def quick_analyze_url(url: str) -> dict:
+        import time as _time
+
+        t_start = _time.time()
+        try:
+            parsed = urlparse(url if "://" in url else "https://" + url)
+            domain = parsed.hostname or url
+
+            # Source credibility
+            source_score = 50
+            source_verdict = "Chưa biết"
+            try:
+                if fact_checker_v6_engine.source_analyzer:
+                    sc = fact_checker_v6_engine.source_analyzer.analyze(url)
+                    source_score = sc.get("reputation_score", 50)
+                    source_verdict = sc.get("verdict", "Chưa biết")
+            except Exception:
+                pass
+
+            # Community blocklist
+            is_blocked = community_blocklist.is_blocked(url)
+            report_count = community_blocklist.get_domain_report_count(url)
+
+            # URL-level scam pattern detection
+            url_lower = url.lower()
+            scam_url_patterns = [
+                r"(free|mien-phi|trung-thuong|phan-thuong)",
+                r"(kiemtien|lam-giau|thu-nhap|loi-nhuan)",
+                r"(login|signin|account|verify|xac-minh).*\.(tk|ml|ga|cf|gq)",
+                r"(bank|ngan-hang|vietcom|techcom|bidv|agri).*(?<!\.(com\.vn|vn)$)",
+                r"update.*flash|antivirus.*free|win.*prize",
+            ]
+            url_scam_hit = any(_re.search(p, url_lower) for p in scam_url_patterns)
+
+            # Seed blacklist check
+            seed_blocked = domain in [
+                "xvideos.com",
+                "xnxx.com",
+                "pornhub.com",
+                "sunwin.me",
+                "fb88.com",
+                "w88.com",
+                "bet365.com",
+                "kiemtienonline.vip",
+            ]
+
+            # Quick risk estimation
+            risk = 100 - source_score
+            if is_blocked or seed_blocked:
+                risk = min(100, risk + 40)
+            if url_scam_hit:
+                risk = min(100, risk + 30)
+            if report_count >= 3:
+                risk = min(100, risk + 20)
+            risk = max(0, min(100, int(risk)))
+
+            risk_level = (
+                "Critical"
+                if risk >= 75
+                else "High" if risk >= 50 else "Medium" if risk >= 25 else "Low"
+            )
+
+            return {
+                "url": url,
+                "domain": domain,
+                "risk_score": risk,
+                "risk_level": risk_level,
+                "source_credibility_score": source_score,
+                "source_verdict": source_verdict,
+                "blocklist_blocked": is_blocked or seed_blocked,
+                "report_count": report_count,
+                "url_scam_pattern": url_scam_hit,
+                "toxicity_score": 0.0,
+                "sentiment": "Neutral",
+                "fact_check_status": "Quick scan only — no AI analysis",
+                "title": "",
+                "error": None,
+                "scan_depth": "quick",
+                "scan_time_ms": int((_time.time() - t_start) * 1000),
+            }
+        except Exception as e:
+            return {
+                "url": url,
+                "domain": "",
+                "risk_score": 0,
+                "risk_level": "Unknown",
+                "error": str(e),
+                "scan_depth": "quick",
+                "scan_time_ms": 0,
+            }
+
+    # ── FULL MODE: fetch page + AI analysis ─────────────────────────────────
+    async def full_analyze_url(url: str) -> dict:
+        import time as _time
+
+        t_start = _time.time()
+        try:
+            from urllib.parse import urlparse as _up
+
+            import aiohttp
+            from bs4 import BeautifulSoup
+
+            parsed = _up(url if "://" in url else "https://" + url)
+            domain = parsed.hostname or url
+            fetch_url = url if url.startswith("http") else "https://" + url
+
+            # Fetch page (7s timeout)
+            title = ""
+            article_text = ""
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                        fetch_url,
+                        timeout=aiohttp.ClientTimeout(total=7),
+                        headers={"User-Agent": "Mozilla/5.0 VnContentGuard/6.0"},
+                        ssl=False,
+                    ) as resp:
+                        if resp.status == 200:
+                            html = await resp.text(errors="replace")
+                            soup = BeautifulSoup(html, "html.parser")
+                            title = soup.title.string.strip() if soup.title else ""
+                            # Remove scripts/styles
+                            for tag in soup(["script", "style", "nav", "footer"]):
+                                tag.decompose()
+                            article_text = " ".join(
+                                soup.get_text(separator=" ").split()
+                            )[:2000]
+            except Exception as fetch_err:
+                article_text = ""
+                title = f"(fetch failed: {fetch_err})"
+
+            # Quick analysis first
+            quick = await quick_analyze_url(url)
+
+            if not article_text:
+                quick["title"] = title
+                quick["scan_depth"] = "full_fetch_failed"
+                quick["scan_time_ms"] = int((_time.time() - t_start) * 1000)
+                return quick
+
+            # AI analysis on fetched content
+            sentiment_result = {"overall": "Neutral", "confidence": 0.0}
+            toxicity_result = {
+                "is_toxic": False,
+                "overall_score": 0.0,
+                "severity": "Low",
+            }
+            fact_result = {"score": 50, "verdict": "Chưa xác minh"}
+            try:
+                sentiment_result = sentiment_v6_engine.analyze(article_text[:512])
+            except Exception:
+                pass
+            try:
+                toxicity_result = toxicity_v6_engine.analyze(article_text[:1000])
+            except Exception:
+                pass
+            try:
+                fact_result = fact_checker_v6_engine.check(article_text, url)
+            except Exception:
+                pass
+
+            # Refined risk score
+            ai_risk = max(
+                quick["risk_score"],
+                int(
+                    (1 - fact_result.get("score", 50) / 100) * 60
+                    + toxicity_result.get("overall_score", 0) * 40
+                ),
+            )
+            ai_risk = max(0, min(100, ai_risk))
+            risk_level = (
+                "Critical"
+                if ai_risk >= 75
+                else "High" if ai_risk >= 50 else "Medium" if ai_risk >= 25 else "Low"
+            )
+
+            return {
+                **quick,
+                "title": title,
+                "risk_score": ai_risk,
+                "risk_level": risk_level,
+                "toxicity_score": round(toxicity_result.get("overall_score", 0.0), 3),
+                "sentiment": sentiment_result.get("overall", "Neutral"),
+                "fact_check_status": fact_result.get("verdict", "Chưa xác minh"),
+                "scan_depth": "full",
+                "scan_time_ms": int((_time.time() - t_start) * 1000),
+            }
+        except Exception as e:
+            return {
+                "url": url,
+                "domain": "",
+                "risk_score": 0,
+                "risk_level": "Unknown",
+                "error": str(e),
+                "scan_depth": "full",
+                "scan_time_ms": 0,
+            }
+
+    # ── Execute ──────────────────────────────────────────────────────────────
+    print(f"📊 [bulk] Scanning {len(req.urls)} URLs (depth: {req.scan_depth})")
+    import asyncio as _asyncio
+
+    if req.scan_depth == "quick":
+        tasks = [quick_analyze_url(url) for url in req.urls]
+        results = await _asyncio.gather(*tasks)
+    else:
+        # Full mode: process 3 at a time to respect rate limits
+        results = []
+        for i in range(0, len(req.urls), 3):
+            batch = req.urls[i : i + 3]
+            batch_results = await _asyncio.gather(*[full_analyze_url(u) for u in batch])
+            results.extend(batch_results)
+            if i + 3 < len(req.urls):
+                await _asyncio.sleep(2)
+
+    results = list(results)  # ensure plain list
+    high_risk = sum(1 for r in results if r.get("risk_score", 0) >= 70)
+
+    print(f"✅ [bulk] Done — {len(results)} URLs, {high_risk} high-risk")
+    return {
+        "total": len(results),
+        "high_risk_count": high_risk,
+        "scan_depth": req.scan_depth,
+        "results": sorted(results, key=lambda r: -r.get("risk_score", 0)),
+        "timestamp": datetime.now().isoformat(),
+    }
 
 
 # ============================================================================
@@ -1725,6 +2157,18 @@ def analyze_unified_v6(req: StructuredScanRequest):
         }
         domain_feedback = feedback_store.get_domain_feedback(url)
 
+        # Feature 6.12 — extract scam_detection from unified AI result
+        scam_detection = ai_result.get(
+            "scam_detection",
+            {
+                "is_scam": False,
+                "confidence": 0.0,
+                "scam_type": "none",
+                "evidence_phrases": [],
+                "reasoning": "",
+            },
+        )
+
         total_time = time.time() - t0
         response = {
             "version": "6.0",
@@ -1737,6 +2181,7 @@ def analyze_unified_v6(req: StructuredScanRequest):
             "fact_check_v6": fact_check_v6_result,
             "risk_score_v6": risk_score_v6_result,
             "comments_analysis": comments_analysis,
+            "scam_detection": scam_detection,
             "url": url,
             "page_type": req.page_type,
             "page_metadata": {
@@ -1752,9 +2197,27 @@ def analyze_unified_v6(req: StructuredScanRequest):
             "domain_feedback": domain_feedback,
         }
 
+        # ─────────────────────────────────────────
+        # STEP 5: APPLY RE-RANKER (Feature 6.9)
+        # ─────────────────────────────────────────
+        domain_for_reranker = req.metadata.domain or (
+            url.split("/")[2] if "//" in url else url
+        )
+        # Flatten risk score to top-level for reranker compatibility
+        response["risk_score"] = risk_score_v6_result.get("risk_score", 0)
+        response = reranker.apply(domain_for_reranker, response)
+        # Re-sync nested risk_score_v6 with adjusted top-level risk
+        if response.get("reranker_applied"):
+            risk_score_v6_result["risk_score"] = response["risk_score"]
+            risk_score_v6_result["reranker_adjustments"] = response.get(
+                "reranker_adjustments", {}
+            )
+            response["risk_score_v6"] = risk_score_v6_result
+
         print(
-            f"✅ [unified] Done in {total_time:.1f}s | Risk: {ai_risk.get('score', 0)}/100 | "
+            f"✅ [unified] Done in {total_time:.1f}s | Risk: {response['risk_score']}/100 | "
             f"Toxics: {len(toxic_comments)} | Mode: {'fallback' if was_fallback else 'unified_ai'}"
+            + (" | Reranker applied" if response.get("reranker_applied") else "")
         )
         return response
 
@@ -1806,4 +2269,5 @@ if __name__ == "__main__":
     kill_port(8000)
     print("🚀 Starting VnContentGuard Pro Server on http://127.0.0.1:8000")
     print("📊 API Docs available at http://127.0.0.1:8000/docs")
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
     uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
