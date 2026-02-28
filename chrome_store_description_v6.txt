@@ -98,7 +98,6 @@ Tiện ích hoạt động trực tiếp trên các mạng xã hội lớn (Face
 • Chỉ gửi văn bản đến Gemini AI của Google để phân tích (giống Google Translate)
 • Lịch sử quét được lưu hoàn toàn local trên thiết bị của bạn (Chrome Storage)
 • Không theo dõi, không quảng cáo, không thu thập dữ liệu cá nhân
-• Mã nguồn mở: https://github.com/NgocDungNguyen/VnContentGuard-Pro
 
 ─────────────────────────────────
 🚀 ĐIỂM MỚI TRONG v6.0
@@ -199,7 +198,6 @@ Works directly on major social media platforms and Vietnamese news sites, with a
 • Content is only sent to Google's Gemini API (same as Google Translate)
 • Scan history stored locally on your device only
 • No tracking, no ads, no personal data collection
-• Open source: https://github.com/NgocDungNguyen/VnContentGuard-Pro
 
 ─────────────────────────────────
 🚀 WHAT'S NEW IN v6.0
