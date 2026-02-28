@@ -89,17 +89,7 @@ Hỗ trợ light/dark mode đầy đủ, tự động theo cài đặt hệ th�
 ─────────────────────────────────
 🌐 TRANG WEB HỖ TRỢ
 ─────────────────────────────────
-✅ Facebook.com
-✅ VnExpress.net
-✅ Dantri.com.vn
-✅ Tuoitre.vn
-✅ Thanhnien.vn
-✅ 24h.com.vn
-✅ Vietnamnet.vn
-✅ Baomoi.com
-✅ YouTube.com
-✅ TikTok.com
-+ Bất kỳ trang web nào qua chế độ thủ công
+Tiện ích hoạt động trực tiếp trên các mạng xã hội lớn (Facebook, YouTube, TikTok), các trang báo tiếng Việt hàng đầu (VnExpress, Dân Trí, Tuổi Trẻ, Thanh Niên, 24h, VietnamNet, BáoMới) và bất kỳ trang web nào khác thông qua chế độ phân tích thủ công.
 
 ─────────────────────────────────
 🔒 QUYỀN RIÊNG TƯ & BẢO MẬT
@@ -201,7 +191,7 @@ Weekly summary of visited sites: how many safe, how many risky, daily trends.
 ─────────────────────────────────
 🌐 SUPPORTED SITES
 ─────────────────────────────────
-Facebook, VnExpress, Dân Trí, Tuổi Trẻ, Thanh Niên, 24h, VietnamNet, BáoMới, YouTube, TikTok + any page via manual mode.
+Works directly on major social media platforms and Vietnamese news sites, with a manual analysis mode that works on any webpage you visit.
 
 ─────────────────────────────────
 🔒 PRIVACY
@@ -224,6 +214,4 @@ Facebook, VnExpress, Dân Trí, Tuổi Trẻ, Thanh Niên, 24h, VietnamNet, Báo
 
 ──────────────────────────────────────────────────────────────────
  STORE CATEGORY:  Productivity  |  Language: Vietnamese (vi)
- KEYWORDS: content moderation, toxic comments, fact check, Vietnamese AI, 
-           kiểm duyệt nội dung, phát hiện tin giả, bảo vệ trẻ em
 ──────────────────────────────────────────────────────────────────
