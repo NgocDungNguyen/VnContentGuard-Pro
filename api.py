@@ -237,7 +237,7 @@ def api_stats():
         uptime_seconds = int(time.time() - SERVER_START_TIME)
 
         return {
-            "version": "6.0.0",
+            "version": "7.0",
             "model": gemini_status.get("model", "unknown"),
             "using_fallback": gemini_status.get("using_fallback", False),
             "api_keys": {
@@ -264,7 +264,7 @@ def api_stats():
             "status": "🟢 Online",
         }
     except Exception as e:
-        return {"version": "6.0.0", "status": "🔴 Error", "error": str(e)}
+        return {"version": "7.0", "status": "🔴 Error", "error": str(e)}
 
 
 # ============================================================================

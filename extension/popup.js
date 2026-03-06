@@ -2240,7 +2240,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function exportReport(data, url) {
-    const isSupported = !!(data.sentiment_v7 || data.version === "6.0");
+    const isSupported = !!(data.sentiment_v7 || data.version === "7.0");
     if (!isSupported) return;
 
     const sentiment = data.sentiment_v7 || {};
@@ -3295,7 +3295,7 @@ async function confirmScamReport() {
 // feature 7.13 — Bulk Analysis Mode
 // ============================================================================
 
-const BULK_API = 'https://vncontentguard-pro.onrender.com/analyze/V7/bulk';
+const BULK_API = 'https://vncontentguard-pro.onrender.com/analyze/v7/bulk';
 
 /** Store last bulk results for CSV export */
 let _lastBulkResults = null;
