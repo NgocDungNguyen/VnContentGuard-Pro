@@ -22,16 +22,16 @@ importScripts('domain_control.js');
 
 // API endpoints (cloud)
 const API_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/V7"
+    "https://vncontentguard-pro.onrender.com/analyze/v7"
 ];
 
 const STREAM_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/V7/stream"
+    "https://vncontentguard-pro.onrender.com/analyze/v7/stream"
 ];
 
 // ARCH-01: Unified single-pass endpoint
 const UNIFIED_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/V7/unified"
+    "https://vncontentguard-pro.onrender.com/analyze/v7/unified"
 ];
 
 // Feedback endpoints

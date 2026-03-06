@@ -299,7 +299,7 @@ LƯU Ý QUAN TRỌNG:
         """Issue the unified Gemini call with retry + key rotation."""
         max_retries = 3
         for attempt in range(max_retries):
-            key = self.key_rotator.get_key()
+            key = self.key_rotator.get_current_key()
             if key is None:
                 print("⚠️ [unified] No API key available")
                 return None
@@ -329,7 +329,7 @@ LƯU Ý QUAN TRỌNG:
                 print(f"⚠️ [unified] Attempt {attempt+1} failed: {e}")
 
                 if "429" in err or "quota" in err or "resource_exhausted" in err:
-                    self.key_rotator.mark_exhausted(key)
+                    self.key_rotator.mark_key_exhausted()
                     # Small sleep before retry with next key
                     time.sleep(1)
                     continue
