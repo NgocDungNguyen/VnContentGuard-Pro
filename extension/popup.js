@@ -92,6 +92,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // ── Hamburger dropdown menu toggle ──────────────────────────────────────────
+    const menuToggleBtn = document.getElementById('menuToggleBtn');
+    const headerDropdown = document.getElementById('headerDropdown');
+    if (menuToggleBtn && headerDropdown) {
+        menuToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            headerDropdown.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!headerDropdown.contains(e.target) && e.target !== menuToggleBtn) {
+                headerDropdown.classList.add('hidden');
+            }
+        });
+    }
+
+    // ── Results tab switching ────────────────────────────────────────────────────
+    document.querySelectorAll('.result-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('.result-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            const target = tab.dataset.tab;
+            const analysisPane = document.getElementById('tab-analysis');
+            const summaryPane  = document.getElementById('tab-summary');
+            if (analysisPane) analysisPane.classList.toggle('hidden', target !== 'analysis');
+            if (summaryPane)  summaryPane.classList.toggle('hidden', target !== 'summary');
+        });
+    });
+
     // Clear cache button handler
     if (document.getElementById('clearCache')) {
         document.getElementById('clearCache').addEventListener('click', async () => {
@@ -1423,7 +1451,7 @@ function structuredScrapePageContent() {
 
 function renderResults(data, urlInfo) {
     // All responses from V7 endpoint include sentiment_v7 or version="7.0"
-    const isV7 = !!(data.sentiment_v7 || data.version === "6.0");
+    const isV7 = !!(data.sentiment_v7 || data.version === "7.0");
 
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
@@ -1432,6 +1460,13 @@ function renderResults(data, urlInfo) {
     
     // Show results container
     document.getElementById('results').classList.remove('hidden');
+
+    // Reset to analysis tab on every new render
+    document.querySelectorAll('.result-tab').forEach(t => t.classList.remove('active'));
+    const analysisTab = document.querySelector('.result-tab[data-tab="analysis"]');
+    if (analysisTab) analysisTab.classList.add('active');
+    document.getElementById('tab-analysis')?.classList.remove('hidden');
+    document.getElementById('tab-summary')?.classList.add('hidden');
 
     if (isV7) {
         renderV7Results(data, urlInfo);
@@ -1499,8 +1534,11 @@ function renderV7Results(data, urlInfo) {
             metaHTML += ' <span class="summary-badge" style="background: #e67e22;">Đang chờ AI...</span>';
         }
         document.getElementById('summaryMeta').innerHTML = metaHTML;
+        document.getElementById('noSummaryMsg')?.style.setProperty('display', 'none');
     } else {
         summaryCard.style.display = 'none';
+        const noSummaryEl = document.getElementById('noSummaryMsg');
+        if (noSummaryEl) noSummaryEl.style.display = 'block';
     }
 
     // ===== 1. RISK SCORE (Overall) =====
@@ -1557,10 +1595,9 @@ function renderV7Results(data, urlInfo) {
         `<strong style="color: ${sentColor};">${sentLabelVi[sentLabel] || sentLabel}</strong> (độ tin cậy ${(sentConf * 100).toFixed(0)}%)`;
     
     document.getElementById('sentimentDetails').innerHTML = `
-        <div style="font-size: 11px; color: #666;">
+        <div style="font-size: 12px; color: var(--text-secondary);">
             <strong>Cường độ:</strong> ${sentIntensityVi[sentIntensity] || sentIntensity}<br/>
-            <strong>Phương pháp:</strong> ${sentMethod === 'phobert' ? 'PhoBERT (AI)' : 'Phân tích từ khóa'}<br/>
-            <div style="margin-top: 4px; background: #f0f0f0; border-radius: 3px; overflow: hidden;">
+            <div style="margin-top: 4px; background: var(--border-color); border-radius: 3px; overflow: hidden;">
                 <div style="width: ${sentConf * 100}%; background: ${sentColor}; height: 8px;"></div>
             </div>
         </div>
@@ -1587,9 +1624,8 @@ function renderV7Results(data, urlInfo) {
         `<strong style="color: ${toxColor};">${isToxic ? '⚠️ ĐỘC HẠI' : '✅ AN TOÀN'}</strong> - Mức độ: ${severityVi[toxSeverity] || toxSeverity} (${(toxScore * 100).toFixed(0)}%)`;
     
     let toxDetailsHTML = `
-        <div style="font-size: 11px; color: #666; margin-top: 8px;">
-            <strong>Lớp phát hiện:</strong> ${(toxLayers || []).map(l => ({'regex':'Regex','gemini':'Gemini AI','perspective':'Perspective API','detoxify':'Detoxify'}[l] || l)).join(', ') || 'không'}<br/>
-            <strong>Điểm:</strong> ${(toxScore * 100).toFixed(0)}%<br/>
+        <div style="font-size: 12px; color: var(--text-secondary); margin-top: 8px;">
+            <strong>Mức độ:</strong> ${(toxScore * 100).toFixed(0)}%<br/>
     `;
     
     if (Object.keys(toxCategories).length > 0) {
@@ -1653,23 +1689,9 @@ function renderV7Results(data, urlInfo) {
         `Đã quét: ${totalComments} bình luận | Độc hại: <strong style="color: ${toxicCount > 0 ? '#e74c3c' : '#27ae60'};">${toxicCount}</strong>` +
         (totalComments > 0 ? ` (${comments.toxic_percentage || 0}%)` : '');
 
-    // Show API savings bar
+    // Always hide the API savings bar (technical info, not user-friendly)
     const savingsBar = document.getElementById('commentsApiSavings');
-    if (totalComments > 0 && apiCallsSaved > 0) {
-        const savingsPercent = Math.round(apiCallsSaved / totalComments * 100);
-        savingsBar.style.display = 'block';
-        savingsBar.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 6px; margin: 6px 0;">
-                <span style="font-size: 11px; color: #27ae60; font-weight: bold;">⚡ Tiết kiệm ${apiCallsSaved}/${totalComments} lần gọi API (${savingsPercent}%)</span>
-            </div>
-            <div style="font-size: 10px; color: #888;">
-                Phát hiện nhanh: ${filterStats.obvious_toxic || 0} độc hại, ${filterStats.obvious_clean || 0} sạch, ${filterStats.spam || 0} spam
-                 — Gửi AI phân tích sâu: ${filterStats.sent_to_ai || 0} bình luận
-            </div>
-        `;
-    } else {
-        savingsBar.style.display = 'none';
-    }
+    if (savingsBar) savingsBar.style.display = 'none';
     
     if (toxicCount > 0) {
         let commentsHTML = '<div style="margin-top: 8px;">';
@@ -1677,16 +1699,13 @@ function renderV7Results(data, urlInfo) {
             if (idx < 8) {
                 const sevColor = tc.severity === 'Critical' ? '#c0392b' : tc.severity === 'High' ? '#e74c3c' : '#f39c12';
                 const sevLabel = severityVi[tc.severity] || tc.severity;
-                const method = tc.method || 'unknown';
-                const methodBadge = method === 'gemini_context' ? '🤖 AI' : method === 'regex' ? '🔍 Regex' : '📋 Bộ lọc';
                 commentsHTML += `
                     <div style="margin: 6px 0; padding: 8px; background: #fff3cd; border-left: 3px solid ${sevColor}; border-radius: 3px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 10px; color: ${sevColor}; font-weight: bold;">${sevLabel} - ${(tc.score * 100).toFixed(0)}%</span>
-                            <span style="font-size: 9px; color: #999; background: #f0f0f0; padding: 1px 5px; border-radius: 8px;">${methodBadge}</span>
+                            <span style="font-size: 12px; color: ${sevColor}; font-weight: bold;">${sevLabel} - ${(tc.score * 100).toFixed(0)}%</span>
                         </div>
-                        <div style="font-size: 11px; margin-top: 3px;">${highlightEvidenceInText(tc.comment || '', tc.evidence_spans || [])}</div>
-                        ${tc.reason ? `<div style="font-size: 10px; color: #666; font-style: italic; margin-top: 3px;">💡 ${tc.reason}</div>` : ''}
+                        <div style="font-size: 12px; margin-top: 3px;">${highlightEvidenceInText(tc.comment || '', tc.evidence_spans || [])}</div>
+                        ${tc.reason ? `<div style="font-size: 12px; color: var(--text-secondary); font-style: italic; margin-top: 3px;">💡 ${tc.reason}</div>` : ''}
                         ${renderEvidenceTags(tc.evidence_spans || [])}
                     </div>
                 `;
