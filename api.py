@@ -20,24 +20,24 @@ from pydantic import BaseModel
 if platform.system() == "Windows":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-from src.models.article_summarizer_v6 import ArticleSummarizer
-from src.models.fact_checker_v6 import FactCheckerV6
+from src.models.article_summarizer_v7 import ArticleSummarizer
+from src.models.fact_checker_v7 import FactCheckerV7
 from src.models.gemini_llm import API_KEY_POOL, MODEL_NAME, APIKeyRotator, GeminiAgent
 from src.models.reranker import ScoreReranker
-from src.models.risk_scorer_v6 import RiskScorerV6
+from src.models.risk_scorer_v7 import RiskScorerV7
 from src.models.sentiment import SentimentAnalyzer
 
-# v6 Enhanced Components
-from src.models.sentiment_v6 import SentimentAnalyzerV6
+# v7 Enhanced Components
+from src.models.sentiment_v7 import SentimentAnalyzerV7
 from src.models.toxicity import ToxicityAnalyzer
-from src.models.toxicity_v6 import ToxicityAnalyzerV6
+from src.models.toxicity_v7 import ToxicityAnalyzerV7
 from src.models.unified_analyzer import UnifiedAnalyzer
 from src.utils.blocklist import CommunityBlocklist
 from src.utils.cache_manager import CacheManager
 from src.utils.comment_filter import CommentFilter
 from src.utils.feedback_store import FeedbackStore
 
-app = FastAPI(title="VnContentGuard Pro API", version="6.0")
+app = FastAPI(title="VnContentGuard Pro API", version="7.0")
 
 # Enable CORS for Chrome Extension
 app.add_middleware(
@@ -90,39 +90,39 @@ try:
     gemini_agent = GeminiAgent(key_rotator=shared_key_rotator)
     sentiment_engine = SentimentAnalyzer()
 
-    # v6 Enhanced Engines (use fallback mode for faster startup)
-    sentiment_v6_engine = SentimentAnalyzerV6(use_phobert=False)
-    toxicity_v6_engine = ToxicityAnalyzerV6(use_detoxify=False)
-    fact_checker_v6_engine = FactCheckerV6(key_rotator=shared_key_rotator)
-    risk_scorer_v6_engine = RiskScorerV6(
-        sentiment_analyzer=sentiment_v6_engine,
-        toxicity_analyzer=toxicity_v6_engine,
-        fact_checker=fact_checker_v6_engine,
+    # v7 Enhanced Engines (use fallback mode for faster startup)
+    sentiment_v7_engine = SentimentAnalyzerV7(use_phobert=False)
+    toxicity_v7_engine = ToxicityAnalyzerV7(use_detoxify=False)
+    fact_checker_v7_engine = FactCheckerV7(key_rotator=shared_key_rotator)
+    risk_scorer_v7_engine = RiskScorerV7(
+        sentiment_analyzer=sentiment_v7_engine,
+        toxicity_analyzer=toxicity_v7_engine,
+        fact_checker=fact_checker_v7_engine,
     )
 
-    # v6 New Components
+    # v7 New Components
     cache_manager = CacheManager(ttl_seconds=86400)  # 24-hour cache
     comment_filter = CommentFilter()
     article_summarizer = ArticleSummarizer(
         cache_manager, key_rotator=shared_key_rotator
     )
 
-    # v6.0 Feedback Store
+    # v7.0 Feedback Store
     feedback_store = FeedbackStore()
 
-    # v6.0 Community Blocklist
+    # v7.0 Community Blocklist
     community_blocklist = CommunityBlocklist()
 
-    # v6 ARCH-01: Unified Single-Pass Analyzer
+    # v7 ARCH-01: Unified Single-Pass Analyzer
     unified_analyzer = UnifiedAnalyzer(key_rotator=shared_key_rotator)
 
-    # v6.9: Score Re-Ranker (domain-level calibration from user corrections)
+    # v7.9: Score Re-Ranker (domain-level calibration from user corrections)
     reranker = ScoreReranker()
 
     # Reuse same shared key rotator for batch comment analysis
     batch_key_rotator = shared_key_rotator
 
-    print("✅ AI Server Ready! (v6 with Unified Analysis + Summary + Batch + Reranker)")
+    print("✅ AI Server Ready! (v7 with Unified Analysis + Summary + Batch + Reranker)")
 except Exception as e:
     print(f"❌ Error during initialization: {e}")
     raise
@@ -142,7 +142,7 @@ class ScanRequest(BaseModel):
 
 
 # ============================================================================
-# ARCH-01: Structured Scan Models (v6 Unified Analysis)
+# ARCH-01: Structured Scan Models (v7 Unified Analysis)
 # ============================================================================
 
 
@@ -217,7 +217,7 @@ def health_check():
 
 @app.get("/api/stats")
 def api_stats():
-    """v6.0 — API usage statistics, daily usage tracking, and system health."""
+    """v7.0 — API usage statistics, daily usage tracking, and system health."""
     try:
         gemini_status = gemini_agent.get_status()
         feedback_stats = feedback_store.get_stats()
@@ -268,7 +268,7 @@ def api_stats():
 
 
 # ============================================================================
-# User Feedback Endpoint (v6.0)
+# User Feedback Endpoint (v7.0)
 # ============================================================================
 
 
@@ -284,7 +284,7 @@ class FeedbackRequest(BaseModel):
 
 @app.post("/api/feedback")
 def submit_feedback(req: FeedbackRequest):
-    """v6.0 \u2014 Accept user feedback on scan results. Feeds into learning system."""
+    """v7.0 \u2014 Accept user feedback on scan results. Feeds into learning system."""
     try:
         result = feedback_store.add_feedback(
             url=req.url,
@@ -302,7 +302,7 @@ def submit_feedback(req: FeedbackRequest):
 
 
 # ============================================================================
-# Community Blocklist Endpoints (v6.0)
+# Community Blocklist Endpoints (v7.0)
 # ============================================================================
 
 
@@ -316,7 +316,7 @@ class ReportRequest(BaseModel):
 
 @app.post("/api/report")
 def report_page(req: ReportRequest):
-    """v6.0 \u2014 Report a page/domain to the community blocklist."""
+    """v7.0 \u2014 Report a page/domain to the community blocklist."""
     try:
         result = community_blocklist.add_report(
             url=req.url,
@@ -332,7 +332,7 @@ def report_page(req: ReportRequest):
 
 @app.get("/api/blocklist")
 def get_blocklist():
-    """v6.0 \u2014 Get community blocklist (domains with 5+ reports)."""
+    """v7.0 \u2014 Get community blocklist (domains with 5+ reports)."""
     try:
         domains = community_blocklist.get_blocklist()
         return {"blocklist": domains, "count": len(domains)}
@@ -342,7 +342,7 @@ def get_blocklist():
 
 @app.get("/api/blocklist/check")
 def check_blocklist(url: str):
-    """v6.0 \u2014 Check if a URL is blocked."""
+    """v7.0 \u2014 Check if a URL is blocked."""
     try:
         is_blocked = community_blocklist.is_blocked(url)
         report_count = community_blocklist.get_domain_report_count(url)
@@ -357,7 +357,7 @@ def check_blocklist(url: str):
 
 @app.get("/api/feedback/domain")
 def get_domain_feedback(url: str):
-    """v6.0 \u2014 Get feedback learning data for a domain."""
+    """v7.0 \u2014 Get feedback learning data for a domain."""
     try:
         return feedback_store.get_domain_feedback(url)
     except Exception as e:
@@ -545,7 +545,7 @@ class BulkScanRequest(BaseModel):
     include_summary: bool = False
 
 
-@app.post("/analyze/v6/bulk")
+@app.post("/analyze/v7/bulk")
 async def bulk_analyze(req: BulkScanRequest):
     """
     Feature 6.13 — Bulk analysis of up to 100 URLs.
@@ -576,8 +576,8 @@ async def bulk_analyze(req: BulkScanRequest):
             source_score = 50
             source_verdict = "Chưa biết"
             try:
-                if fact_checker_v6_engine.source_analyzer:
-                    sc = fact_checker_v6_engine.source_analyzer.analyze(url)
+                if fact_checker_v7_engine.source_analyzer:
+                    sc = fact_checker_v7_engine.source_analyzer.analyze(url)
                     source_score = sc.get("reputation_score", 50)
                     source_verdict = sc.get("verdict", "Chưa biết")
             except Exception:
@@ -713,15 +713,15 @@ async def bulk_analyze(req: BulkScanRequest):
             }
             fact_result = {"score": 50, "verdict": "Chưa xác minh"}
             try:
-                sentiment_result = sentiment_v6_engine.analyze(article_text[:512])
+                sentiment_result = sentiment_v7_engine.analyze(article_text[:512])
             except Exception:
                 pass
             try:
-                toxicity_result = toxicity_v6_engine.analyze(article_text[:1000])
+                toxicity_result = toxicity_v7_engine.analyze(article_text[:1000])
             except Exception:
                 pass
             try:
-                fact_result = fact_checker_v6_engine.check(article_text, url)
+                fact_result = fact_checker_v7_engine.check(article_text, url)
             except Exception:
                 pass
 
@@ -898,20 +898,20 @@ def get_blacklist_seed():
     return {
         "domains": deduped,
         "count": len(deduped),
-        "version": "6.0",
+        "version": "7.0",
         "description": "Danh sach den mac dinh - noi dung nguoi lon, co bac, lua dao, phan mem doc hai.",
     }
 
 
 # ============================================================================
-# v6.0 Streaming Analysis Endpoint (SSE)
+# v7.0 Streaming Analysis Endpoint (SSE)
 # ============================================================================
 
 
-@app.post("/analyze/v6/stream")
-def analyze_content_v6_stream(req: ScanRequest):
+@app.post("/analyze/v7/stream")
+def analyze_content_v7_stream(req: ScanRequest):
     """
-    v6.0 — Streaming analysis endpoint using Server-Sent Events.
+    v7.0 — Streaming analysis endpoint using Server-Sent Events.
     Yields each module result as it completes so the frontend can render progressively.
     """
 
@@ -945,7 +945,7 @@ def analyze_content_v6_stream(req: ScanRequest):
             yield _sse_event(
                 "progress", {"module": "sentiment", "status": "running", "step": "2/6"}
             )
-            sentiment_v6 = {
+            sentiment_v7 = {
                 "label": "Neutral",
                 "confidence": 0.0,
                 "intensity": "Weak",
@@ -953,16 +953,16 @@ def analyze_content_v6_stream(req: ScanRequest):
             }
             if len(req.article_text) > 5:
                 try:
-                    sentiment_v6 = sentiment_v6_engine.analyze(req.article_text[:512])
+                    sentiment_v7 = sentiment_v7_engine.analyze(req.article_text[:512])
                 except Exception as e:
                     print(f"⚠️ [SSE] Sentiment failed: {e}")
-            yield _sse_event("module", {"module": "sentiment_v6", "data": sentiment_v6})
+            yield _sse_event("module", {"module": "sentiment_v7", "data": sentiment_v7})
 
             # Module 3: Toxicity
             yield _sse_event(
                 "progress", {"module": "toxicity", "status": "running", "step": "3/6"}
             )
-            toxicity_v6 = {
+            toxicity_v7 = {
                 "is_toxic": False,
                 "overall_score": 0.0,
                 "severity": "Low",
@@ -971,16 +971,16 @@ def analyze_content_v6_stream(req: ScanRequest):
             }
             if len(req.article_text) > 5:
                 try:
-                    toxicity_v6 = toxicity_v6_engine.analyze(req.article_text[:1000])
+                    toxicity_v7 = toxicity_v7_engine.analyze(req.article_text[:1000])
                 except Exception as e:
                     print(f"⚠️ [SSE] Toxicity failed: {e}")
-            yield _sse_event("module", {"module": "toxicity_v6", "data": toxicity_v6})
+            yield _sse_event("module", {"module": "toxicity_v7", "data": toxicity_v7})
 
             # Module 4: Fact Check
             yield _sse_event(
                 "progress", {"module": "fact_check", "status": "running", "step": "4/6"}
             )
-            fact_check_v6 = {
+            fact_check_v7 = {
                 "score": 50,
                 "verdict": "Unverifiable",
                 "confidence": "Low",
@@ -989,23 +989,23 @@ def analyze_content_v6_stream(req: ScanRequest):
             }
             if len(req.article_text) > 20:
                 try:
-                    fact_check_v6 = fact_checker_v6_engine.check(
+                    fact_check_v7 = fact_checker_v7_engine.check(
                         req.article_text, req.url
                     )
                     # Track Gemini verification call
-                    if fact_check_v6.get("verification_methods"):
+                    if fact_check_v7.get("verification_methods"):
                         request_tracker.increment(1)
                 except Exception as e:
                     print(f"⚠️ [SSE] Fact check failed: {e}")
             yield _sse_event(
-                "module", {"module": "fact_check_v6", "data": fact_check_v6}
+                "module", {"module": "fact_check_v7", "data": fact_check_v7}
             )
 
             # Module 5: Risk Score — use pre-computed modules to avoid contradictions
             yield _sse_event(
                 "progress", {"module": "risk_score", "status": "running", "step": "5/6"}
             )
-            risk_score_v6 = {
+            risk_score_v7 = {
                 "risk_score": 0.0,
                 "risk_level": "Low",
                 "confidence": 0.0,
@@ -1015,17 +1015,17 @@ def analyze_content_v6_stream(req: ScanRequest):
             }
             if len(req.article_text) > 20:
                 try:
-                    risk_score_v6 = risk_scorer_v6_engine.score_from_results(
+                    risk_score_v7 = risk_scorer_v7_engine.score_from_results(
                         req.article_text,
                         req.url,
-                        sentiment_result=sentiment_v6,
-                        toxicity_result=toxicity_v6,
-                        fact_check_result=fact_check_v6,
+                        sentiment_result=sentiment_v7,
+                        toxicity_result=toxicity_v7,
+                        fact_check_result=fact_check_v7,
                     )
                 except Exception as e:
                     print(f"⚠️ [SSE] Risk score failed: {e}")
             yield _sse_event(
-                "module", {"module": "risk_score_v6", "data": risk_score_v6}
+                "module", {"module": "risk_score_v7", "data": risk_score_v7}
             )
 
             # Module 6: Comments
@@ -1041,7 +1041,7 @@ def analyze_content_v6_stream(req: ScanRequest):
                 "api_calls_saved": 0,
             }
             if req.comments:
-                comments_analysis = _analyze_comments_v6(
+                comments_analysis = _analyze_comments_v7(
                     req.comments[:50], summary_text, req.url, learning_ctx
                 )
                 # Track Gemini calls for ambiguous comments
@@ -1067,12 +1067,12 @@ def analyze_content_v6_stream(req: ScanRequest):
 
             # Final complete event
             final = {
-                "version": "6.0",
+                "version": "7.0",
                 "article_summary": article_summary,
-                "sentiment_v6": sentiment_v6,
-                "toxicity_v6": toxicity_v6,
-                "fact_check_v6": fact_check_v6,
-                "risk_score_v6": risk_score_v6,
+                "sentiment_v7": sentiment_v7,
+                "toxicity_v7": toxicity_v7,
+                "fact_check_v7": fact_check_v7,
+                "risk_score_v7": risk_score_v7,
                 "comments_analysis": comments_analysis,
                 "url": req.url,
                 "cache_stats": cache_manager.get_stats(),
@@ -1218,14 +1218,14 @@ def analyze_content(req: ScanRequest):
 
 
 # ============================================================================
-# v6 Enhanced Analysis Endpoint
+# v7 Enhanced Analysis Endpoint
 # ============================================================================
 
 
-@app.post("/analyze/v6", response_model=dict)
-def analyze_content_v6(req: ScanRequest):
+@app.post("/analyze/v7", response_model=dict)
+def analyze_content_v7(req: ScanRequest):
     """
-    v6 Enhanced full content scan endpoint.
+    v7 Enhanced full content scan endpoint.
 
     New features:
     - Unified structured analysis (70% fewer API calls)
@@ -1234,12 +1234,12 @@ def analyze_content_v6(req: ScanRequest):
     - Smart comment filtering (skip obvious toxic/clean/spam)
     - API usage optimization (70-80% fewer Gemini calls)
     """
-    print(f"📥 [v6] Received Scan Request for: {req.url}")
+    print(f"📥 [v7] Received Scan Request for: {req.url}")
     try:
-        # ========== LEARNING CONTEXT (v6.0) ==========
+        # ========== LEARNING CONTEXT (v7.0) ==========
         learning_ctx = feedback_store.get_learning_context(req.url)
         if learning_ctx:
-            print(f"🧠 [v6.0] Learning context loaded for {req.url}")
+            print(f"🧠 [v7.0] Learning context loaded for {req.url}")
 
         # ========== 0. ARTICLE SUMMARY (NEW) ==========
         article_summary = {"summary": "", "method": "none", "cached": False}
@@ -1252,13 +1252,13 @@ def analyze_content_v6(req: ScanRequest):
                 )
                 summary_text = article_summary.get("summary", "")
                 print(
-                    f"✅ [v6] Summary: {article_summary['method']} ({len(summary_text)} chars)"
+                    f"✅ [v7] Summary: {article_summary['method']} ({len(summary_text)} chars)"
                 )
             except Exception as e:
-                print(f"⚠️  [v6] Summary failed: {e}")
+                print(f"⚠️  [v7] Summary failed: {e}")
 
-        # ========== 1. SENTIMENT ANALYSIS v6 (PhoBERT) ========== (PhoBERT) ==========
-        sentiment_v6 = {
+        # ========== 1. SENTIMENT Analysis v7 (PhoBERT) ========== (PhoBERT) ==========
+        sentiment_v7 = {
             "label": "Neutral",
             "confidence": 0.0,
             "intensity": "Weak",
@@ -1267,13 +1267,13 @@ def analyze_content_v6(req: ScanRequest):
 
         if len(req.article_text) > 5:
             try:
-                sentiment_v6 = sentiment_v6_engine.analyze(req.article_text[:512])
+                sentiment_v7 = sentiment_v7_engine.analyze(req.article_text[:512])
                 print(
-                    f"✅ [v6] Sentiment: {sentiment_v6['overall']} (confidence: {sentiment_v6['confidence']:.2f})"
+                    f"✅ [v7] Sentiment: {sentiment_v7['overall']} (confidence: {sentiment_v7['confidence']:.2f})"
                 )
             except Exception as e:
-                print(f"⚠️  [v6] Sentiment analysis failed: {e}")
-                sentiment_v6 = {
+                print(f"⚠️  [v7] Sentiment analysis failed: {e}")
+                sentiment_v7 = {
                     "label": "Neutral",
                     "confidence": 0.0,
                     "intensity": "Weak",
@@ -1281,11 +1281,11 @@ def analyze_content_v6(req: ScanRequest):
                 }
         else:
             print(
-                f"⚠️  [v6] Article too short for sentiment ({len(req.article_text)} chars)"
+                f"⚠️  [v7] Article too short for sentiment ({len(req.article_text)} chars)"
             )
 
-        # ========== 2. Toxicity Detection v6 (4-layer, article body) ==========
-        toxicity_v6 = {
+        # ========== 2. Toxicity detection v7 (4-layer, article body) ==========
+        toxicity_v7 = {
             "is_toxic": False,
             "overall_score": 0.0,
             "severity": "Low",
@@ -1295,15 +1295,15 @@ def analyze_content_v6(req: ScanRequest):
 
         if len(req.article_text) > 5:
             try:
-                toxicity_v6 = toxicity_v6_engine.analyze(req.article_text[:1000])
+                toxicity_v7 = toxicity_v7_engine.analyze(req.article_text[:1000])
                 print(
-                    f"✅ [v6] Toxicity: {toxicity_v6['severity']} (score: {toxicity_v6['overall_score']:.2f})"
+                    f"✅ [v7] Toxicity: {toxicity_v7['severity']} (score: {toxicity_v7['overall_score']:.2f})"
                 )
             except Exception as e:
-                print(f"⚠️  [v6] Toxicity detection failed: {e}")
+                print(f"⚠️  [v7] Toxicity detection failed: {e}")
 
-        # ========== 3. FACT-CHECKING v6 (Multi-source) ========== (Multi-source) ==========
-        fact_check_v6 = {
+        # ========== 3. FACT-CHECKING v7 (Multi-source) ========== (Multi-source) ==========
+        fact_check_v7 = {
             "score": 50,
             "verdict": "Unverifiable",
             "confidence": "Low",
@@ -1313,20 +1313,20 @@ def analyze_content_v6(req: ScanRequest):
 
         if len(req.article_text) > 20:
             try:
-                fact_check_v6 = fact_checker_v6_engine.check(req.article_text, req.url)
+                fact_check_v7 = fact_checker_v7_engine.check(req.article_text, req.url)
                 print(
-                    f"✅ [v6] Fact Check: {fact_check_v6['verdict']} (credibility: {fact_check_v6['score']})"
+                    f"✅ [v7] Fact Check: {fact_check_v7['verdict']} (credibility: {fact_check_v7['score']})"
                 )
             except Exception as e:
-                print(f"⚠️  [v6] Fact-checking failed: {e}")
+                print(f"⚠️  [v7] Fact-checking failed: {e}")
                 error_msg = str(e).lower()
                 if "429" in str(e) or "quota" in error_msg:
-                    fact_check_v6["verdict"] = "Quota Exceeded"
+                    fact_check_v7["verdict"] = "Quota Exceeded"
                 else:
-                    fact_check_v6["verdict"] = "Service Unavailable"
+                    fact_check_v7["verdict"] = "Service Unavailable"
 
-        # ========== 4. RISK SCORING v6 (Comprehensive) ========== (Comprehensive) ==========
-        risk_score_v6 = {
+        # ========== 4. RISK SCORING v7 (Comprehensive) ========== (Comprehensive) ==========
+        risk_score_v7 = {
             "risk_score": 0.0,
             "risk_level": "Low",
             "confidence": 0.0,
@@ -1337,14 +1337,14 @@ def analyze_content_v6(req: ScanRequest):
 
         if len(req.article_text) > 20:
             try:
-                risk_score_v6 = risk_scorer_v6_engine.score(req.article_text, req.url)
+                risk_score_v7 = risk_scorer_v7_engine.score(req.article_text, req.url)
                 print(
-                    f"✅ [v6] Risk Score: {risk_score_v6['risk_score']:.1f}/100 ({risk_score_v6['risk_level']})"
+                    f"✅ [v7] Risk Score: {risk_score_v7['risk_score']:.1f}/100 ({risk_score_v7['risk_level']})"
                 )
             except Exception as e:
-                print(f"⚠️  [v6] Risk scoring failed: {e}")
+                print(f"⚠️  [v7] Risk scoring failed: {e}")
 
-        # ========== 5. COMMENTS ANALYSIS (v6 - Context-Aware Batch) ==========
+        # ========== 5. COMMENTS ANALYSIS (v7 - Context-Aware Batch) ==========
         comments_analysis = {
             "total": 0,
             "toxic_count": 0,
@@ -1355,27 +1355,27 @@ def analyze_content_v6(req: ScanRequest):
         }
 
         if req.comments:
-            comments_analysis = _analyze_comments_v6(
+            comments_analysis = _analyze_comments_v7(
                 req.comments[:50], summary_text, req.url, learning_ctx
             )
 
-        # ========== 6. BLOCKLIST CHECK (v6.0) ==========
+        # ========== 6. BLOCKLIST CHECK (v7.0) ==========
         blocklist_info = {
             "is_blocked": community_blocklist.is_blocked(req.url),
             "report_count": community_blocklist.get_domain_report_count(req.url),
         }
 
-        # ========== 7. DOMAIN FEEDBACK (v6.0) ==========
+        # ========== 7. DOMAIN FEEDBACK (v7.0) ==========
         domain_feedback = feedback_store.get_domain_feedback(req.url)
 
-        # ========== 8. COMPILE v6.0 RESPONSE ==========
+        # ========== 8. COMPILE v7.0 RESPONSE ==========
         response = {
-            "version": "6.0",
+            "version": "7.0",
             "article_summary": article_summary,
-            "sentiment_v6": sentiment_v6,
-            "toxicity_v6": toxicity_v6,
-            "fact_check_v6": fact_check_v6,
-            "risk_score_v6": risk_score_v6,
+            "sentiment_v7": sentiment_v7,
+            "toxicity_v7": toxicity_v7,
+            "fact_check_v7": fact_check_v7,
+            "risk_score_v7": risk_score_v7,
             "comments_analysis": comments_analysis,
             "url": req.url,
             "cache_stats": cache_manager.get_stats(),
@@ -1385,25 +1385,25 @@ def analyze_content_v6(req: ScanRequest):
         }
 
         print(
-            f"✅ [v6] Analysis complete. Risk: {risk_score_v6['risk_score']:.1f}/100, "
+            f"✅ [v7] Analysis complete. Risk: {risk_score_v7['risk_score']:.1f}/100, "
             f"Toxics: {comments_analysis['toxic_count']}, "
             f"API saved: {comments_analysis.get('api_calls_saved', 0)}"
         )
         return response
 
     except Exception as e:
-        print(f"❌ [v6] Critical Error: {e}")
+        print(f"❌ [v7] Critical Error: {e}")
         import traceback
 
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"v6 analysis error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"v7 analysis error: {str(e)}")
 
 
-def _analyze_comments_v6(
+def _analyze_comments_v7(
     comments: List[str], article_summary: str, url: str, learning_ctx: str = ""
 ) -> dict:
     """
-    Context-aware batch comment analysis (v6).
+    Context-aware batch comment analysis (v7).
 
     Steps:
     1. Pre-filter comments into categories (saves ~70% of API calls)
@@ -1423,7 +1423,7 @@ def _analyze_comments_v6(
         + len(filtered["spam"])
     )
 
-    print(f"📊 [v6] Comment filtering:")
+    print(f"📊 [v7] Comment filtering:")
     print(f"   Total: {total}")
     print(f"   Obvious toxic: {len(filtered['obvious_toxic'])}")
     print(f"   Obvious clean: {len(filtered['obvious_clean'])}")
@@ -1488,10 +1488,10 @@ def _analyze_comments_v6(
         regex_result = None
         try:
             if (
-                hasattr(toxicity_v6_engine, "regex_analyzer")
-                and toxicity_v6_engine.regex_analyzer
+                hasattr(toxicity_v7_engine, "regex_analyzer")
+                and toxicity_v7_engine.regex_analyzer
             ):
-                regex_result = toxicity_v6_engine._analyze_regex(comment)
+                regex_result = toxicity_v7_engine._analyze_regex(comment)
         except Exception:
             pass
 
@@ -1519,7 +1519,7 @@ def _analyze_comments_v6(
         cached = cache_manager.get(cache_key)
 
         if cached:
-            print(f"✅ [v6] Batch cache hit ({len(still_ambiguous)} comments)")
+            print(f"✅ [v7] Batch cache hit ({len(still_ambiguous)} comments)")
             all_results.extend(cached)
         else:
             # Process in chunks of 25 (safe token limit) with rate limit sleep
@@ -1589,14 +1589,14 @@ def _batch_gemini_analyze(
     # Circuit breaker: check how many keys are left
     available = len(batch_key_rotator.api_keys) - len(batch_key_rotator.exhausted_keys)
     if available <= 0:
-        print("⚠️ [v6] All API keys exhausted — using regex fallback for batch")
+        print("⚠️ [v7] All API keys exhausted — using regex fallback for batch")
         return _fallback_results(comments)
 
     max_batch_attempts = min(3, available)  # Try up to 3 different keys
     for attempt in range(max_batch_attempts):
         api_key = batch_key_rotator.get_current_key()
         if not api_key:
-            print("⚠️ [v6] No API key available for batch analysis")
+            print("⚠️ [v7] No API key available for batch analysis")
             return _fallback_results(comments)
 
         try:
@@ -1609,15 +1609,15 @@ def _batch_gemini_analyze(
 
                 retry_delay = APIKeyRotator.parse_retry_delay(error_str)
                 print(
-                    f"⚠️ [v6] Batch attempt {attempt+1}/{max_batch_attempts} got 429, cooldown {retry_delay:.0f}s..."
+                    f"⚠️ [v7] Batch attempt {attempt+1}/{max_batch_attempts} got 429, cooldown {retry_delay:.0f}s..."
                 )
                 batch_key_rotator.mark_key_rate_limited(retry_delay)
                 continue
             else:
-                print(f"⚠️ [v6] Batch analysis failed: {e}")
+                print(f"⚠️ [v7] Batch analysis failed: {e}")
                 return _fallback_results(comments)
 
-    print("⚠️ [v6] All batch attempts exhausted — using regex fallback")
+    print("⚠️ [v7] All batch attempts exhausted — using regex fallback")
     return _fallback_results(comments)
 
 
@@ -1637,7 +1637,7 @@ def _try_batch_gemini(
     if article_summary:
         context_line = f"Bối cảnh bài báo: {article_summary[:500]}\n\n"
 
-    # v6.0: Inject learning from user feedback
+    # v7.0: Inject learning from user feedback
     learning_line = ""
     if learning_ctx:
         learning_line = f"\n{learning_ctx}\n\n"
@@ -1698,7 +1698,7 @@ Quy tắc:
                 try:
                     repaired = _repair_truncated_json(match.group())
                     parsed = json.loads(repaired)
-                    print(f"✅ [v6] Repaired truncated JSON ({len(parsed)} items)")
+                    print(f"✅ [v7] Repaired truncated JSON ({len(parsed)} items)")
                 except json.JSONDecodeError:
                     pass
 
@@ -1707,7 +1707,7 @@ Quy tắc:
             try:
                 repaired = _repair_truncated_json(raw)
                 parsed = json.loads(repaired)
-                print(f"✅ [v6] Repaired raw JSON ({len(parsed)} items)")
+                print(f"✅ [v7] Repaired raw JSON ({len(parsed)} items)")
             except json.JSONDecodeError:
                 # Last resort: extract individual complete JSON objects
                 objects = _re.findall(r"\{[^{}]*\}", raw)
@@ -1719,10 +1719,10 @@ Quy tắc:
                         except json.JSONDecodeError:
                             continue
                     print(
-                        f"✅ [v6] Extracted {len(parsed)} objects from malformed JSON"
+                        f"✅ [v7] Extracted {len(parsed)} objects from malformed JSON"
                     )
                 else:
-                    print(f"⚠️ [v6] Could not parse Gemini response, using fallback")
+                    print(f"⚠️ [v7] Could not parse Gemini response, using fallback")
                     return _fallback_results(comments)
 
     results = []
@@ -1759,7 +1759,7 @@ Quy tắc:
                 }
             )
 
-    print(f"✅ [v6] Batch analyzed {len(comments)} comments (1 API call)")
+    print(f"✅ [v7] Batch analyzed {len(comments)} comments (1 API call)")
     return results
 
 
@@ -1800,17 +1800,17 @@ def _fallback_results(comments: List[str]) -> List[dict]:
     """Fallback: REGEX ONLY (no Perspective/Gemini API calls) when AI is unavailable."""
     results = []
     for c in comments:
-        # Use v2 regex engine DIRECTLY — do NOT call toxicity_v6_engine.analyze()
+        # Use v2 regex engine DIRECTLY — do NOT call toxicity_v7_engine.analyze()
         # because that triggers Perspective API + Gemini calls per comment = API storm
         is_toxic = False
         score = 0.0
         severity = "None"
         try:
             if (
-                hasattr(toxicity_v6_engine, "regex_analyzer")
-                and toxicity_v6_engine.regex_analyzer
+                hasattr(toxicity_v7_engine, "regex_analyzer")
+                and toxicity_v7_engine.regex_analyzer
             ):
-                regex_result = toxicity_v6_engine._analyze_regex(c)
+                regex_result = toxicity_v7_engine._analyze_regex(c)
                 if regex_result and regex_result.get("is_toxic"):
                     is_toxic = True
                     score = 0.8
@@ -1833,12 +1833,12 @@ def _fallback_results(comments: List[str]) -> List[dict]:
 
 
 # ============================================================================
-# ARCH-01: Unified Single-Pass Analysis Endpoint (v6)
+# ARCH-01: Unified Single-Pass Analysis Endpoint (v7)
 # ============================================================================
 
 
-@app.post("/analyze/v6/unified", response_model=dict)
-def analyze_unified_v6(req: StructuredScanRequest):
+@app.post("/analyze/v7/unified", response_model=dict)
+def analyze_unified_v7(req: StructuredScanRequest):
     """
     ARCH-01 — Unified structured analysis endpoint.
 
@@ -1877,7 +1877,7 @@ def analyze_unified_v6(req: StructuredScanRequest):
         }
         if len(article_body) > 5:
             try:
-                regex_toxicity = toxicity_v6_engine.analyze(article_body[:1000])
+                regex_toxicity = toxicity_v7_engine.analyze(article_body[:1000])
             except Exception as e:
                 print(f"⚠️ [unified] Regex toxicity failed: {e}")
 
@@ -1889,15 +1889,15 @@ def analyze_unified_v6(req: StructuredScanRequest):
         }
         if len(article_body) > 5:
             try:
-                keyword_sentiment = sentiment_v6_engine.analyze(article_body[:512])
+                keyword_sentiment = sentiment_v7_engine.analyze(article_body[:512])
             except Exception as e:
                 print(f"⚠️ [unified] Keyword sentiment failed: {e}")
 
         # 1c. Source credibility from fact_checker's source_analyzer
         source_credibility = {"reputation_score": 50, "verdict": "Chưa biết"}
         try:
-            if fact_checker_v6_engine.source_analyzer and url:
-                sc = fact_checker_v6_engine.source_analyzer.analyze(url)
+            if fact_checker_v7_engine.source_analyzer and url:
+                sc = fact_checker_v7_engine.source_analyzer.analyze(url)
                 if sc:
                     source_credibility = sc
         except Exception as e:
@@ -1907,10 +1907,10 @@ def analyze_unified_v6(req: StructuredScanRequest):
         factcheck_api_results = []
         try:
             if len(full_article_text) > 20 and hasattr(
-                fact_checker_v6_engine, "_check_google_factcheck"
+                fact_checker_v7_engine, "_check_google_factcheck"
             ):
                 factcheck_api_results = (
-                    fact_checker_v6_engine._check_google_factcheck(
+                    fact_checker_v7_engine._check_google_factcheck(
                         full_article_text[:500]
                     )
                     or []
@@ -1922,10 +1922,10 @@ def analyze_unified_v6(req: StructuredScanRequest):
         newsdata_results = []
         try:
             if len(full_article_text) > 20 and hasattr(
-                fact_checker_v6_engine, "_check_newsdata"
+                fact_checker_v7_engine, "_check_newsdata"
             ):
                 newsdata_results = (
-                    fact_checker_v6_engine._check_newsdata(full_article_text[:200])
+                    fact_checker_v7_engine._check_newsdata(full_article_text[:200])
                     or []
                 )
         except Exception as e:
@@ -2054,7 +2054,7 @@ def analyze_unified_v6(req: StructuredScanRequest):
                 }
             )
 
-        # Build comments_analysis (matches /analyze/v6 format)
+        # Build comments_analysis (matches /analyze/v7 format)
         toxic_comments = [c for c in all_comment_results if c["is_toxic"]]
         total_analyzed = len(req.comments)
         toxic_pct = (
@@ -2076,15 +2076,15 @@ def analyze_unified_v6(req: StructuredScanRequest):
             "api_calls_saved": max(0, len(req.comments) // 25 - 1),
         }
 
-        # Format AI results to match /analyze/v6 response shape
+        # Format AI results to match /analyze/v7 response shape
         ai_sentiment = ai_result.get("sentiment", {})
         ai_fact_check = ai_result.get("fact_check", {})
         ai_article_tox = ai_result.get("article_toxicity", {})
         ai_risk = ai_result.get("risk_assessment", {})
         ai_summary = ai_result.get("summary", "")
 
-        # Build sentiment_v6 compatible dict
-        sentiment_v6_result = {
+        # Build sentiment_v7 compatible dict
+        sentiment_v7_result = {
             "overall": ai_sentiment.get(
                 "overall", keyword_sentiment.get("overall", "Neutral")
             ),
@@ -2097,8 +2097,8 @@ def analyze_unified_v6(req: StructuredScanRequest):
             "label": ai_sentiment.get("overall", "Neutral"),
         }
 
-        # Build toxicity_v6 compatible dict
-        toxicity_v6_result = {
+        # Build toxicity_v7 compatible dict
+        toxicity_v7_result = {
             "is_toxic": ai_article_tox.get(
                 "is_toxic", regex_toxicity.get("is_toxic", False)
             ),
@@ -2115,8 +2115,8 @@ def analyze_unified_v6(req: StructuredScanRequest):
             "reasoning": ai_article_tox.get("reasoning", ""),
         }
 
-        # Build fact_check_v6 compatible dict
-        fact_check_v6_result = {
+        # Build fact_check_v7 compatible dict
+        fact_check_v7_result = {
             "score": ai_fact_check.get(
                 "score", source_credibility.get("reputation_score", 50)
             ),
@@ -2133,8 +2133,8 @@ def analyze_unified_v6(req: StructuredScanRequest):
             ),
         }
 
-        # Build risk_score_v6 compatible dict
-        risk_score_v6_result = {
+        # Build risk_score_v7 compatible dict
+        risk_score_v7_result = {
             "risk_score": float(ai_risk.get("score", 0)),
             "risk_level": ai_risk.get("level", "Low"),
             "confidence": 0.8 if not was_fallback else 0.4,
@@ -2171,15 +2171,15 @@ def analyze_unified_v6(req: StructuredScanRequest):
 
         total_time = time.time() - t0
         response = {
-            "version": "6.0",
+            "version": "7.0",
             "analysis_mode": "unified",
             "was_fallback": was_fallback,
             "processing_time_s": round(total_time, 2),
             "article_summary": article_summary,
-            "sentiment_v6": sentiment_v6_result,
-            "toxicity_v6": toxicity_v6_result,
-            "fact_check_v6": fact_check_v6_result,
-            "risk_score_v6": risk_score_v6_result,
+            "sentiment_v7": sentiment_v7_result,
+            "toxicity_v7": toxicity_v7_result,
+            "fact_check_v7": fact_check_v7_result,
+            "risk_score_v7": risk_score_v7_result,
             "comments_analysis": comments_analysis,
             "scam_detection": scam_detection,
             "url": url,
@@ -2204,15 +2204,15 @@ def analyze_unified_v6(req: StructuredScanRequest):
             url.split("/")[2] if "//" in url else url
         )
         # Flatten risk score to top-level for reranker compatibility
-        response["risk_score"] = risk_score_v6_result.get("risk_score", 0)
+        response["risk_score"] = risk_score_v7_result.get("risk_score", 0)
         response = reranker.apply(domain_for_reranker, response)
-        # Re-sync nested risk_score_v6 with adjusted top-level risk
+        # Re-sync nested risk_score_v7 with adjusted top-level risk
         if response.get("reranker_applied"):
-            risk_score_v6_result["risk_score"] = response["risk_score"]
-            risk_score_v6_result["reranker_adjustments"] = response.get(
+            risk_score_v7_result["risk_score"] = response["risk_score"]
+            risk_score_v7_result["reranker_adjustments"] = response.get(
                 "reranker_adjustments", {}
             )
-            response["risk_score_v6"] = risk_score_v6_result
+            response["risk_score_v7"] = risk_score_v7_result
 
         print(
             f"✅ [unified] Done in {total_time:.1f}s | Risk: {response['risk_score']}/100 | "
@@ -2227,7 +2227,7 @@ def analyze_unified_v6(req: StructuredScanRequest):
 
         traceback.print_exc()
         raise HTTPException(
-            status_code=500, detail=f"v6 unified analysis error: {str(e)}"
+            status_code=500, detail=f"v7 unified analysis error: {str(e)}"
         )
 
 

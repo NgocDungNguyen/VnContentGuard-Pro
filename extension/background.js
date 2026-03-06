@@ -1,37 +1,37 @@
-﻿// ─── Import domain control module (Feature 6.2) ───────────────────────────
+﻿// ─── Import domain control module (feature 7.2) ───────────────────────────
 importScripts('domain_control.js');
 
 /**
- * VnContentGuard Pro v6.0 — Background Service Worker
+ * VnContentGuard Pro V7.0 — Background Service Worker
  * =====================================================
  * Handles API calls in the background so they survive popup close.
  * 
  * Responsibilities:
  * 1. Receive scan requests from popup via chrome.runtime.sendMessage
- * 2. Execute API call (try local → cloud fallback) + SSE streaming (v6)
+ * 2. Execute API call (try local → cloud fallback) + SSE streaming (V7)
  * 3. Save results to chrome.storage.local
  * 4. Update badge with risk score
  * 5. Notify popup when done (if still open)
  * 6. Auto-scan supported sites when toggle is ON
- * 7. 🔔 Notification system (v6)
- * 8. 🚩 Community Blocklist checking (v6)
- * 9. 🔒 Parental Control interception (v6)
- * 10. ⚠️ Browser Content Warning redirect (v6)
- * 11. 📊 Weekly Safety Report via alarms (v6)
+ * 7. 🔔 Notification system (V7)
+ * 8. 🚩 Community Blocklist checking (V7)
+ * 9. 🔒 Parental Control interception (V7)
+ * 10. ⚠️ Browser Content Warning redirect (V7)
+ * 11. 📊 Weekly Safety Report via alarms (V7)
  */
 
 // API endpoints (cloud)
 const API_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/v6"
+    "https://vncontentguard-pro.onrender.com/analyze/v7"
 ];
 
 const STREAM_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/v6/stream"
+    "https://vncontentguard-pro.onrender.com/analyze/v7/stream"
 ];
 
 // ARCH-01: Unified single-pass endpoint
 const UNIFIED_ENDPOINTS = [
-    "https://vncontentguard-pro.onrender.com/analyze/v6/unified"
+    "https://vncontentguard-pro.onrender.com/analyze/v7/unified"
 ];
 
 // Feedback endpoints
@@ -85,7 +85,7 @@ const AUTO_SCAN_DOMAINS = [
 const AUTO_SCAN_COOLDOWN_MS = 30 * 60 * 1000;
 const autoScanTimestamps = {};
 
-// Feature 6.6 — Incognito log (in-memory, also persisted to storage)
+// feature 7.6 — Incognito log (in-memory, also persisted to storage)
 let incognitoLog = [];
 
 // ============================================================================
@@ -177,7 +177,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    // ── Feature 6.2 — Domain Blacklist / Whitelist ────────────────────────────
+    // ── feature 7.2 — Domain Blacklist / Whitelist ────────────────────────────
     if (message.type === 'GET_DOMAIN_BLACKLIST') {
         DomainControl.getBlacklist().then(list => sendResponse({ list }));
         return true;
@@ -216,7 +216,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    // ── Feature 6.6 — Incognito Log ───────────────────────────────────────────
+    // ── feature 7.6 — Incognito Log ───────────────────────────────────────────
     if (message.type === 'GET_INCOGNITO_LOG') {
         chrome.storage.local.get(['incognitoLog', 'incognitoBlockMode'], (d) => {
             sendResponse({
@@ -335,8 +335,8 @@ async function handleScan(data) {
         });
 
         // 5. Update badge with risk score
-        const riskScore = results.risk_score_v6?.risk_score || 0;
-        const riskLevel = results.risk_score_v6?.risk_level || 'Low';
+        const riskScore = results.risk_score_v7?.risk_score || 0;
+        const riskLevel = results.risk_score_v7?.risk_level || 'Low';
         updateBadge(riskScore, riskLevel);
 
         // 6. Add to scan history
@@ -344,7 +344,7 @@ async function handleScan(data) {
 
         console.log(`[BG] Scan completed for: ${url}`);
 
-        // 7. Send notification if high risk (v6)
+        // 7. Send notification if high risk (V7)
         sendRiskNotification(url, riskScore, riskLevel);
 
     } catch (err) {
@@ -423,13 +423,13 @@ async function addToScanHistory(url, results, pageTitle = '') {
             url: url,
             title: articleTitle || domain,
             domain: domain,
-            riskScore: results.risk_score_v6?.risk_score || 0,
-            riskLevel: results.risk_score_v6?.risk_level || 'Low',
+            riskScore: results.risk_score_v7?.risk_score || 0,
+            riskLevel: results.risk_score_v7?.risk_level || 'Low',
             toxicPercent: results.comments_analysis?.toxic_percentage || 0,
             toxicCount: results.comments_analysis?.toxic_count || 0,
             totalComments: results.comments_analysis?.total || 0,
-            verdict: results.fact_check_v6?.verdict || 'Chưa rõ',
-            sentiment: results.sentiment_v6?.overall || 'Neutral',
+            verdict: results.fact_check_v7?.verdict || 'Chưa rõ',
+            sentiment: results.sentiment_v7?.overall || 'Neutral',
             timestamp: new Date().toISOString(),
             resultsKey: url // Key to load full results
         };
@@ -465,7 +465,7 @@ function extractDomain(url) {
 }
 
 // ============================================================================
-// ARCH-01: UNIFIED SINGLE-PASS SCAN — Structured /analyze/v6/unified
+// ARCH-01: UNIFIED SINGLE-PASS SCAN — Structured /analyze/V7/unified
 // 70-80% fewer Gemini calls, 5-15s latency
 // ============================================================================
 
@@ -483,7 +483,7 @@ async function handleUnifiedScan(data) {
                 status: 'scanning',
                 url,
                 timestamp: new Date().toISOString(),
-                progress: 'Đang phân tích thống nhất (v6)…',
+                progress: 'Đang phân tích thống nhất (V7)…',
             }
         });
         chrome.action.setBadgeText({ text: '…' });
@@ -584,7 +584,7 @@ async function handleUnifiedScan(data) {
         });
 
         // 6. Update badge
-        const risk = results?.risk_score_v6?.risk_score ?? results?.risk_score ?? 0;
+        const risk = results?.risk_score_v7?.risk_score ?? results?.risk_score ?? 0;
         const riskInt = Math.round(risk);
         const badgeColor = riskInt >= 75 ? '#e74c3c' : riskInt >= 50 ? '#e67e22' : riskInt >= 25 ? '#f39c12' : '#27ae60';
         chrome.action.setBadgeText({ text: `${riskInt}` });
@@ -600,11 +600,11 @@ async function handleUnifiedScan(data) {
                 type: 'basic',
                 iconUrl: 'icons/icon48.png',
                 title: '⚠️ VnContentGuard Pro',
-                message: `${domain} — Rủi ro: ${riskInt}/100 (${results?.risk_score_v6?.risk_level || 'Cao'})`,
+                message: `${domain} — Rủi ro: ${riskInt}/100 (${results?.risk_score_v7?.risk_level || 'Cao'})`,
             });
         }
 
-        // 9. Feature 6.12 — Scam auto-report / prompt
+        // 9. feature 7.12 — Scam auto-report / prompt
         await checkAndReportScam(results, url);
 
         // 9. Send results to content script for overlay
@@ -636,7 +636,7 @@ async function handleUnifiedScan(data) {
 }
 
 // ============================================================================
-// Feature 6.12 — Scam Auto-Report / Prompt
+// feature 7.12 — Scam Auto-Report / Prompt
 // ============================================================================
 
 /**
@@ -686,7 +686,7 @@ async function checkAndReportScam(scanResults, url) {
 }
 
 // ============================================================================
-// SSE STREAMING SCAN (v6.0)
+// SSE STREAMING SCAN (V7.0)
 // ============================================================================
 
 async function handleStreamScan(data) {
@@ -803,8 +803,8 @@ async function handleStreamScan(data) {
             [url]: { ...results, timestamp: new Date().toISOString(), url: url }
         });
 
-        const riskScore = results.risk_score_v6?.risk_score || 0;
-        const riskLevel = results.risk_score_v6?.risk_level || 'Low';
+        const riskScore = results.risk_score_v7?.risk_score || 0;
+        const riskLevel = results.risk_score_v7?.risk_level || 'Low';
         updateBadge(riskScore, riskLevel);
         await addToScanHistory(url, results, pageTitle);
         sendRiskNotification(url, riskScore, riskLevel);
@@ -822,16 +822,16 @@ function buildResultFromModules(modules) {
     return {
         version: '6.0',
         article_summary: modules.article_summary || {},
-        sentiment_v6: modules.sentiment_v6 || {},
-        toxicity_v6: modules.toxicity_v6 || {},
-        fact_check_v6: modules.fact_check_v6 || {},
-        risk_score_v6: modules.risk_score_v6 || {},
+        sentiment_v7: modules.sentiment_v7 || {},
+        toxicity_v7: modules.toxicity_v7 || {},
+        fact_check_v7: modules.fact_check_v7 || {},
+        risk_score_v7: modules.risk_score_v7 || {},
         comments_analysis: modules.comments_analysis || {}
     };
 }
 
 // ============================================================================
-// NOTIFICATION SYSTEM (v6.0)
+// NOTIFICATION SYSTEM (V7.0)
 // ============================================================================
 
 function sendRiskNotification(url, riskScore, riskLevel) {
@@ -886,7 +886,7 @@ chrome.notifications.onClicked.addListener((notifId) => {
 });
 
 // ============================================================================
-// COMMUNITY REPORT (v6.0)
+// COMMUNITY REPORT (V7.0)
 // ============================================================================
 
 async function submitReport(data) {
@@ -912,7 +912,7 @@ async function submitReport(data) {
 }
 
 // ============================================================================
-// FEATURE 6.2 — DOMAIN BLACKLIST/WHITELIST INTERCEPT (fast, before page load)
+// feature 7.2 — DOMAIN BLACKLIST/WHITELIST INTERCEPT (fast, before page load)
 // ============================================================================
 
 chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
@@ -937,7 +937,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
 });
 
 // ============================================================================
-// FEATURE 6.6 — INCOGNITO MODE DETECTION
+// feature 7.6 — INCOGNITO MODE DETECTION
 // ============================================================================
 
 chrome.tabs.onCreated.addListener(async (tab) => {
@@ -984,7 +984,7 @@ chrome.tabs.onCreated.addListener(async (tab) => {
 });
 
 // ============================================================================
-// COMMUNITY BLOCKLIST (v6.0)
+// COMMUNITY BLOCKLIST (V7.0)
 // ============================================================================
 
 async function refreshBlocklist(force = false) {
@@ -1020,7 +1020,7 @@ async function checkBlocklist(url) {
 }
 
 // ============================================================================
-// PARENTAL CONTROL — Feature v6 (v6.0)
+// PARENTAL CONTROL — Feature V7 (V7.0)
 // ============================================================================
 
 async function setParentalControl(enabled, pin, threshold) {
@@ -1034,7 +1034,7 @@ async function setParentalControl(enabled, pin, threshold) {
 }
 
 // ============================================================================
-// CONTENT WARNING + PARENTAL INTERCEPT — Features 4.2 + 4.3 (v6.0)
+// CONTENT WARNING + PARENTAL INTERCEPT — Features 4.2 + 4.3 (V7.0)
 // ============================================================================
 
 chrome.webNavigation.onCompleted.addListener(async (details) => {
@@ -1077,7 +1077,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
             const cached = scanData[url];
 
             if (cached) {
-                const risk = cached.risk_score_v6?.risk_score || 0;
+                const risk = cached.risk_score_v7?.risk_score || 0;
                 if (risk >= threshold) {
                     const blockUrl = chrome.runtime.getURL('block.html') +
                         `?url=${encodeURIComponent(url)}&risk=${risk >= 70 ? 'Cao' : 'Trung bình'}`;
@@ -1092,7 +1092,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
 });
 
 // ============================================================================
-// WEEKLY SAFETY REPORT (v6.0)
+// WEEKLY SAFETY REPORT (V7.0)
 // ============================================================================
 
 // Set up weekly alarm
@@ -1144,7 +1144,7 @@ chrome.notifications.onButtonClicked.addListener((notifId, btnIdx) => {
 });
 
 // ============================================================================
-// SYSTEM STATS (v6.0)
+// SYSTEM STATS (V7.0)
 // ============================================================================
 
 async function fetchSystemStats() {
@@ -1188,7 +1188,7 @@ async function submitFeedback(data) {
 }
 
 // ============================================================================
-// AUTO-SCAN (v6.0)
+// AUTO-SCAN (V7.0)
 // ============================================================================
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
@@ -1386,7 +1386,7 @@ function autoScrapeContent() {
 // ============================================================================
 
 chrome.runtime.onInstalled.addListener(() => {
-    console.log('[BG] VnContentGuard Pro v6.0 service worker installed');
+    console.log('[BG] VnContentGuard Pro V7.0 service worker installed');
     chrome.action.setBadgeText({ text: '' });
 
     // Initialize weekly report alarm

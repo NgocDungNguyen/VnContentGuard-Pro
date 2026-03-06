@@ -1,5 +1,5 @@
-# 🛡️ VNCONTENTGUARD PRO — V6 UPGRADE PLAN
-### Version: 6.0.0 | Planned Start: March 2026
+﻿# 🛡️ VNCONTENTGUARD PRO — V7 UPGRADE PLAN
+### Version: 7.0.0 | Planned Start: March 2026
 ### Tracking Document — Update status as each feature is completed
 ### Base: v5.0.0 (all 20 v5 features complete, deployed on Render, Chrome Store)
 
@@ -853,7 +853,7 @@ class BulkScanResult(BaseModel):
     error: Optional[str] = None
     scan_time_ms: int
 
-@app.post("/analyze/v6/bulk")
+@app.post("/analyze/V7/bulk")
 async def bulk_analyze(req: BulkScanRequest, background_tasks: BackgroundTasks):
     if len(req.urls) > 100:
         raise HTTPException(400, "Tối đa 100 URL mỗi lần")
@@ -974,7 +974,7 @@ async function startBulkScan() {
   updateProgress(0, urls.length);
   
   try {
-    const response = await fetch(`${API_BASE}/analyze/v6/bulk`, {
+    const response = await fetch(`${API_BASE}/analyze/V7/bulk`, {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ urls, scan_depth: depth }),
@@ -1114,7 +1114,7 @@ document.getElementById('bulkFile').addEventListener('change', (e) => {
 ### Modified Files
 | File | Changes |
 |------|---------|
-| `api.py` | + seed blacklist endpoint (6.2), + `/api/correction` (6.9), + `/api/report/scam` (6.12), + `/analyze/v6/bulk` (6.13), + reranker integration (6.9) |
+| `api.py` | + seed blacklist endpoint (6.2), + `/api/correction` (6.9), + `/api/report/scam` (6.12), + `/analyze/V7/bulk` (6.13), + reranker integration (6.9) |
 | `src/models/unified_analyzer.py` | + evidence spans in prompt/response (6.3), + scam detection (6.12) |
 | `extension/manifest.json` | + `"incognito": "spanning"` (6.6), + `domain_control.js` in content_scripts (6.2) |
 | `extension/background.js` | + webNavigation blacklist intercept (6.2), + incognito detection (6.6), + auto scam report (6.12) |
@@ -1148,7 +1148,7 @@ document.getElementById('bulkFile').addEventListener('change', (e) => {
 
 ## 🚀 VERSION TARGET
 
-**v6.0.0** — All 6 features above  
-**Manifest version** bump from `5.0.0` → `6.0.0`  
-**Chrome Store** re-submission after v6.0.0 is stable  
-**Backend** deploy to Render from `v6-enhancement` branch  
+**V7.0.0** — All 6 features above  
+**Manifest version** bump from `5.0.0` → `7.0.0`  
+**Chrome Store** re-submission after V7.0.0 is stable  
+**Backend** deploy to Render from `V7-enhancement` branch  

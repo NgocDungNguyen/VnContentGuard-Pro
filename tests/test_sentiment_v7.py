@@ -11,16 +11,16 @@ import pytest
 # Add project root to path
 sys.path.insert(0, "c:\\Users\\LucyS\\Tox")
 
-from src.models.sentiment_v6 import SentimentAnalyzerV6
+from src.models.sentiment_v7 import SentimentAnalyzerV7
 
 
-class TestSentimentAnalyzerV6:
-    """Test suite for SentimentAnalyzerV6"""
+class TestSentimentAnalyzerV7:
+    """Test suite for SentimentAnalyzerV7"""
 
     @pytest.fixture
     def analyzer(self):
         """Create analyzer instance for testing"""
-        return SentimentAnalyzerV6()
+        return SentimentAnalyzerV7()
 
     # ==================== Basic Tests ====================
 
@@ -134,7 +134,7 @@ class TestSentimentAnalyzerV6:
     def test_fallback_on_phobert_error(self):
         """Test that keyword fallback works when PhoBERT fails"""
         # Create analyzer with PhoBERT disabled
-        analyzer = SentimentAnalyzerV6(use_phobert=False)
+        analyzer = SentimentAnalyzerV7(use_phobert=False)
 
         text = "Bài viết hay quá!"
         result = analyzer.analyze(text)
@@ -144,7 +144,7 @@ class TestSentimentAnalyzerV6:
 
     def test_fallback_returns_valid_result(self):
         """Test that fallback returns complete result structure"""
-        analyzer = SentimentAnalyzerV6(use_phobert=False)
+        analyzer = SentimentAnalyzerV7(use_phobert=False)
 
         text = "Sản phẩm tệ lắm"
         result = analyzer.analyze(text)
@@ -194,7 +194,7 @@ class TestSentimentV5VsV2:
         from src.models.sentiment import SentimentAnalyzer as V2
 
         v2 = V2()
-        v5 = SentimentAnalyzerV6()
+        v5 = SentimentAnalyzerV7()
 
         # Clear positive case
         text = "Sản phẩm tuyệt vời, rất hài lòng, chất lượng xuất sắc!"
@@ -215,7 +215,7 @@ class TestSentimentV5VsV2:
         from src.models.sentiment import SentimentAnalyzer as V2
 
         v2 = V2()
-        v5 = SentimentAnalyzerV6()
+        v5 = SentimentAnalyzerV7()
 
         test_cases = [
             ("Rất tốt và hay", "Positive"),

@@ -6,23 +6,78 @@
 </head>
 <body>
     <div class="container">
-        <!-- v6 HEADER BAR -->
+        <!-- V7 HEADER BAR — REDESIGNED -->
         <div class="header-bar">
-            <h2>🛡️ VnContentGuard Pro</h2>
-            <div class="header-actions">
-                <button id="autoScanBtn" class="icon-btn" title="Tự động quét">⚡</button>
-                <button id="historyBtn" class="icon-btn" title="Lịch sử quét">📜</button>
-                <button id="compareBtn" class="icon-btn" title="So sánh 2 trang">📊</button>
-                <button id="reportPageBtn" class="icon-btn" title="Báo cáo trang này">🚩</button>
-                <button id="weeklyReportBtn" class="icon-btn" title="Báo cáo hàng tuần">📈</button>
-                <button id="parentalBtn" class="icon-btn" title="Kiểm soát gia đình">🔒</button>
-                <button id="darkModeBtn" class="icon-btn" title="Chế độ tối">🌙</button>
-                <button id="bulkBtn" class="icon-btn" title="Phân tích hàng loạt">📋</button>
+            <div class="header-brand">
+                <span class="header-logo">🛡️</span>
+                <span class="header-title">VnContentGuard Pro</span>
+            </div>
+            <div class="header-controls">
+                <button id="darkModeBtn" class="ctrl-btn" title="Chế độ tối/sáng">🌙</button>
+                <div class="menu-wrapper">
+                    <button id="menuToggleBtn" class="ctrl-btn menu-toggle" title="Tất cả tính năng">☰</button>
+                    <div id="headerDropdown" class="header-dropdown hidden">
+                        <div class="dropdown-section-label">Công cụ</div>
+                        <button id="autoScanBtn" class="dropdown-item" title="Tự động kiểm tra trang khi bạn truy cập — không cần nhấn Quét">
+                            <span class="dropdown-icon">⚡</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Tự động quét</span>
+                                <span class="dropdown-desc">Kiểm tra khi mở trang mới</span>
+                            </span>
+                        </button>
+                        <button id="bulkBtn" class="dropdown-item" title="Quét nhiều trang cùng lúc từ danh sách đường dẫn">
+                            <span class="dropdown-icon">📋</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Quét hàng loạt</span>
+                                <span class="dropdown-desc">Quét nhiều trang cùng lúc</span>
+                            </span>
+                        </button>
+                        <button id="compareBtn" class="dropdown-item" title="So sánh mức độ an toàn giữa 2 trang web với nhau">
+                            <span class="dropdown-icon">📊</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">So sánh trang</span>
+                                <span class="dropdown-desc">So sánh 2 trang với nhau</span>
+                            </span>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-section-label">Báo cáo</div>
+                        <button id="historyBtn" class="dropdown-item" title="Xem lại tất cả các trang bạn đã quét trước đây">
+                            <span class="dropdown-icon">📜</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Lịch sử quét</span>
+                                <span class="dropdown-desc">Xem lại kết quả đã quét</span>
+                            </span>
+                        </button>
+                        <button id="weeklyReportBtn" class="dropdown-item" title="Xem tổng kết an toàn trong 7 ngày qua">
+                            <span class="dropdown-icon">📈</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Báo cáo hàng tuần</span>
+                                <span class="dropdown-desc">Tổng kết an toàn 7 ngày qua</span>
+                            </span>
+                        </button>
+                        <button id="reportPageBtn" class="dropdown-item" title="Báo cáo trang này vi phạm để cộng đồng cùng biết">
+                            <span class="dropdown-icon">🚩</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Báo cáo trang này</span>
+                                <span class="dropdown-desc">Báo vi phạm cho cộng đồng</span>
+                            </span>
+                        </button>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-section-label">Cài đặt</div>
+                        <button id="parentalBtn" class="dropdown-item" title="Chặn các trang không phù hợp, bảo vệ trẻ em và gia đình">
+                            <span class="dropdown-icon">🔒</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Bảo vệ gia đình</span>
+                                <span class="dropdown-desc">Chặn nội dung không phù hợp</span>
+                            </span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
         <div id="status" class="status-badge">Sẵn sàng quét</div>
 
-        <!-- API USAGE DASHBOARD (v6) -->
+        <!-- API USAGE DASHBOARD (V7) -->
         <div id="usageDashboard" class="usage-dashboard">
             <div class="usage-row">
                 <span class="usage-label">🔋 Hệ thống</span>
@@ -32,18 +87,18 @@
                 <div id="usageBarFill" class="usage-bar-fill" style="width: 0%"></div>
             </div>
             <div class="usage-details">
-                <span id="usageKeys" title="API keys khả dụng">🔑 --/--</span>
-                <span id="usageCache" title="Cache hit rate">💾 --</span>
-                <span id="usageUptime" title="Thời gian chạy">⏱️ --</span>
+                <span id="usageKeys" title="Số kết nối AI đang hoạt động">🔑 --/--</span>
+                <span id="usageCache" title="Tỷ lệ kết quả lưu sẵn">💾 --</span>
+                <span id="usageUptime" title="Thời gian hoạt động">⏱️ --</span>
             </div>
         </div>
 
-        <!-- STREAMING PROGRESS BAR (v6) -->
+        <!-- STREAMING PROGRESS BAR (V7) -->
         <div id="streamProgress" class="hidden">
             <div class="stream-progress-bar">
                 <div class="stream-progress-fill" id="streamProgressFill" style="width: 0%"></div>
             </div>
-            <div id="streamProgressText" class="stream-progress-text">0/6 mô-đun hoàn tất</div>
+            <div id="streamProgressText" class="stream-progress-text">Đang phân tích...</div>
         </div>
         
         <button id="scanBtn" class="btn-primary">🚀 QUÉT TRANG NÀY</button>
@@ -77,7 +132,7 @@
             </div>
         </div>
 
-        <!-- v6 SCAN HISTORY PANEL -->
+        <!-- V7 SCAN HISTORY PANEL -->
         <div id="historyPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #9b59b6;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -88,7 +143,7 @@
             </div>
         </div>
 
-        <!-- v6 COMPARISON MODE PANEL -->
+        <!-- V7 COMPARISON MODE PANEL -->
         <div id="comparePanel" class="hidden">
             <div class="card" style="border-left: 4px solid #e67e22;">
                 <h3>📊 So sánh 2 trang</h3>
@@ -102,7 +157,7 @@
             </div>
         </div>
 
-        <!-- BULK ANALYSIS PANEL (Feature 6.13) -->
+        <!-- BULK ANALYSIS PANEL (feature 7.13) -->
         <div id="bulkPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #16a085;">
                 <h3>📋 Phân tích hàng loạt</h3>
@@ -132,7 +187,7 @@
             </div>
         </div>
 
-        <!-- REPORT PAGE PANEL (v6) -->
+        <!-- REPORT PAGE PANEL (V7) -->
         <div id="reportPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #e74c3c;">
                 <h3>🚩 Báo cáo trang web</h3>
@@ -154,7 +209,7 @@
         <!-- PARENTAL CONTROL PANEL (4.2 + 6.2 + 6.6) -->
         <div id="parentalPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #8e44ad;">
-                <h3>🔒 Kiểm soát gia đình v6</h3>
+                <h3>🔒 Kiểm soát gia đình V7</h3>
                 <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Tự động chặn trang web có rủi ro cao, danh sách đen & phát hiện ẩn danh.</p>
 
                 <!-- Basic settings row -->
@@ -177,7 +232,7 @@
                     <input type="password" id="parentalPinInput" maxlength="6" placeholder="0000" style="width: 80px; padding: 4px 8px; text-align: center; font-size: 14px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #fff); color: var(--text-primary);">
                 </div>
 
-                <!-- ─── Feature 6.6: Incognito detection ─────────────────── -->
+                <!-- ─── feature 7.6: Incognito detection ─────────────────── -->
                 <div style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-bottom: 10px;">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                         <span style="font-size: 12px; font-weight: bold;">🕵️ Chế độ ẩn danh:</span>
@@ -201,7 +256,7 @@
 
                 <button id="parentalSaveBtn" class="btn-primary" style="padding: 8px; margin: 0 0 10px 0; background: #8e44ad;">💾 Lưu cài đặt</button>
 
-                <!-- ─── Feature 6.2: Domain Blacklist / Whitelist tabs ─── -->
+                <!-- ─── feature 7.2: Domain Blacklist / Whitelist tabs ─── -->
                 <div style="border-top: 1px solid var(--border-color); padding-top: 8px;">
                     <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px;">📋 Quản lý tên miền</div>
 
@@ -244,169 +299,189 @@
         </div>
 
         <div id="results" class="hidden">
-            <!-- SCAM PROMPT CARD (Feature 6.12) -->
+            <!-- SCAM PROMPT CARD -->
             <div id="scamPromptCard" class="hidden scam-prompt-card">
                 <div style="display: flex; align-items: flex-start; gap: 10px;">
                     <span style="font-size: 28px; line-height: 1;">🦈</span>
                     <div style="flex: 1;">
                         <div style="font-weight: bold; font-size: 13px; color: #c0392b; margin-bottom: 4px;">Phát hiện dấu hiệu lừa đảo!</div>
-                        <div id="scamPromptDetail" style="font-size: 11px; color: var(--text-secondary); margin-bottom: 8px;"></div>
-                        <div id="scamEvidenceList" style="font-size: 11px; color: #7f8c8d; margin-bottom: 8px;"></div>
+                        <div id="scamPromptDetail" style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;"></div>
+                        <div id="scamEvidenceList" style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;"></div>
                         <div style="display: flex; gap: 6px;">
-                            <button id="scamConfirmBtn" class="btn-primary" style="flex: 1; padding: 6px; margin: 0; background: #c0392b; font-size: 11px;">🚨 Xác nhận báo cáo</button>
-                            <button id="scamDenyBtn" class="btn-secondary" style="flex: 1; padding: 6px; font-size: 11px;">✖ Bỏ qua</button>
+                            <button id="scamConfirmBtn" class="btn-primary" style="flex: 1; padding: 6px; margin: 0; background: #c0392b; font-size: 12px;">🚨 Xác nhận báo cáo</button>
+                            <button id="scamDenyBtn" class="btn-secondary" style="flex: 1; padding: 6px; font-size: 12px;">✖ Bỏ qua</button>
                         </div>
-                        <div id="scamReportResult" class="hidden" style="font-size: 11px; text-align: center; margin-top: 6px; padding: 4px; border-radius: 4px;"></div>
+                        <div id="scamReportResult" class="hidden" style="font-size: 12px; text-align: center; margin-top: 6px; padding: 4px; border-radius: 4px;"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- BLOCKLIST WARNING (v6) -->
+            <!-- BLOCKLIST WARNING -->
             <div id="blocklistWarning" class="hidden" style="margin-bottom: 10px;">
-                <div class="card" style="border-left: 4px solid #e74c3c; background: rgba(231,76,60,0.1);">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 24px;">🚫</span>
+                <div class="card" style="border-left: 4px solid #e74c3c; background: rgba(231,76,60,0.08);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 26px;">🚫</span>
                         <div>
-                            <div style="font-weight: bold; font-size: 12px; color: #e74c3c;">Trang web trong danh sách đen cộng đồng</div>
-                            <div id="blocklistDetail" style="font-size: 11px; color: var(--text-secondary);">Đã bị nhiều người dùng báo cáo.</div>
+                            <div style="font-weight: bold; font-size: 13px; color: #e74c3c;">Trang web bị cộng đồng cảnh báo</div>
+                            <div id="blocklistDetail" style="font-size: 12px; color: var(--text-secondary);">Đã bị nhiều người dùng báo cáo.</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- LEARNING APPLIED INDICATOR -->
+            <!-- LEARNING INDICATOR -->
             <div id="learningIndicator" class="hidden" style="margin-bottom: 8px;">
-                <div style="font-size: 11px; color: #27ae60; text-align: center; padding: 4px; background: rgba(39,174,96,0.1); border-radius: 4px;">
-                    🧠 AI đã học từ <span id="learningCount">0</span> phản hồi trước đó
+                <div style="font-size: 12px; color: #27ae60; text-align: center; padding: 6px 10px; background: rgba(39,174,96,0.1); border-radius: 6px;">
+                    🧠 AI đã học từ <span id="learningCount">0</span> phản hồi trước — kết quả chính xác hơn
                 </div>
             </div>
 
-            <!-- v6 ARTICLE SUMMARY -->
-            <div class="card summary-card" id="summaryCard" style="display: none;">
-                <h3>📰 Tóm tắt bài viết (AI)</h3>
-                <div id="summaryText" class="card-content summary-text"></div>
-                <div id="summaryMeta" class="summary-meta"></div>
+            <!-- RESULTS TABS -->
+            <div class="result-tabs">
+                <button class="result-tab active" data-tab="analysis">📊 Kết quả</button>
+                <button class="result-tab" data-tab="summary">📖 Tóm tắt bài</button>
             </div>
 
-            <!-- v6 RISK SCORE -->
-            <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
-                <h3 style="color: white;">📊 Điểm Rủi Ro Tổng Thể</h3>
-                <div id="riskScore" class="card-content" style="font-size: 32px; font-weight: bold; text-align: center; color: white;">-/100</div>
-                <div id="riskLevel" class="card-content" style="text-align: center; color: white; font-size: 18px;">Đang tính...</div>
-                <div id="riskBreakdown" class="details" style="color: rgba(255,255,255,0.9); font-size: 11px;"></div>
-            </div>
+            <!-- ═══ TAB: ANALYSIS RESULTS ═══ -->
+            <div id="tab-analysis" class="result-tab-content">
 
-            <!-- v6 SENTIMENT (Enhanced) -->
-            <div class="card">
-                <h3>🎭 Phân tích cảm xúc</h3>
-                <div id="sentimentStatus" class="card-content">...</div>
-                <div id="sentimentDetails" class="details" style="margin-top: 8px;"></div>
-            </div>
-
-            <!-- v6 TOXICITY (Enhanced) -->
-            <div class="card">
-                <h3>🛡️ Phát hiện nội dung độc hại</h3>
-                <div id="toxicStatus" class="card-content">Đang chờ...</div>
-                <div id="toxicDetails" class="details"></div>
-                <div id="toxicFindings" class="findings"></div>
-            </div>
-
-            <!-- v6 FACT CHECK (Enhanced) -->
-            <div class="card">
-                <h3>📰 Kiểm tra thực tế (Đa nguồn)</h3>
-                <div id="fakeStatus" class="card-content">Đang chờ...</div>
-                <div id="fakeSummary" class="details"></div>
-                <div id="fakeEvidence" class="details" style="font-size: 11px; margin-top: 8px;"></div>
-            </div>
-
-            <!-- v6 COMMENTS ANALYSIS (Enhanced) -->
-            <div class="card">
-                <h3>💬 Phân tích bình luận v6</h3>
-                <div id="commentsStatus" class="card-content">Đang chờ...</div>
-                <div id="commentsApiSavings" class="api-savings-bar" style="display: none;"></div>
-                <div id="commentsDetails" class="details"></div>
-            </div>
-
-            <!-- v6 WARNINGS & RECOMMENDATIONS -->
-            <div class="card" id="warningsCard" style="display: none; border-left: 4px solid #f39c12;">
-                <h3>⚠️ Cảnh báo</h3>
-                <div id="warningsList" class="details"></div>
-            </div>
-
-            <div class="card" id="recommendationsCard" style="display: none; border-left: 4px solid #3498db;">
-                <h3>💡 Khuyến nghị</h3>
-                <div id="recommendationsList" class="details"></div>
-            </div>
-
-            <!-- v6 FEEDBACK SECTION -->
-            <div id="feedbackSection" class="hidden" style="margin-top: 10px;">
-                <div class="card" style="border-left: 4px solid #9b59b6; padding: 10px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 12px; font-weight: bold;">Kết quả chính xác không?</span>
-                        <div style="display: flex; gap: 6px;">
-                            <button id="feedbackUp" class="feedback-btn" title="Chính xác">👍</button>
-                            <button id="feedbackDown" class="feedback-btn" title="Không chính xác">👎</button>
-                        </div>
-                    </div>
-                    <div id="feedbackExtra" class="hidden" style="margin-top: 8px;">
-                        <textarea id="feedbackText" placeholder="Bạn nghĩ kết quả nên là gì? (tùy chọn)" style="width: 100%; height: 50px; font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; resize: none; background: var(--input-bg); color: var(--text-primary);"></textarea>
-                        <button id="feedbackSubmit" class="btn-primary" style="padding: 6px; margin: 4px 0 0 0; font-size: 11px;">📤 Gửi phản hồi</button>
-                    </div>
-                    <div id="feedbackThanks" class="hidden" style="text-align: center; color: #27ae60; font-weight: bold; padding: 8px;">🙏 Cảm ơn phản hồi của bạn!</div>
+                <!-- RISK SCORE -->
+                <div class="card card-risk">
+                    <h3 class="card-risk-title">📊 Điểm Rủi Ro Tổng Thể</h3>
+                    <div id="riskScore" class="risk-number">-/100</div>
+                    <div id="riskLevel" class="risk-label">Đang tính...</div>
+                    <div id="riskBreakdown" class="risk-breakdown"></div>
                 </div>
-            </div>
 
-            <!-- CORRECTION PANEL (Feature 6.9) -->
-            <div id="correctionPanel" class="hidden correction-panel">
-                <div class="card" style="border-left: 4px solid #8e44ad; padding: 10px;">
-                    <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px;">📐 Hiệu chỉnh điểm số (6.9)</div>
-                    <p style="font-size: 10px; color: var(--text-secondary); margin-bottom: 8px;">AI chưa đúng? Hiệu chỉnh để cải thiện cho lần sau.</p>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <div style="flex: 1;">
-                            <label style="font-size: 10px; color: var(--text-secondary);">Điểm rủi ro đúng (0-100):</label>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <input type="range" id="corrRiskSlider" min="0" max="100" value="50" style="flex: 1;">
-                                <span id="corrRiskVal" style="font-size: 12px; font-weight: bold; min-width: 24px;">50</span>
+                <!-- TOXICITY -->
+                <div class="card">
+                    <h3>🛡️ Nội dung độc hại</h3>
+                    <div id="toxicStatus" class="card-content">Đang chờ...</div>
+                    <div id="toxicDetails" class="details"></div>
+                    <div id="toxicFindings" class="findings"></div>
+                </div>
+
+                <!-- FACT CHECK -->
+                <div class="card">
+                    <h3>✅ Kiểm tra độ tin cậy</h3>
+                    <div id="fakeStatus" class="card-content">Đang chờ...</div>
+                    <div id="fakeSummary" class="details"></div>
+                    <div id="fakeEvidence" class="details" style="border-top: none; padding-top: 0;"></div>
+                </div>
+
+                <!-- COMMENTS -->
+                <div class="card">
+                    <h3>💬 Bình luận</h3>
+                    <div id="commentsStatus" class="card-content">Đang chờ...</div>
+                    <div id="commentsApiSavings" style="display: none;"></div>
+                    <div id="commentsDetails" class="details"></div>
+                </div>
+
+                <!-- SENTIMENT -->
+                <div class="card">
+                    <h3>🎭 Cảm xúc bài viết</h3>
+                    <div id="sentimentStatus" class="card-content">...</div>
+                    <div id="sentimentDetails" class="details" style="margin-top: 8px;"></div>
+                </div>
+
+                <!-- WARNINGS -->
+                <div class="card" id="warningsCard" style="display: none; border-left: 4px solid #f39c12;">
+                    <h3>⚠️ Cảnh báo</h3>
+                    <div id="warningsList" class="details"></div>
+                </div>
+
+                <!-- RECOMMENDATIONS -->
+                <div class="card" id="recommendationsCard" style="display: none; border-left: 4px solid #3498db;">
+                    <h3>💡 Gợi ý</h3>
+                    <div id="recommendationsList" class="details"></div>
+                </div>
+
+                <!-- FEEDBACK -->
+                <div id="feedbackSection" class="hidden" style="margin-top: 10px;">
+                    <div class="card" style="border-left: 4px solid #9b59b6; padding: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 13px; font-weight: 600;">Kết quả này có đúng không?</span>
+                            <div style="display: flex; gap: 6px;">
+                                <button id="feedbackUp" class="feedback-btn" title="Đúng">👍</button>
+                                <button id="feedbackDown" class="feedback-btn" title="Chưa đúng">👎</button>
                             </div>
                         </div>
-                        <div style="flex: 1;">
-                            <label style="font-size: 10px; color: var(--text-secondary);">Độc hại đúng (0-100):</label>
-                            <div style="display: flex; align-items: center; gap: 6px;">
-                                <input type="range" id="corrToxSlider" min="0" max="100" value="0" style="flex: 1;">
-                                <span id="corrToxVal" style="font-size: 12px; font-weight: bold; min-width: 24px;">0</span>
+                        <div id="feedbackExtra" class="hidden" style="margin-top: 8px;">
+                            <textarea id="feedbackText" placeholder="Bạn thấy kết quả nên thay đổi thế nào? (tùy chọn)" style="width: 100%; height: 52px; font-size: 12px; font-family: inherit; border: 1px solid var(--border-color); border-radius: 4px; padding: 6px; resize: none; background: var(--input-bg); color: var(--text-primary);"></textarea>
+                            <button id="feedbackSubmit" class="btn-primary" style="padding: 7px; margin: 4px 0 0; font-size: 12px;">📤 Gửi phản hồi</button>
+                        </div>
+                        <div id="feedbackThanks" class="hidden" style="text-align: center; color: #27ae60; font-weight: 600; padding: 8px;">🙏 Cảm ơn phản hồi của bạn!</div>
+                    </div>
+                </div>
+
+                <!-- CORRECTION PANEL -->
+                <div id="correctionPanel" class="hidden correction-panel">
+                    <div class="card" style="border-left: 4px solid #8e44ad; padding: 10px;">
+                        <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">✏️ Góp ý cải thiện AI</div>
+                        <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 10px;">AI chưa đúng? Điều chỉnh bên dưới để AI học tốt hơn cho lần sau.</p>
+                        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                            <div style="flex: 1;">
+                                <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Điểm rủi ro đúng (0–100):</label>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="range" id="corrRiskSlider" min="0" max="100" value="50" style="flex: 1;">
+                                    <span id="corrRiskVal" style="font-size: 13px; font-weight: 700; min-width: 28px;">50</span>
+                                </div>
+                            </div>
+                            <div style="flex: 1;">
+                                <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Mức độ độc hại đúng (0–100):</label>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="range" id="corrToxSlider" min="0" max="100" value="0" style="flex: 1;">
+                                    <span id="corrToxVal" style="font-size: 13px; font-weight: 700; min-width: 28px;">0</span>
+                                </div>
                             </div>
                         </div>
+                        <div style="margin-bottom: 8px;">
+                            <label style="font-size: 12px; color: var(--text-secondary); display: block; margin-bottom: 4px;">Lý do:</label>
+                            <select id="corrReasonSelect" style="width: 100%; padding: 6px 8px; font-size: 12px; font-family: inherit; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #fff); color: var(--text-primary);">
+                                <option value="too_high">Điểm quá cao</option>
+                                <option value="too_low">Điểm quá thấp</option>
+                                <option value="cultural_context">Ngữ cảnh văn hóa Việt Nam</option>
+                                <option value="sarcasm">Châm biếm / mỉa mai</option>
+                                <option value="wrong_category">Phân loại sai</option>
+                                <option value="other">Lý do khác</option>
+                            </select>
+                        </div>
+                        <button id="corrSubmitBtn" class="btn-primary" style="padding: 8px; margin: 0; font-size: 12px; background: #8e44ad;">📤 Gửi góp ý</button>
+                        <div id="corrResult" class="hidden" style="font-size: 12px; margin-top: 6px; text-align: center; padding: 4px; border-radius: 4px;"></div>
                     </div>
-                    <div style="margin-bottom: 8px;">
-                        <label style="font-size: 10px; color: var(--text-secondary);">Lý do:</label>
-                        <select id="corrReasonSelect" style="width: 100%; padding: 4px 6px; font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #fff); color: var(--text-primary); margin-top: 3px;">
-                            <option value="too_high">Điểm quá cao</option>
-                            <option value="too_low">Điểm quá thấp</option>
-                            <option value="cultural_context">Ngữ cảnh văn hóa VN</option>
-                            <option value="sarcasm">Châm biếm / mỉa mai</option>
-                            <option value="wrong_category">Sai danh mục</option>
-                            <option value="other">Khác</option>
-                        </select>
-                    </div>
-                    <button id="corrSubmitBtn" class="btn-primary" style="padding: 7px; margin: 0; font-size: 11px; background: #8e44ad;">📤 Gửi hiệu chỉnh</button>
-                    <div id="corrResult" class="hidden" style="font-size: 11px; margin-top: 6px; text-align: center; padding: 4px; border-radius: 4px;"></div>
                 </div>
-            </div>
 
-            <div style="margin-top: 15px; padding: 10px; background: var(--footer-bg, #f0f0f0); border-radius: 5px; text-align: center;">
-                <div style="font-size: 10px; color: var(--text-secondary, #666); margin-bottom: 8px;">VnContentGuard Pro v6.0 — AI · Thống nhất · Lừa đảo · Hàng loạt · Hiệu chỉnh · YouTube/TikTok</div>
-                <div style="display: flex; gap: 6px;">
-                    <button id="exportBtn" class="btn-secondary" style="flex: 1; padding: 8px;">📥 Xuất báo cáo</button>
-                    <button id="clearCache" class="btn-secondary" style="flex: 1; padding: 8px;">🗑️ Xóa kết quả</button>
+                <!-- BOTTOM ACTION BUTTONS -->
+                <div class="results-footer">
+                    <div class="results-footer-btns">
+                        <button id="exportBtn" class="btn-footer">📥 Xuất báo cáo</button>
+                        <button id="clearCache" class="btn-footer">🗑️ Xóa kết quả</button>
+                    </div>
                 </div>
-            </div>
-        </div>
+
+            </div><!-- end #tab-analysis -->
+
+            <!-- ═══ TAB: ARTICLE SUMMARY ═══ -->
+            <div id="tab-summary" class="result-tab-content hidden">
+                <div class="card summary-card" id="summaryCard">
+                    <h3>📰 Tóm tắt bài viết</h3>
+                    <div id="summaryText" class="card-content summary-text"></div>
+                    <div id="summaryMeta" class="summary-meta"></div>
+                </div>
+                <div id="noSummaryMsg" class="card" style="text-align: center; padding: 28px 12px;">
+                    <div style="font-size: 36px; margin-bottom: 10px;">📄</div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">Chưa có tóm tắt cho trang này.<br>Hãy quét trang để AI tạo tóm tắt.</div>
+                </div>
+            </div><!-- end #tab-summary -->
+
+        </div><!-- end #results -->
 
         <div id="errorBox" class="hidden">
             <div class="error-title">❌ Lỗi</div>
             <div id="errorMessage" class="card-content"></div>
             <button id="retryBtn" class="btn-secondary" style="margin-top: 10px;">Thử lại</button>
         </div>
+    <div class="app-version">VnContentGuard Pro &middot; v7.0</div>
     </div>
     <script src="offline_analyzer.js"></script>
     <script src="popup.js"></script>

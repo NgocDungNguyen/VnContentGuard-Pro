@@ -1,5 +1,5 @@
 ﻿"""
-VnContentGuard Pro v6 - Unified Single-Pass AI Analyzer
+VnContentGuard Pro V7 - Unified Single-Pass AI Analyzer
 ========================================================
 ARCH-01: Single Gemini call that handles summary, sentiment, fact-check,
 article toxicity, all ambiguous comments, and overall risk in one shot.
@@ -65,7 +65,7 @@ class UnifiedAnalyzer:
               Each: {index, text, reactions}  (index = position in original list)
 
         Returns:
-            Complete analysis dict matching the v6 response structure.
+            Complete analysis dict matching the V7 response structure.
             Falls back gracefully if Gemini call fails.
         """
         prompt = self._build_prompt(structured_data, precomputed, ambiguous_comments)
@@ -299,7 +299,7 @@ LƯU Ý QUAN TRỌNG:
         """Issue the unified Gemini call with retry + key rotation."""
         max_retries = 3
         for attempt in range(max_retries):
-            key = self.key_rotator.get_key()
+            key = self.key_rotator.get_current_key()
             if key is None:
                 print("⚠️ [unified] No API key available")
                 return None
@@ -329,7 +329,7 @@ LƯU Ý QUAN TRỌNG:
                 print(f"⚠️ [unified] Attempt {attempt+1} failed: {e}")
 
                 if "429" in err or "quota" in err or "resource_exhausted" in err:
-                    self.key_rotator.mark_exhausted(key)
+                    self.key_rotator.mark_key_exhausted()
                     # Small sleep before retry with next key
                     time.sleep(1)
                     continue
@@ -409,7 +409,7 @@ LƯU Ý QUAN TRỌNG:
                     }
                 )
 
-        # Ensure every comment has evidence_spans key (Feature 6.3)
+        # Ensure every comment has evidence_spans key (feature 7.3)
         for c in data["comments"]:
             if "evidence_spans" not in c:
                 c["evidence_spans"] = []
@@ -417,7 +417,7 @@ LƯU Ý QUAN TRỌNG:
         # Sort by index
         data["comments"].sort(key=lambda x: x.get("index", 0))
 
-        # Normalize scam_detection (Feature 6.12) — fill defaults if absent
+        # Normalize scam_detection (feature 7.12) — fill defaults if absent
         if "scam_detection" not in data:
             data["scam_detection"] = {
                 "is_scam": False,
