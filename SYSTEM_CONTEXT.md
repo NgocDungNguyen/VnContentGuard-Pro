@@ -1,15 +1,15 @@
 ﻿# VNCONTENTGUARD PRO — COMPLETE SYSTEM CONTEXT
 # Paste this file into any new chat so the AI knows exactly what the system is and does.
-# Last updated: February 24, 2026 | Version: 6.0.0
+# Last updated: February 24, 2026 | Version: 7.0.0
 
 ## PROJECT IDENTITY
 - **Name:** VnContentGuard Pro
 - **Purpose:** AI-powered Vietnamese content moderation Chrome Extension + backend with unified structured analysis and self-learning feedback system
 - **Repo:** https://github.com/NgocDungNguyen/VnContentGuard-Pro.git
-- **Branch:** `v6-enhancement` (active dev), `v4-enhancement` (stable), `main` (production)
+- **Branch:** `V7-enhancement` (active dev), `v4-enhancement` (stable), `main` (production)
 - **Workspace:** `C:\Users\LucyS\Tox`
 - **Language:** Python 3.10 (backend) + JavaScript (Chrome extension)
-- **Version:** 6.0.0
+- **Version:** 7.0.0
 
 ---
 
@@ -308,7 +308,7 @@ Returns system health, API key stats, cache stats, blocklist stats, version info
 - API stats dashboard
 - Gemini 2.5 Flash upgrade (with Lite fallback)
 
-### v6.0 Features (implemented, version = "6.0" internally)
+### V7.0 Features (implemented, version = "7.0" internally)
 - 1.3: Auto-scan toggle (supported domains, 30-min cooldown)
 - 2.5: Comparison mode (side-by-side of 2 scanned pages)
 - 2.7: Offline regex mode (instant partial results)

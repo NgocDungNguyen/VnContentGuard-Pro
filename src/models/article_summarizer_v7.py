@@ -1,5 +1,5 @@
 ﻿"""
-VnContentGuard Pro v6 - Article Summarizer
+VnContentGuard Pro V7 - Article Summarizer
 ============================================
 Generates detailed 12-15 sentence summaries of Vietnamese news articles
 using Gemini AI. Results are cached per URL to avoid redundant API calls.

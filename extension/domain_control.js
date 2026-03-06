@@ -1,5 +1,5 @@
-/**
- * VnContentGuard Pro v6.0 — Domain Control Module (Feature 6.2)
+﻿/**
+ * VnContentGuard Pro V7.0 — Domain Control Module (feature 7.2)
  * Manages user-defined domain blacklist and whitelist for parental control.
  *
  * Storage keys:

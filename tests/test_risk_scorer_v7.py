@@ -1,7 +1,7 @@
 ﻿"""
 Tests for VnContentGuard Pro v5 - Risk Scoring System
 ======================================================
-Comprehensive tests for RiskScorerV6 integrating all v5 modules
+Comprehensive tests for RiskScorerV7 integrating all v5 modules
 """
 
 import os
@@ -12,11 +12,11 @@ import pytest
 # Add parent directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from src.models.risk_scorer_v6 import RiskScorerV6, calculate_risk
+from src.models.risk_scorer_v7 import RiskScorerV7, calculate_risk
 
 
-class TestRiskScorerV6:
-    """Test suite for RiskScorerV6"""
+class TestRiskScorerV7:
+    """Test suite for RiskScorerV7"""
 
     # Class-level scorer to avoid reloading models
     scorer = None
@@ -24,7 +24,7 @@ class TestRiskScorerV6:
     @classmethod
     def setup_class(cls):
         """Setup once for entire test class"""
-        cls.scorer = RiskScorerV6()
+        cls.scorer = RiskScorerV7()
 
     def test_initialization(self):
         """Test risk scorer initializes correctly"""
@@ -33,7 +33,7 @@ class TestRiskScorerV6:
         assert hasattr(self.scorer, "sentiment_analyzer")
         assert hasattr(self.scorer, "toxicity_analyzer")
         assert hasattr(self.scorer, "fact_checker")
-        print("✅ RiskScorerV6 initialization test passed")
+        print("✅ RiskScorerV7 initialization test passed")
 
     def test_empty_input(self):
         """Test handling of empty input"""
@@ -274,7 +274,7 @@ class TestIntegration:
 
     def test_full_v5_pipeline(self):
         """Test complete v5 pipeline integration"""
-        scorer = RiskScorerV6()
+        scorer = RiskScorerV7()
 
         # Test with complex content
         result = scorer.score(
@@ -298,7 +298,7 @@ class TestIntegration:
 
     def test_all_components_contribution(self):
         """Test that all components contribute to final score"""
-        scorer = RiskScorerV6()
+        scorer = RiskScorerV7()
 
         result = scorer.score(
             "Shocking news! This is terrible and unbelievable!",

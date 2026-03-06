@@ -1,5 +1,5 @@
 ﻿/**
- * VnContentGuard Pro v6.0 — Popup Script
+ * VnContentGuard Pro V7.0 — Popup Script
  * ========================================
  * - Delegates API calls to background.js (survives popup close)
  * - Resumes scan state on popup reopen
@@ -8,16 +8,16 @@
  * - Export report (PDF/HTML)
  * - Auto-scan for supported sites
  * - Offline regex mode with instant partial results
- * - SSE Streaming results (v6)
- * - Community report & blocklist (v6)
- * - Parental control + Domain Blacklist/Whitelist (v6)
- * - Weekly safety report (v6)
- * - Unified single-pass AI analysis (v6 ARCH-01)
- * - Explainable AI — evidence spans (v6.3)
- * - Incognito detection (v6.6)
- * - Score Correction + Re-Ranker (v6.9)
- * - Scam URL reporting (v6.12)
- * - Bulk analysis mode (v6.13)
+ * - SSE Streaming results (V7)
+ * - Community report & blocklist (V7)
+ * - Parental control + Domain Blacklist/Whitelist (V7)
+ * - Weekly safety report (V7)
+ * - Unified single-pass AI analysis (V7 ARCH-01)
+ * - Explainable AI — evidence spans (V7.3)
+ * - Incognito detection (V7.6)
+ * - Score Correction + Re-Ranker (V7.9)
+ * - Scam URL reporting (V7.12)
+ * - Bulk analysis mode (V7.13)
  */
 
 let currentResultsData = null;
@@ -40,10 +40,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
         document.getElementById('status').textContent = 'Sẵn sàng quét';
 
-        // Check blocklist for current URL (v6)
+        // Check blocklist for current URL (V7)
         checkBlocklistStatus(tab.url);
 
-        // Fetch and display system stats (v6)
+        // Fetch and display system stats (V7)
         loadUsageDashboard();
 
         // Apply saved dark mode preference
@@ -127,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v6.0 — Auto-scan toggle handler
+    // V7.0 — Auto-scan toggle handler
     const autoScanBtn = document.getElementById('autoScanBtn');
     if (autoScanBtn) {
         // Load current auto-scan state
@@ -150,19 +150,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v6.0 — Comparison mode button handler
+    // V7.0 — Comparison mode button handler
     const compareBtn = document.getElementById('compareBtn');
     if (compareBtn) {
         compareBtn.addEventListener('click', toggleComparePanel);
     }
 
-    // v6.0 — Compare Go button
+    // V7.0 — Compare Go button
     const compareGoBtn = document.getElementById('compareGoBtn');
     if (compareGoBtn) {
         compareGoBtn.addEventListener('click', runComparison);
     }
 
-    // v6.0 — Feedback button handlers
+    // V7.0 — Feedback button handlers
     const feedbackUp = document.getElementById('feedbackUp');
     const feedbackDown = document.getElementById('feedbackDown');
     if (feedbackUp) {
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         feedbackSubmit.addEventListener('click', submitFeedbackWithCorrection);
     }
 
-    // v6 — Report page button handler
+    // V7 — Report page button handler
     const reportPageBtn = document.getElementById('reportPageBtn');
     if (reportPageBtn) {
         reportPageBtn.addEventListener('click', toggleReportPanel);
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         reportSubmitBtn.addEventListener('click', submitPageReport);
     }
 
-    // v6 — Weekly report button handler
+    // V7 — Weekly report button handler
     const weeklyReportBtn = document.getElementById('weeklyReportBtn');
     if (weeklyReportBtn) {
         weeklyReportBtn.addEventListener('click', () => {
@@ -196,7 +196,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // v6 — Parental control button handler
+    // V7 — Parental control button handler
     const parentalBtn = document.getElementById('parentalBtn');
     if (parentalBtn) {
         parentalBtn.addEventListener('click', toggleParentalPanel);
@@ -214,7 +214,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // ── Feature 6.2 — Domain Blacklist / Whitelist UI ──────────────────────
+    // ── feature 7.2 — Domain Blacklist / Whitelist UI ──────────────────────
 
     // Tab switching
     document.getElementById('blacklistTabBtn')?.addEventListener('click', () => switchDomainTab('blacklist'));
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ── Feature 6.6 — Incognito Log UI ────────────────────────────────────
+    // ── feature 7.6 — Incognito Log UI ────────────────────────────────────
 
     document.getElementById('incognitoLogBtn')?.addEventListener('click', () => {
         const panel = document.getElementById('incognitoLogPanel');
@@ -264,12 +264,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('incognitoLogList').innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Nhật ký trống.</div>';
     });
 
-    // ── Feature 6.13 — Bulk Analysis ──────────────────────────────────────
+    // ── feature 7.13 — Bulk Analysis ──────────────────────────────────────
     document.getElementById('bulkBtn')?.addEventListener('click', toggleBulkPanel);
     document.getElementById('bulkScanBtn')?.addEventListener('click', runBulkScan);
     document.getElementById('bulkExportBtn')?.addEventListener('click', exportBulkCsv);
 
-    // ── Feature 6.9 — Score Correction sliders ────────────────────────────
+    // ── feature 7.9 — Score Correction sliders ────────────────────────────
     document.getElementById('corrRiskSlider')?.addEventListener('input', (e) => {
         document.getElementById('corrRiskVal').textContent = e.target.value;
     });
@@ -278,7 +278,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('corrSubmitBtn')?.addEventListener('click', submitCorrection);
 
-    // ── Feature 6.12 — Scam prompt handlers ──────────────────────────────
+    // ── feature 7.12 — Scam prompt handlers ──────────────────────────────
     document.getElementById('scamConfirmBtn')?.addEventListener('click', confirmScamReport);
     document.getElementById('scamDenyBtn')?.addEventListener('click', () => {
         document.getElementById('scamPromptCard')?.classList.add('hidden');
@@ -345,7 +345,7 @@ function startPollingForResults(url) {
         } else if (status.status === 'scanning') {
             document.getElementById('status').textContent = status.progress || 'Đang phân tích...';
 
-            // Update streaming progress bar if available (v6)
+            // Update streaming progress bar if available (V7)
             if (status.stream_modules && Object.keys(status.stream_modules).length > 0) {
                 const count = Object.keys(status.stream_modules).length;
                 updateStreamProgress(count, status.stream_modules);
@@ -468,7 +468,7 @@ document.getElementById('confirmYes').addEventListener('click', async () => {
         let response;
 
         if (scannedDataCache._is_structured) {
-            // ARCH-01: Send structured data to /analyze/v6/unified (1 Gemini call)
+            // ARCH-01: Send structured data to /analyze/V7/unified (1 Gemini call)
             response = await chrome.runtime.sendMessage({
                 type: 'START_SCAN_UNIFIED',
                 data: {
@@ -1360,7 +1360,7 @@ function structuredScrapePageContent() {
     const wordCount = articleBody ? articleBody.split(/\s+/).filter(Boolean).length : 0;
 
     // ── Flat backward-compatible fallback ───────────────────────────────────
-    // Old /analyze/v6 still works with this
+    // Old /analyze/V7 still works with this
     const flatText = [articleTitle, articleBody].filter(Boolean).join('\n').trim() || cleanText(document.body.innerText).substring(0, 5000);
     const flatComments = finalComments.map(c => c.text);
 
@@ -1422,8 +1422,8 @@ function structuredScrapePageContent() {
 
 
 function renderResults(data, urlInfo) {
-    // All responses from v6 endpoint include sentiment_v6 or version="6.0"
-    const isV6 = !!(data.sentiment_v6 || data.version === "6.0");
+    // All responses from V7 endpoint include sentiment_v7 or version="7.0"
+    const isV7 = !!(data.sentiment_v7 || data.version === "6.0");
 
     // ===== RESET ALL UI STATES FIRST =====
     document.getElementById('confirmation').classList.add('hidden');
@@ -1433,29 +1433,29 @@ function renderResults(data, urlInfo) {
     // Show results container
     document.getElementById('results').classList.remove('hidden');
 
-    if (isV6) {
-        renderV6Results(data, urlInfo);
+    if (isV7) {
+        renderV7Results(data, urlInfo);
     } else {
         renderV2Results(data, urlInfo);
     }
 }
 
-function renderV6Results(data, urlInfo) {
-    const sentiment = data.sentiment_v6 || { overall: "Neutral", confidence: 0, intensity: "Weak" };
-    const toxicity = data.toxicity_v6 || { is_toxic: false, overall_score: 0, severity: "Low" };
-    const factCheck = data.fact_check_v6 || { score: 50, verdict: "Unknown" };
-    const riskScore = data.risk_score_v6 || { risk_score: 0, risk_level: "Low" };
+function renderV7Results(data, urlInfo) {
+    const sentiment = data.sentiment_v7 || { overall: "Neutral", confidence: 0, intensity: "Weak" };
+    const toxicity = data.toxicity_v7 || { is_toxic: false, overall_score: 0, severity: "Low" };
+    const factCheck = data.fact_check_v7 || { score: 50, verdict: "Unknown" };
+    const riskScore = data.risk_score_v7 || { risk_score: 0, risk_level: "Low" };
     const comments = data.comments_analysis || { total: 0, toxic_count: 0, toxic_comments: [], details: [] };
     const articleSummary = data.article_summary || null;
     const isOffline = data.offline_mode === true;
 
-    console.log("📊 Rendering v6 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
+    console.log("📊 Rendering V7 results:", { sentiment, toxicity, factCheck, riskScore, articleSummary, isOffline });
 
     // Hide streaming progress bar
     const streamEl = document.getElementById('streamProgress');
     if (streamEl) streamEl.classList.add('hidden');
 
-    // Show learning indicator if AI used feedback (v6.0)
+    // Show learning indicator if AI used feedback (V7.0)
     const learningIndicator = document.getElementById('learningIndicator');
     if (learningIndicator && data.learning_applied) {
         learningIndicator.classList.remove('hidden');
@@ -1465,7 +1465,7 @@ function renderV6Results(data, urlInfo) {
         learningIndicator.classList.add('hidden');
     }
 
-    // Show blocklist warning if applicable (v6)
+    // Show blocklist warning if applicable (V7)
     const blockWarning = document.getElementById('blocklistWarning');
     if (blockWarning && data.blocklist_info && data.blocklist_info.is_blocked) {
         blockWarning.classList.remove('hidden');
@@ -1475,10 +1475,10 @@ function renderV6Results(data, urlInfo) {
         blockWarning.classList.add('hidden');
     }
 
-    // Feature 6.12 — Show scam prompt if AI detected scam indicators
+    // feature 7.12 — Show scam prompt if AI detected scam indicators
     renderScamPrompt(data.scam_detection, urlInfo || currentTabUrl);
 
-    // ===== 0. ARTICLE SUMMARY (v6 — AI-generated, cached) =====
+    // ===== 0. ARTICLE SUMMARY (V7 — AI-generated, cached) =====
     const summaryCard = document.getElementById('summaryCard');
     const summaryRaw = articleSummary?.summary || articleSummary?.text || '';
     const summaryContent = truncateSummary(summaryRaw, 5);
@@ -1535,7 +1535,7 @@ function renderV6Results(data, urlInfo) {
         document.getElementById('riskBreakdown').innerHTML = breakdownHTML;
     }
 
-    // ===== 2. SENTIMENT v6 (PhoBERT) =====
+    // ===== 2. SENTIMENT V7 (PhoBERT) =====
     const sentLabel = sentiment.overall || "Neutral";
     const sentConf = sentiment.confidence || 0;
     const sentIntensity = sentiment.intensity || "Weak";
@@ -1566,7 +1566,7 @@ function renderV6Results(data, urlInfo) {
         </div>
     `;
 
-    // ===== 3. TOXICITY v6 (4-Layer) =====
+    // ===== 3. TOXICITY V7 (4-Layer) =====
     const isToxic = toxicity.is_toxic || false;
     const toxScore = toxicity.overall_score || 0;
     const toxSeverity = toxicity.severity || "Low";
@@ -1603,7 +1603,7 @@ function renderV6Results(data, urlInfo) {
     toxDetailsHTML += '</div>';
     document.getElementById('toxicDetails').innerHTML = toxDetailsHTML;
 
-    // ===== 4. FACT CHECK v6 (Multi-Source) =====
+    // ===== 4. FACT CHECK V7 (Multi-Source) =====
     const credScore = factCheck.score || 50;
     const verdict = factCheck.verdict || "Unknown";
     const evidence = factCheck.evidence || [];
@@ -1641,7 +1641,7 @@ function renderV6Results(data, urlInfo) {
         document.getElementById('fakeEvidence').innerHTML = evidenceHTML;
     }
 
-    // ===== 5. COMMENTS ANALYSIS v6 (Enhanced) =====
+    // ===== 5. COMMENTS ANALYSIS V7 (Enhanced) =====
     const totalComments = comments.total || 0;
     const toxicCount = comments.toxic_count || 0;
     const toxicComments = comments.toxic_comments || [];
@@ -1727,12 +1727,12 @@ function renderV6Results(data, urlInfo) {
         document.getElementById('recommendationsCard').style.display = 'none';
     }
 
-    console.log("✅ v6 results rendered");
+    console.log("✅ V7 results rendered");
 
     // ===== 2.1 — OVERLAY CONTROLS (Content Script) =====
     renderOverlayControls(data, urlInfo);
 
-    // ===== v6.0 — SHOW FEEDBACK SECTION (after results) =====
+    // ===== V7.0 — SHOW FEEDBACK SECTION (after results) =====
     const feedbackSection = document.getElementById('feedbackSection');
     if (feedbackSection && !isOffline) {
         feedbackSection.classList.remove('hidden');
@@ -1743,19 +1743,19 @@ function renderV6Results(data, urlInfo) {
         document.getElementById('feedbackDown').disabled = false;
     }
 
-    // Feature 6.9 — Correction panel (pre-filled with current scores)
+    // feature 7.9 — Correction panel (pre-filled with current scores)
     renderCorrectionPanel(data, urlInfo || currentTabUrl);
 
     // ===== SHOW WARNING MODAL if high risk (after delay) =====
     if (riskValue >= 50) {  // Medium-High or higher (0-100 scale)
         setTimeout(() => {
-            showWarningModalV6(riskScore, sentiment, toxicity, factCheck);
+            showWarningModalV7(riskScore, sentiment, toxicity, factCheck);
         }, 12000);
     }
 }
 
 /**
- * v6 Content Script Overlay — Toggle controls card injected into popup results.
+ * V7 Content Script Overlay — Toggle controls card injected into popup results.
  * Shows/hides the floating risk badge on the active page via content.js.
  */
 async function renderOverlayControls(data, urlInfo) {
@@ -1949,7 +1949,7 @@ function renderV2Results(data, urlInfo) {
     }
 }
 
-function showWarningModalV6(riskScore, sentiment, toxicity, factCheck) {
+function showWarningModalV7(riskScore, sentiment, toxicity, factCheck) {
     const warningModal = document.getElementById('warningModal');
     const warningContent = document.getElementById('warningContent');
 
@@ -2221,13 +2221,13 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================================
 
 function exportReport(data, url) {
-    const isSupported = !!(data.sentiment_v6 || data.version === "6.0");
+    const isSupported = !!(data.sentiment_v7 || data.version === "6.0");
     if (!isSupported) return;
 
-    const sentiment = data.sentiment_v6 || {};
-    const toxicity = data.toxicity_v6 || {};
-    const factCheck = data.fact_check_v6 || {};
-    const riskScore = data.risk_score_v6 || {};
+    const sentiment = data.sentiment_v7 || {};
+    const toxicity = data.toxicity_v7 || {};
+    const factCheck = data.fact_check_v7 || {};
+    const riskScore = data.risk_score_v7 || {};
     const comments = data.comments_analysis || {};
     const summary = data.article_summary || {};
 
@@ -2274,7 +2274,7 @@ function exportReport(data, url) {
     <h1>🛡️ VnContentGuard Pro — Báo cáo phân tích</h1>
     <p><strong>URL:</strong> <a href="${url || '#'}">${url || 'N/A'}</a></p>
     <p><strong>Ngày quét:</strong> ${dateStr}</p>
-    <p><strong>Phiên bản:</strong> v6.0</p>
+    <p><strong>Phiên bản:</strong> V7.0</p>
 
     <h2>📊 Điểm Rủi Ro Tổng Thể</h2>
     <div style="text-align: center; margin: 15px 0;">
@@ -2333,7 +2333,7 @@ function exportReport(data, url) {
     <ul>${riskScore.recommendations.map(r => `<li>${r}</li>`).join('')}</ul>` : ''}
 
     <div class="footer">
-        <p>Báo cáo được tạo bởi VnContentGuard Pro v6.0</p>
+        <p>Báo cáo được tạo bởi VnContentGuard Pro V7.0</p>
         <p>⚠️ Kết quả phân tích mang tính tham khảo. Hãy luôn kiểm chứng thông tin từ nhiều nguồn.</p>
     </div>
 </body>
@@ -2361,7 +2361,7 @@ function exportReport(data, url) {
 }
 
 // ============================================================================
-// USER FEEDBACK (v6.0)
+// USER FEEDBACK (V7.0)
 // ============================================================================
 
 let feedbackRating = null;
@@ -2437,7 +2437,7 @@ async function submitFeedbackToBackend(rating, correction) {
 }
 
 // ============================================================================
-// COMPARISON MODE (v6.0)
+// COMPARISON MODE (V7.0)
 // ============================================================================
 
 async function toggleComparePanel() {
@@ -2511,18 +2511,18 @@ async function runComparison() {
 }
 
 async function renderComparison(data1, data2, url1, url2) {
-    const risk1 = data1.risk_score_v6?.risk_score || 0;
-    const risk2 = data2.risk_score_v6?.risk_score || 0;
-    const level1 = data1.risk_score_v6?.risk_level || 'Low';
-    const level2 = data2.risk_score_v6?.risk_level || 'Low';
-    const sent1 = data1.sentiment_v6?.overall || 'Neutral';
-    const sent2 = data2.sentiment_v6?.overall || 'Neutral';
-    const toxic1 = data1.toxicity_v6?.is_toxic || false;
-    const toxic2 = data2.toxicity_v6?.is_toxic || false;
-    const fact1 = data1.fact_check_v6?.score || 50;
-    const fact2 = data2.fact_check_v6?.score || 50;
-    const verdict1 = data1.fact_check_v6?.verdict || '?';
-    const verdict2 = data2.fact_check_v6?.verdict || '?';
+    const risk1 = data1.risk_score_v7?.risk_score || 0;
+    const risk2 = data2.risk_score_v7?.risk_score || 0;
+    const level1 = data1.risk_score_v7?.risk_level || 'Low';
+    const level2 = data2.risk_score_v7?.risk_level || 'Low';
+    const sent1 = data1.sentiment_v7?.overall || 'Neutral';
+    const sent2 = data2.sentiment_v7?.overall || 'Neutral';
+    const toxic1 = data1.toxicity_v7?.is_toxic || false;
+    const toxic2 = data2.toxicity_v7?.is_toxic || false;
+    const fact1 = data1.fact_check_v7?.score || 50;
+    const fact2 = data2.fact_check_v7?.score || 50;
+    const verdict1 = data1.fact_check_v7?.verdict || '?';
+    const verdict2 = data2.fact_check_v7?.verdict || '?';
     const toxicCount1 = data1.comments_analysis?.toxic_count || 0;
     const toxicCount2 = data2.comments_analysis?.toxic_count || 0;
     const totalComments1 = data1.comments_analysis?.total || 0;
@@ -2606,15 +2606,15 @@ function getDomain(url) {
 }
 
 // ============================================================================
-// STREAMING PROGRESS (v6.0)
+// STREAMING PROGRESS (V7.0)
 // ============================================================================
 
 const MODULE_NAMES = {
     article_summary: '📰 Tóm tắt',
-    sentiment_v6: '🎭 Cảm xúc',
-    toxicity_v6: '🛡️ Độc hại',
-    fact_check_v6: '📰 Kiểm tra TT',
-    risk_score_v6: '📊 Rủi ro',
+    sentiment_v7: '🎭 Cảm xúc',
+    toxicity_v7: '🛡️ Độc hại',
+    fact_check_v7: '📰 Kiểm tra TT',
+    risk_score_v7: '📊 Rủi ro',
     comments_analysis: '💬 Bình luận'
 };
 
@@ -2634,7 +2634,7 @@ function updateStreamProgress(count, modules) {
 }
 
 // ============================================================================
-// BLOCKLIST CHECK (v6.0)
+// BLOCKLIST CHECK (V7.0)
 // ============================================================================
 
 async function checkBlocklistStatus(url) {
@@ -2652,7 +2652,7 @@ async function checkBlocklistStatus(url) {
 }
 
 // ============================================================================
-// REPORT PAGE (v6.0)
+// REPORT PAGE (V7.0)
 // ============================================================================
 
 function toggleReportPanel() {
@@ -2690,7 +2690,7 @@ async function submitPageReport() {
         return;
     }
 
-    const riskScore = currentResultsData?.risk_score_v6?.risk_score || 50;
+    const riskScore = currentResultsData?.risk_score_v7?.risk_score || 50;
     const btn = document.getElementById('reportSubmitBtn');
     if (btn) { btn.disabled = true; btn.textContent = '⏳ Đang gửi...'; }
 
@@ -2729,7 +2729,7 @@ async function submitPageReport() {
 }
 
 // ============================================================================
-// PARENTAL CONTROL (v6.0)
+// PARENTAL CONTROL (V7.0)
 // ============================================================================
 
 function toggleParentalPanel() {
@@ -2806,7 +2806,7 @@ async function saveParentalSettings() {
 }
 
 // ============================================================================
-// FEATURE 6.2 — DOMAIN BLACKLIST / WHITELIST (v6.0)
+// feature 7.2 — DOMAIN BLACKLIST / WHITELIST (V7.0)
 // ============================================================================
 
 function switchDomainTab(tab) {
@@ -2901,7 +2901,7 @@ async function exportDomainList(listType) {
 }
 
 // ============================================================================
-// FEATURE 6.6 — INCOGNITO LOG (v6.0)
+// feature 7.6 — INCOGNITO LOG (V7.0)
 // ============================================================================
 
 async function renderIncognitoLog() {
@@ -2930,7 +2930,7 @@ async function renderIncognitoLog() {
 }
 
 // ============================================================================
-// API USAGE DASHBOARD (v6.0)
+// API USAGE DASHBOARD (V7.0)
 // ============================================================================
 
 async function loadUsageDashboard() {
@@ -3029,7 +3029,7 @@ function formatUptime(seconds) {
 }
 
 // ============================================================================
-// FEATURE 6.3 — EXPLAINABLE AI EVIDENCE HELPERS
+// feature 7.3 — EXPLAINABLE AI EVIDENCE HELPERS
 // ============================================================================
 
 /**
@@ -3087,7 +3087,7 @@ function renderEvidenceTags(evidenceSpans) {
 }
 
 // ============================================================================
-// Feature 6.9 — User Correction + Model Re-Ranking
+// feature 7.9 — User Correction + Model Re-Ranking
 // ============================================================================
 
 const CORRECTION_API = 'https://vncontentguard-pro.onrender.com/api/correction';
@@ -3099,8 +3099,8 @@ function renderCorrectionPanel(data, url) {
     const panel = document.getElementById('correctionPanel');
     if (!panel) return;
 
-    const riskScore = Math.round(data?.risk_score_v6?.risk_score || data?.risk_score || 0);
-    const toxScore  = Math.round((data?.toxicity_v6?.overall_score || 0) * 100);
+    const riskScore = Math.round(data?.risk_score_v7?.risk_score || data?.risk_score || 0);
+    const toxScore  = Math.round((data?.toxicity_v7?.overall_score || 0) * 100);
 
     const riskSlider = document.getElementById('corrRiskSlider');
     const toxSlider  = document.getElementById('corrToxSlider');
@@ -3175,7 +3175,7 @@ async function submitCorrection() {
 }
 
 // ============================================================================
-// Feature 6.12 — Scam URL Prompt + Reporting
+// feature 7.12 — Scam URL Prompt + Reporting
 // ============================================================================
 
 const SCAM_REPORT_API = 'https://vncontentguard-pro.onrender.com/api/report/scam';
@@ -3273,10 +3273,10 @@ async function confirmScamReport() {
 }
 
 // ============================================================================
-// Feature 6.13 — Bulk Analysis Mode
+// feature 7.13 — Bulk Analysis Mode
 // ============================================================================
 
-const BULK_API = 'https://vncontentguard-pro.onrender.com/analyze/v6/bulk';
+const BULK_API = 'https://vncontentguard-pro.onrender.com/analyze/V7/bulk';
 
 /** Store last bulk results for CSV export */
 let _lastBulkResults = null;

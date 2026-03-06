@@ -50,7 +50,7 @@
     function renderOverlay(results) {
         removeOverlay(); // clean up any previous overlay first
 
-        const risk = results?.risk_score_v6 || results?.risk_assessment || {};
+        const risk = results?.risk_score_v7 || results?.risk_assessment || {};
         const riskScore = risk.risk_score ?? risk.score ?? 0;
         const riskLevel = risk.risk_level || risk.level || classifyRisk(riskScore);
         const riskCategory = risk.risk_category || risk.category || '';
@@ -134,8 +134,8 @@
 
     function buildBadgeDetails(results) {
         const lines = [];
-        const sentiment = results?.sentiment_v6 || {};
-        const factCheck = results?.fact_check_v6 || results?.fact_check || {};
+        const sentiment = results?.sentiment_v7 || {};
+        const factCheck = results?.fact_check_v7 || results?.fact_check || {};
         const comments = results?.comments_analysis || [];
         const toxicCount = comments.filter(c => c.is_toxic || c.toxicity_score > 0.5).length;
 
@@ -213,7 +213,7 @@
             el.setAttribute('data-vcg-toxic', '1');
             highlightedEls.push(el);
 
-            // Feature 6.3 — Highlight individual evidence spans within the element
+            // feature 7.3 — Highlight individual evidence spans within the element
             if (matchedResult.evidence_spans && matchedResult.evidence_spans.length > 0) {
                 highlightEvidenceSpans(el, matchedResult.evidence_spans);
             }
@@ -230,7 +230,7 @@
         });
     }
 
-    // ─── Feature 6.3: Evidence Span DOM Highlighting ─────────────────────────
+    // ─── feature 7.3: Evidence Span DOM Highlighting ─────────────────────────
     /**
      * Walk text nodes inside `container` and wrap occurrences of each
      * evidence span's text with a coloured <span> for in-page highlighting.

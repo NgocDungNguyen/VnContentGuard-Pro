@@ -1,5 +1,5 @@
 ﻿"""
-VnContentGuard Pro v6 - Fact-Checking System
+VnContentGuard Pro V7 - Fact-Checking System
 =============================================
 Multi-source fact verification system with:
 1. Google Fact Check Tools API - Known fact-checks from multiple organizations
@@ -23,7 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class FactCheckerV6:
+class FactCheckerV7:
     """
     Advanced Multi-Source Fact-Checking System
 
@@ -37,7 +37,7 @@ class FactCheckerV6:
     """
 
     def __init__(self, key_rotator=None):
-        print("⏳ Initializing Fact-Checking System v6...")
+        print("⏳ Initializing Fact-Checking System V7...")
 
         # API Keys
         self.google_factcheck_key = os.getenv("GOOGLE_FACT_CHECK_API_KEY")
@@ -54,7 +54,7 @@ class FactCheckerV6:
 
         # Import source analyzer
         try:
-            from .source_analyzer_v6 import SourceAnalyzer
+            from .source_analyzer_v7 import SourceAnalyzer
 
             self.source_analyzer = SourceAnalyzer()
             print("✅ Source analyzer loaded")
@@ -94,7 +94,7 @@ class FactCheckerV6:
         else:
             print("⚠️ NewsData.io API not configured (optional)")
 
-        print("✅ Fact-Checker v6 Ready!")
+        print("✅ Fact-Checker V7 Ready!")
 
     def check(self, text: str, url: Optional[str] = None) -> Dict:
         """
@@ -347,13 +347,13 @@ Trả lời ngắn gọn, khách quan, bằng tiếng Việt."""
 # Convenience function
 def check_fact(text: str, url: Optional[str] = None) -> Dict:
     """Quick fact check"""
-    checker = FactCheckerV6()
+    checker = FactCheckerV7()
     return checker.check(text, url)
 
 
 if __name__ == "__main__":
     # Quick test
-    checker = FactCheckerV6()
+    checker = FactCheckerV7()
 
     test_cases = [
         ("Việt Nam có 54 dân tộc", None),
@@ -361,7 +361,7 @@ if __name__ == "__main__":
         ("COVID-19 vaccine causes autism", None),
     ]
 
-    print("\n🧪 Testing Fact-Checker v6:")
+    print("\n🧪 Testing Fact-Checker V7:")
     for text, url in test_cases:
         result = checker.check(text, url)
         print(f"\nClaim: {text}")

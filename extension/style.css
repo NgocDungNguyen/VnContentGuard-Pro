@@ -1,5 +1,5 @@
 ﻿/**
- * VnContentGuard Pro v6.0 - Clean Design with Dark Mode
+ * VnContentGuard Pro V7.0 - Clean Design with Dark Mode
  */
 
 /* ============================================================================ */
@@ -86,7 +86,7 @@ h2 {
 }
 
 /* ============================================================================
-   API USAGE DASHBOARD â€” v6.0
+   API USAGE DASHBOARD â€” V7.0
    ============================================================================ */
 
 .usage-dashboard {
@@ -337,7 +337,7 @@ h3 {
 }
 
 /* ============================================================================ */
-/* ARTICLE SUMMARY CARD (v6) */
+/* ARTICLE SUMMARY CARD (V7) */
 /* ============================================================================ */
 
 .summary-card {
@@ -537,7 +537,7 @@ h3 {
 }
 
 /* ============================================================================ */
-/* v6 HEADER BAR                                                                 */
+/* V7 HEADER BAR                                                                 */
 /* ============================================================================ */
 
 .header-bar {
@@ -581,7 +581,7 @@ h3 {
 }
 
 /* ============================================================================ */
-/* v6 HISTORY CARD                                                               */
+/* V7 HISTORY CARD                                                               */
 /* ============================================================================ */
 
 .history-card {
@@ -601,7 +601,7 @@ h3 {
 }
 
 /* ============================================================================ */
-/* v6 DARK MODE TRANSITION HELPERS                                               */
+/* V7 DARK MODE TRANSITION HELPERS                                               */
 /* ============================================================================ */
 
 body.dark-mode .btn-secondary {
@@ -684,7 +684,7 @@ body.dark-mode .history-card:hover {
 }
 
 /* ============================================================================ */
-/* v6 AUTO-SCAN BUTTON (active state)                                          */
+/* V7 AUTO-SCAN BUTTON (active state)                                          */
 /* ============================================================================ */
 
 .icon-btn.active {
@@ -701,7 +701,7 @@ body.dark-mode .icon-btn.active {
 }
 
 /* ============================================================================ */
-/* v6 OFFLINE MODE BADGE                                                       */
+/* V7 OFFLINE MODE BADGE                                                       */
 /* ============================================================================ */
 
 .summary-badge.offline {
@@ -715,7 +715,7 @@ body.dark-mode .icon-btn.active {
 }
 
 /* ============================================================================ */
-/* v6 COMPARISON MODE                                                          */
+/* V7 COMPARISON MODE                                                          */
 /* ============================================================================ */
 
 .compare-select {
@@ -742,7 +742,7 @@ body.dark-mode .compare-select {
 }
 
 /* ============================================================================ */
-/* v6 FEEDBACK BUTTONS                                                         */
+/* V7 FEEDBACK BUTTONS                                                         */
 /* ============================================================================ */
 
 .feedback-btn {
@@ -775,7 +775,7 @@ body.dark-mode .feedback-btn {
 }
 
 /* ============================================================================ */
-/* v6 STREAMING PROGRESS BAR                                                    */
+/* V7 STREAMING PROGRESS BAR                                                    */
 /* ============================================================================ */
 
 .stream-progress-bar {
@@ -802,7 +802,7 @@ body.dark-mode .feedback-btn {
 }
 
 /* ============================================================================ */
-/* v6 PARENTAL CONTROL TOGGLE SWITCH                                            */
+/* V7 PARENTAL CONTROL TOGGLE SWITCH                                            */
 /* ============================================================================ */
 
 .switch {
@@ -851,7 +851,7 @@ input:checked + .slider:before {
 }
 
 /* ============================================================================ */
-/* v6 REPORT BUTTON + PANELS                                                  */
+/* V7 REPORT BUTTON + PANELS                                                  */
 /* ============================================================================ */
 
 #reportPageBtn.active,
@@ -873,7 +873,7 @@ body.dark-mode #parentalPinInput {
 }
 
 /* ============================================================================ */
-/* v6 OVERLAY CONTROL CARD                                                     */
+/* V7 OVERLAY CONTROL CARD                                                     */
 /* ============================================================================ */
 
 .overlay-ctrl-card {
@@ -956,7 +956,7 @@ body.dark-mode .overlay-ctrl-btns .btn-primary {
 }
 
 /* ============================================================
-   FEATURE 6.2 â€” Domain Blacklist / Whitelist                  
+   feature 7.2 â€” Domain Blacklist / Whitelist                  
    =========================================================== */
 
 .domain-control-tabs {
@@ -1043,7 +1043,7 @@ body.dark-mode .overlay-ctrl-btns .btn-primary {
 }
 
 /* ============================================================
-   FEATURE 6.3 â€” Explainable AI Evidence Highlighting         
+   feature 7.3 â€” Explainable AI Evidence Highlighting         
    =========================================================== */
 
 /* In-popup evidence marks (popup.js renderComment) */
@@ -1082,7 +1082,7 @@ body.dark-mode .overlay-ctrl-btns .btn-primary {
 .evidence-tag.low    { background: rgba( 52,152,219, 0.15); color: #2471a3; border: 1px solid rgba(52,152,219,0.4); }
 
 /* ============================================================
-   FEATURE 6.6 â€” Incognito Detection                          
+   feature 7.6 â€” Incognito Detection                          
    =========================================================== */
 
 .incognito-count-badge {
@@ -1141,7 +1141,7 @@ body.dark-mode .evidence-mark.high   { background: rgba(231, 76, 60, 0.35); }
 body.dark-mode .evidence-mark.medium { background: rgba(243,156, 18, 0.35); }
 body.dark-mode .evidence-mark.low    { background: rgba( 52,152,219, 0.30); }   
 
-/* â”€â”€â”€ Feature 6.12 â€” Scam Prompt Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€â”€ feature 7.12 â€” Scam Prompt Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .scam-prompt-card {
     margin-bottom: 10px;
     padding: 12px;
@@ -1159,7 +1159,7 @@ body.dark-mode .scam-prompt-card {
     border-color: #e74c3c;
 }
 
-/* â”€â”€â”€ Feature 6.9 â€” Correction Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€â”€ feature 7.9 â€” Correction Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .correction-panel {
     margin-top: 8px;
 }
@@ -1167,7 +1167,7 @@ body.dark-mode .scam-prompt-card {
     accent-color: #8e44ad;
 }
 
-/* â”€â”€â”€ Feature 6.13 â€” Bulk Result Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€â”€ feature 7.13 â€” Bulk Result Table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .bulk-result-table {
     width: 100%;
     border-collapse: collapse;

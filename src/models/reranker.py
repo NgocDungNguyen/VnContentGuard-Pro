@@ -1,5 +1,5 @@
-"""
-VnContentGuard Pro v6.9 — Score Re-Ranker
+﻿"""
+VnContentGuard Pro V7.9 — Score Re-Ranker
 ==========================================
 Learns per-domain score calibration from user corrections.
 
@@ -164,14 +164,14 @@ class ScoreReranker:
             adjusted["risk_score"] = int(max(0, min(100, round(orig + risk_adj))))
 
         # Nested toxicity dict adjustment
-        tox_data = adjusted.get("toxicity_v6", {})
+        tox_data = adjusted.get("toxicity_v7", {})
         if isinstance(tox_data, dict) and abs(tox_adj) >= 0.5:
             orig_tox = float(tox_data.get("overall_score", 0))
             tox_data = dict(tox_data)
             tox_data["overall_score"] = round(
                 max(0.0, min(1.0, orig_tox + tox_adj / 100.0)), 3
             )
-            adjusted["toxicity_v6"] = tox_data
+            adjusted["toxicity_v7"] = tox_data
 
         adjusted["reranker_applied"] = abs(risk_adj) >= 0.5 or abs(tox_adj) >= 0.5
         adjusted["reranker_adjustments"] = {

@@ -6,7 +6,7 @@
 </head>
 <body>
     <div class="container">
-        <!-- v6 HEADER BAR -->
+        <!-- V7 HEADER BAR -->
         <div class="header-bar">
             <h2>🛡️ VnContentGuard Pro</h2>
             <div class="header-actions">
@@ -22,7 +22,7 @@
         </div>
         <div id="status" class="status-badge">Sẵn sàng quét</div>
 
-        <!-- API USAGE DASHBOARD (v6) -->
+        <!-- API USAGE DASHBOARD (V7) -->
         <div id="usageDashboard" class="usage-dashboard">
             <div class="usage-row">
                 <span class="usage-label">🔋 Hệ thống</span>
@@ -38,7 +38,7 @@
             </div>
         </div>
 
-        <!-- STREAMING PROGRESS BAR (v6) -->
+        <!-- STREAMING PROGRESS BAR (V7) -->
         <div id="streamProgress" class="hidden">
             <div class="stream-progress-bar">
                 <div class="stream-progress-fill" id="streamProgressFill" style="width: 0%"></div>
@@ -77,7 +77,7 @@
             </div>
         </div>
 
-        <!-- v6 SCAN HISTORY PANEL -->
+        <!-- V7 SCAN HISTORY PANEL -->
         <div id="historyPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #9b59b6;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -88,7 +88,7 @@
             </div>
         </div>
 
-        <!-- v6 COMPARISON MODE PANEL -->
+        <!-- V7 COMPARISON MODE PANEL -->
         <div id="comparePanel" class="hidden">
             <div class="card" style="border-left: 4px solid #e67e22;">
                 <h3>📊 So sánh 2 trang</h3>
@@ -102,7 +102,7 @@
             </div>
         </div>
 
-        <!-- BULK ANALYSIS PANEL (Feature 6.13) -->
+        <!-- BULK ANALYSIS PANEL (feature 7.13) -->
         <div id="bulkPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #16a085;">
                 <h3>📋 Phân tích hàng loạt</h3>
@@ -132,7 +132,7 @@
             </div>
         </div>
 
-        <!-- REPORT PAGE PANEL (v6) -->
+        <!-- REPORT PAGE PANEL (V7) -->
         <div id="reportPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #e74c3c;">
                 <h3>🚩 Báo cáo trang web</h3>
@@ -154,7 +154,7 @@
         <!-- PARENTAL CONTROL PANEL (4.2 + 6.2 + 6.6) -->
         <div id="parentalPanel" class="hidden">
             <div class="card" style="border-left: 4px solid #8e44ad;">
-                <h3>🔒 Kiểm soát gia đình v6</h3>
+                <h3>🔒 Kiểm soát gia đình V7</h3>
                 <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Tự động chặn trang web có rủi ro cao, danh sách đen & phát hiện ẩn danh.</p>
 
                 <!-- Basic settings row -->
@@ -177,7 +177,7 @@
                     <input type="password" id="parentalPinInput" maxlength="6" placeholder="0000" style="width: 80px; padding: 4px 8px; text-align: center; font-size: 14px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #fff); color: var(--text-primary);">
                 </div>
 
-                <!-- ─── Feature 6.6: Incognito detection ─────────────────── -->
+                <!-- ─── feature 7.6: Incognito detection ─────────────────── -->
                 <div style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-bottom: 10px;">
                     <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
                         <span style="font-size: 12px; font-weight: bold;">🕵️ Chế độ ẩn danh:</span>
@@ -201,7 +201,7 @@
 
                 <button id="parentalSaveBtn" class="btn-primary" style="padding: 8px; margin: 0 0 10px 0; background: #8e44ad;">💾 Lưu cài đặt</button>
 
-                <!-- ─── Feature 6.2: Domain Blacklist / Whitelist tabs ─── -->
+                <!-- ─── feature 7.2: Domain Blacklist / Whitelist tabs ─── -->
                 <div style="border-top: 1px solid var(--border-color); padding-top: 8px;">
                     <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px;">📋 Quản lý tên miền</div>
 
@@ -244,7 +244,7 @@
         </div>
 
         <div id="results" class="hidden">
-            <!-- SCAM PROMPT CARD (Feature 6.12) -->
+            <!-- SCAM PROMPT CARD (feature 7.12) -->
             <div id="scamPromptCard" class="hidden scam-prompt-card">
                 <div style="display: flex; align-items: flex-start; gap: 10px;">
                     <span style="font-size: 28px; line-height: 1;">🦈</span>
@@ -261,7 +261,7 @@
                 </div>
             </div>
 
-            <!-- BLOCKLIST WARNING (v6) -->
+            <!-- BLOCKLIST WARNING (V7) -->
             <div id="blocklistWarning" class="hidden" style="margin-bottom: 10px;">
                 <div class="card" style="border-left: 4px solid #e74c3c; background: rgba(231,76,60,0.1);">
                     <div style="display: flex; align-items: center; gap: 8px;">
@@ -281,14 +281,14 @@
                 </div>
             </div>
 
-            <!-- v6 ARTICLE SUMMARY -->
+            <!-- V7 ARTICLE SUMMARY -->
             <div class="card summary-card" id="summaryCard" style="display: none;">
                 <h3>📰 Tóm tắt bài viết (AI)</h3>
                 <div id="summaryText" class="card-content summary-text"></div>
                 <div id="summaryMeta" class="summary-meta"></div>
             </div>
 
-            <!-- v6 RISK SCORE -->
+            <!-- V7 RISK SCORE -->
             <div class="card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
                 <h3 style="color: white;">📊 Điểm Rủi Ro Tổng Thể</h3>
                 <div id="riskScore" class="card-content" style="font-size: 32px; font-weight: bold; text-align: center; color: white;">-/100</div>
@@ -296,14 +296,14 @@
                 <div id="riskBreakdown" class="details" style="color: rgba(255,255,255,0.9); font-size: 11px;"></div>
             </div>
 
-            <!-- v6 SENTIMENT (Enhanced) -->
+            <!-- V7 SENTIMENT (Enhanced) -->
             <div class="card">
                 <h3>🎭 Phân tích cảm xúc</h3>
                 <div id="sentimentStatus" class="card-content">...</div>
                 <div id="sentimentDetails" class="details" style="margin-top: 8px;"></div>
             </div>
 
-            <!-- v6 TOXICITY (Enhanced) -->
+            <!-- V7 TOXICITY (Enhanced) -->
             <div class="card">
                 <h3>🛡️ Phát hiện nội dung độc hại</h3>
                 <div id="toxicStatus" class="card-content">Đang chờ...</div>
@@ -311,7 +311,7 @@
                 <div id="toxicFindings" class="findings"></div>
             </div>
 
-            <!-- v6 FACT CHECK (Enhanced) -->
+            <!-- V7 FACT CHECK (Enhanced) -->
             <div class="card">
                 <h3>📰 Kiểm tra thực tế (Đa nguồn)</h3>
                 <div id="fakeStatus" class="card-content">Đang chờ...</div>
@@ -319,15 +319,15 @@
                 <div id="fakeEvidence" class="details" style="font-size: 11px; margin-top: 8px;"></div>
             </div>
 
-            <!-- v6 COMMENTS ANALYSIS (Enhanced) -->
+            <!-- V7 COMMENTS ANALYSIS (Enhanced) -->
             <div class="card">
-                <h3>💬 Phân tích bình luận v6</h3>
+                <h3>💬 Phân tích bình luận V7</h3>
                 <div id="commentsStatus" class="card-content">Đang chờ...</div>
                 <div id="commentsApiSavings" class="api-savings-bar" style="display: none;"></div>
                 <div id="commentsDetails" class="details"></div>
             </div>
 
-            <!-- v6 WARNINGS & RECOMMENDATIONS -->
+            <!-- V7 WARNINGS & RECOMMENDATIONS -->
             <div class="card" id="warningsCard" style="display: none; border-left: 4px solid #f39c12;">
                 <h3>⚠️ Cảnh báo</h3>
                 <div id="warningsList" class="details"></div>
@@ -338,7 +338,7 @@
                 <div id="recommendationsList" class="details"></div>
             </div>
 
-            <!-- v6 FEEDBACK SECTION -->
+            <!-- V7 FEEDBACK SECTION -->
             <div id="feedbackSection" class="hidden" style="margin-top: 10px;">
                 <div class="card" style="border-left: 4px solid #9b59b6; padding: 10px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -356,7 +356,7 @@
                 </div>
             </div>
 
-            <!-- CORRECTION PANEL (Feature 6.9) -->
+            <!-- CORRECTION PANEL (feature 7.9) -->
             <div id="correctionPanel" class="hidden correction-panel">
                 <div class="card" style="border-left: 4px solid #8e44ad; padding: 10px;">
                     <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px;">📐 Hiệu chỉnh điểm số (6.9)</div>
@@ -394,7 +394,7 @@
             </div>
 
             <div style="margin-top: 15px; padding: 10px; background: var(--footer-bg, #f0f0f0); border-radius: 5px; text-align: center;">
-                <div style="font-size: 10px; color: var(--text-secondary, #666); margin-bottom: 8px;">VnContentGuard Pro v6.0 — AI · Thống nhất · Lừa đảo · Hàng loạt · Hiệu chỉnh · YouTube/TikTok</div>
+                <div style="font-size: 10px; color: var(--text-secondary, #666); margin-bottom: 8px;">VnContentGuard Pro V7.0 — AI · Thống nhất · Lừa đảo · Hàng loạt · Hiệu chỉnh · YouTube/TikTok</div>
                 <div style="display: flex; gap: 6px;">
                     <button id="exportBtn" class="btn-secondary" style="flex: 1; padding: 8px;">📥 Xuất báo cáo</button>
                     <button id="clearCache" class="btn-secondary" style="flex: 1; padding: 8px;">🗑️ Xóa kết quả</button>
