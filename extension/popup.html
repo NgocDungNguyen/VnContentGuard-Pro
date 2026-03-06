@@ -18,37 +18,58 @@
                     <button id="menuToggleBtn" class="ctrl-btn menu-toggle" title="Tất cả tính năng">☰</button>
                     <div id="headerDropdown" class="header-dropdown hidden">
                         <div class="dropdown-section-label">Công cụ</div>
-                        <button id="autoScanBtn" class="dropdown-item">
+                        <button id="autoScanBtn" class="dropdown-item" title="Tự động kiểm tra trang khi bạn truy cập — không cần nhấn Quét">
                             <span class="dropdown-icon">⚡</span>
-                            <span class="dropdown-text">Tự động quét</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Tự động quét</span>
+                                <span class="dropdown-desc">Kiểm tra khi mở trang mới</span>
+                            </span>
                         </button>
-                        <button id="bulkBtn" class="dropdown-item">
+                        <button id="bulkBtn" class="dropdown-item" title="Quét nhiều trang cùng lúc từ danh sách đường dẫn">
                             <span class="dropdown-icon">📋</span>
-                            <span class="dropdown-text">Quét hàng loạt</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Quét hàng loạt</span>
+                                <span class="dropdown-desc">Quét nhiều trang cùng lúc</span>
+                            </span>
                         </button>
-                        <button id="compareBtn" class="dropdown-item">
+                        <button id="compareBtn" class="dropdown-item" title="So sánh mức độ an toàn giữa 2 trang web với nhau">
                             <span class="dropdown-icon">📊</span>
-                            <span class="dropdown-text">So sánh trang</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">So sánh trang</span>
+                                <span class="dropdown-desc">So sánh 2 trang với nhau</span>
+                            </span>
                         </button>
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-section-label">Báo cáo</div>
-                        <button id="historyBtn" class="dropdown-item">
+                        <button id="historyBtn" class="dropdown-item" title="Xem lại tất cả các trang bạn đã quét trước đây">
                             <span class="dropdown-icon">📜</span>
-                            <span class="dropdown-text">Lịch sử quét</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Lịch sử quét</span>
+                                <span class="dropdown-desc">Xem lại kết quả đã quét</span>
+                            </span>
                         </button>
-                        <button id="weeklyReportBtn" class="dropdown-item">
+                        <button id="weeklyReportBtn" class="dropdown-item" title="Xem tổng kết an toàn trong 7 ngày qua">
                             <span class="dropdown-icon">📈</span>
-                            <span class="dropdown-text">Báo cáo hàng tuần</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Báo cáo hàng tuần</span>
+                                <span class="dropdown-desc">Tổng kết an toàn 7 ngày qua</span>
+                            </span>
                         </button>
-                        <button id="reportPageBtn" class="dropdown-item">
+                        <button id="reportPageBtn" class="dropdown-item" title="Báo cáo trang này vi phạm để cộng đồng cùng biết">
                             <span class="dropdown-icon">🚩</span>
-                            <span class="dropdown-text">Báo cáo trang này</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Báo cáo trang này</span>
+                                <span class="dropdown-desc">Báo vi phạm cho cộng đồng</span>
+                            </span>
                         </button>
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-section-label">Cài đặt</div>
-                        <button id="parentalBtn" class="dropdown-item">
+                        <button id="parentalBtn" class="dropdown-item" title="Chặn các trang không phù hợp, bảo vệ trẻ em và gia đình">
                             <span class="dropdown-icon">🔒</span>
-                            <span class="dropdown-text">Bảo vệ gia đình</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Bảo vệ gia đình</span>
+                                <span class="dropdown-desc">Chặn nội dung không phù hợp</span>
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -66,9 +87,9 @@
                 <div id="usageBarFill" class="usage-bar-fill" style="width: 0%"></div>
             </div>
             <div class="usage-details">
-                <span id="usageKeys" title="API keys khả dụng">🔑 --/--</span>
-                <span id="usageCache" title="Cache hit rate">💾 --</span>
-                <span id="usageUptime" title="Thời gian chạy">⏱️ --</span>
+                <span id="usageKeys" title="Số kết nối AI đang hoạt động">🔑 --/--</span>
+                <span id="usageCache" title="Tỷ lệ kết quả lưu sẵn">💾 --</span>
+                <span id="usageUptime" title="Thời gian hoạt động">⏱️ --</span>
             </div>
         </div>
 
@@ -77,7 +98,7 @@
             <div class="stream-progress-bar">
                 <div class="stream-progress-fill" id="streamProgressFill" style="width: 0%"></div>
             </div>
-            <div id="streamProgressText" class="stream-progress-text">0/6 mô-đun hoàn tất</div>
+            <div id="streamProgressText" class="stream-progress-text">Đang phân tích...</div>
         </div>
         
         <button id="scanBtn" class="btn-primary">🚀 QUÉT TRANG NÀY</button>
@@ -447,7 +468,7 @@
                     <div id="summaryText" class="card-content summary-text"></div>
                     <div id="summaryMeta" class="summary-meta"></div>
                 </div>
-                <div id="noSummaryMsg" class="card" style="display: none; text-align: center; padding: 28px 12px;">
+                <div id="noSummaryMsg" class="card" style="text-align: center; padding: 28px 12px;">
                     <div style="font-size: 36px; margin-bottom: 10px;">📄</div>
                     <div style="font-size: 13px; color: var(--text-secondary);">Chưa có tóm tắt cho trang này.<br>Hãy quét trang để AI tạo tóm tắt.</div>
                 </div>
@@ -460,6 +481,7 @@
             <div id="errorMessage" class="card-content"></div>
             <button id="retryBtn" class="btn-secondary" style="margin-top: 10px;">Thử lại</button>
         </div>
+    <div class="app-version">VnContentGuard Pro &middot; v7.0</div>
     </div>
     <script src="offline_analyzer.js"></script>
     <script src="popup.js"></script>

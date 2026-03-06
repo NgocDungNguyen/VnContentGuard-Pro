@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     document.getElementById('warningModal').classList.add('hidden');
                     document.getElementById('scanBtn').disabled = false;
                     document.getElementById('scanBtn').textContent = '🚀 QUÉT TRANG NÀY';
-                    document.getElementById('status').textContent = 'Đã xóa bộ nhớ đệm — Sẵn sàng quét';
+                    document.getElementById('status').textContent = 'Đã xóa kết quả đã lưu — Sẵn sàng quét';
                     chrome.action.setBadgeText({ text: '' });
                 });
             }
@@ -1649,7 +1649,7 @@ function renderV7Results(data, urlInfo) {
     const verdictVi = {
         'Verified True': 'Đã xác minh đúng', 'Likely True': 'Có thể đúng',
         'Unclear': 'Chưa rõ', 'Likely False': 'Có thể sai', 'False': 'Sai',
-        'Unknown': 'Không xác định', 'Quota Limit': '⏱️ Hết hạn mức API'
+        'Unknown': 'Không xác định', 'Quota Limit': '⏳ Đang kiểm tra lại sau'
     };
     const verdictDisplay = verdictVi[verdict] || verdict;
 
@@ -1912,7 +1912,7 @@ function renderV2Results(data, urlInfo) {
     const riskScore = parseInt(fake.risk_score) || 0;
     let riskClass = riskScore <= 3 ? 'risk-low' : 'risk-high';
     let verdict = fake.verdict || "Unknown";
-    const verdictVi2 = {'Verified True':'Đã xác minh đúng','Likely True':'Có thể đúng','Unclear':'Chưa rõ','Likely False':'Có thể sai','False':'Sai','Unknown':'Không xác định','Quota Limit':'⏱️ Hết hạn mức API'};
+    const verdictVi2 = {'Verified True':'Đã xác minh đúng','Likely True':'Có thể đúng','Unclear':'Chưa rõ','Likely False':'Có thể sai','False':'Sai','Unknown':'Không xác định','Quota Limit':'⏳ Đang kiểm tra lại sau'};
     verdict = verdictVi2[verdict] || verdict;
     
     document.getElementById('fakeStatus').innerHTML = 
@@ -1954,7 +1954,7 @@ function renderV2Results(data, urlInfo) {
         toxicDetails.innerHTML = detailsHTML;
     }
 
-    document.getElementById('commentsStatus').innerHTML = 'Chế độ v2 (xem phần Phát hiện độc hại ở trên)';
+    document.getElementById('commentsStatus').innerHTML = '(Xem phần nội dung độc hại ở trên)';
     document.getElementById('commentsDetails').innerHTML = '';
 
     console.log("✅ v2 results rendered (legacy mode)");
@@ -2647,7 +2647,7 @@ function updateStreamProgress(count, modules) {
     if (fill) fill.style.width = `${pct}%`;
     if (text) {
         const names = Object.keys(modules).map(m => MODULE_NAMES[m] || m).join(', ');
-        text.textContent = `${count}/${total} mô-đun hoàn tất${names ? ' — ' + names : ''}`;
+        text.textContent = `${count}/${total} bước hoàn tất${names ? ' — ' + names : ''}`;
     }
     if (progressEl && count > 0) progressEl.classList.remove('hidden');
 }
@@ -3008,7 +3008,7 @@ async function loadUsageDashboard() {
             percent: remainPercent,
             color: color,
             keys: `🔑 ${keys.available || 0}/${keys.total || 0}`,
-            cache: `📀 ${hitRate}`,
+            cache: `� ${hitRate}`,
             uptime: `⏱️ ${uptimeStr}`
         });
 
