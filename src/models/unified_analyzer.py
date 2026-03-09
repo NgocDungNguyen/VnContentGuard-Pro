@@ -305,20 +305,22 @@ LƯU Ý QUAN TRỌNG:
                 return None
 
             try:
-                import google.generativeai as genai
+                from google import genai
+                from google.genai import types
 
-                genai.configure(api_key=key)
+                client = genai.Client(api_key=key)
                 model_name = self._get_model_name()
-                model = genai.GenerativeModel(
-                    model_name=model_name,
-                    generation_config={
-                        "temperature": 0.1,  # Low temp for consistent JSON
-                        "max_output_tokens": 4096,
-                        "response_mime_type": "application/json",
-                    },
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=types.GenerateContentConfig(
+                        temperature=0.1,
+                        max_output_tokens=4096,
+                        response_mime_type="application/json",
+                    ),
                 )
-                response = model.generate_content(prompt)
                 raw = response.text.strip()
+                self.key_rotator.mark_key_success()
                 print(
                     f"✅ [unified] Gemini call succeeded (attempt {attempt+1}, {len(raw)} chars)"
                 )
