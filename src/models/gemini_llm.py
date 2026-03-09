@@ -54,9 +54,9 @@ if not API_KEY_POOL:
 
     API_KEY_POOL = [os.getenv("GEMINI_API_KEY", "")]
 
-# Model configuration — v4.0 upgrade to Gemini 2.5 Flash (auto-fallback to Lite)
-MODEL_NAME = "gemini-2.5-flash"  # Primary model (faster, smarter)
-MODEL_NAME_FALLBACK = "gemini-2.5-flash-lite"  # Fallback if primary quota exceeded
+# Model configuration — using Gemini 2.0 Flash (non-thinking, reliable JSON mode, fast)
+MODEL_NAME = "gemini-2.0-flash"  # Primary model (stable, non-thinking, full JSON support)
+MODEL_NAME_FALLBACK = "gemini-2.0-flash-lite"  # Fallback if primary quota exceeded
 
 
 class APIKeyRotator:

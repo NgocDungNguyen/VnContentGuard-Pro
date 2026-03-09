@@ -37,6 +37,7 @@ class UnifiedAnalyzer:
             key_rotator: Shared APIKeyRotator instance from gemini_llm.py
         """
         self.key_rotator = key_rotator
+        self._last_error = None  # Stores last Gemini call error for diagnostics
 
     # -------------------------------------------------------------------------
     # Public Interface
@@ -298,10 +299,12 @@ LƯU Ý QUAN TRỌNG:
     def _call_gemini(self, prompt: str) -> Optional[str]:
         """Issue the unified Gemini call with retry + key rotation."""
         max_retries = 3
+        last_error = None
         for attempt in range(max_retries):
             key = self.key_rotator.get_current_key()
             if key is None:
                 print("⚠️ [unified] No API key available")
+                self._last_error = last_error or "No API key available"
                 return None
 
             try:
@@ -315,19 +318,24 @@ LƯU Ý QUAN TRỌNG:
                     contents=prompt,
                     config=types.GenerateContentConfig(
                         temperature=0.1,
-                        max_output_tokens=4096,
+                        max_output_tokens=8192,
                         response_mime_type="application/json",
                     ),
                 )
-                raw = response.text.strip()
+                raw = response.text
+                if not raw or not raw.strip():
+                    raise ValueError(f"Empty response from model {model_name}")
+                raw = raw.strip()
                 self.key_rotator.mark_key_success()
                 print(
                     f"✅ [unified] Gemini call succeeded (attempt {attempt+1}, {len(raw)} chars)"
                 )
+                self._last_error = None
                 return raw
 
             except Exception as e:
                 err = str(e).lower()
+                last_error = str(e)
                 print(f"⚠️ [unified] Attempt {attempt+1} failed: {e}")
 
                 if "429" in err or "quota" in err or "resource_exhausted" in err:
@@ -340,8 +348,10 @@ LƯU Ý QUAN TRỌNG:
                     time.sleep(2**attempt)
                     continue
 
+                self._last_error = last_error
                 return None
 
+        self._last_error = last_error
         return None
 
     def _get_model_name(self) -> str:
@@ -351,7 +361,7 @@ LƯU Ý QUAN TRỌNG:
 
             return MODEL_NAME
         except Exception:
-            return "gemini-2.5-flash-lite"
+            return "gemini-2.0-flash"
 
     # -------------------------------------------------------------------------
     # Response Parser
@@ -447,7 +457,8 @@ LƯU Ý QUAN TRỌNG:
         Return best-effort results from pre-computed data alone (no Gemini).
         Used when the unified call fails completely.
         """
-        print("⚠️ [unified] Using fallback (pre-computed only, no Gemini)")
+        err_detail = f" | Lỗi: {self._last_error[:120]}" if self._last_error else ""
+        print(f"⚠️ [unified] Using fallback (pre-computed only, no Gemini){err_detail}")
 
         regex_tox = precomputed.get("regex_toxicity", {})
         kw_sent = precomputed.get("keyword_sentiment", {})
@@ -502,7 +513,9 @@ LƯU Ý QUAN TRỌNG:
                 "score": risk_score,
                 "level": self._score_to_level(risk_score),
                 "key_factors": ["AI analysis unavailable"],
-                "warnings": ["Kết quả sơ bộ — AI không khả dụng"],
+                "warnings": [
+                    f"Kết quả sơ bộ — AI không khả dụng{err_detail}"
+                ],
                 "recommendations": ["Thử lại sau khi backend phục hồi"],
             },
             "scam_detection": {
