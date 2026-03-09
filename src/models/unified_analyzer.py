@@ -313,14 +313,27 @@ LƯU Ý QUAN TRỌNG:
 
                 client = genai.Client(api_key=key)
                 model_name = self._get_model_name()
-                response = client.models.generate_content(
-                    model=model_name,
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
+
+                # Build config — disable thinking on gemini-2.5-flash so all output
+                # tokens go to the JSON response (not internal chain-of-thought)
+                try:
+                    gen_config = types.GenerateContentConfig(
                         temperature=0.1,
                         max_output_tokens=8192,
                         response_mime_type="application/json",
-                    ),
+                        thinking_config=types.ThinkingConfig(thinking_budget=0),
+                    )
+                except Exception:
+                    gen_config = types.GenerateContentConfig(
+                        temperature=0.1,
+                        max_output_tokens=8192,
+                        response_mime_type="application/json",
+                    )
+
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                    config=gen_config,
                 )
                 raw = response.text
                 if not raw or not raw.strip():
@@ -369,7 +382,7 @@ LƯU Ý QUAN TRỌNG:
 
             return MODEL_NAME
         except Exception:
-            return "gemini-2.0-flash-lite"
+            return "gemini-2.5-flash"
 
     # -------------------------------------------------------------------------
     # Response Parser

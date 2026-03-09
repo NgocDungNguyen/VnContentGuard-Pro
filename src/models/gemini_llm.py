@@ -54,9 +54,9 @@ if not API_KEY_POOL:
 
     API_KEY_POOL = [os.getenv("GEMINI_API_KEY", "")]
 
-# Model configuration — gemini-2.0-flash-lite: free tier in v1beta (30 RPM, 1500 RPD per key)
-MODEL_NAME = "gemini-2.0-flash-lite"  # Primary: free tier, available in v1beta
-MODEL_NAME_FALLBACK = "gemini-2.0-flash-lite"  # Same model as only reliable free-tier option
+# Model configuration — gemini-2.5-flash is the only model with free-tier quota on these keys
+MODEL_NAME = "gemini-2.5-flash"  # Primary: confirmed working with these API keys
+MODEL_NAME_FALLBACK = "gemini-2.5-flash"  # Same — no other model has free-tier access
 
 
 class APIKeyRotator:
