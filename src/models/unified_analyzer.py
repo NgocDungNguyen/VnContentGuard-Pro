@@ -298,7 +298,7 @@ LƯU Ý QUAN TRỌNG:
 
     def _call_gemini(self, prompt: str) -> Optional[str]:
         """Issue the unified Gemini call with retry + key rotation."""
-        max_retries = 3
+        max_retries = 6
         last_error = None
         for attempt in range(max_retries):
             key = self.key_rotator.get_current_key()
@@ -339,8 +339,15 @@ LƯU Ý QUAN TRỌNG:
                 print(f"⚠️ [unified] Attempt {attempt+1} failed: {e}")
 
                 if "429" in err or "quota" in err or "resource_exhausted" in err:
-                    self.key_rotator.mark_key_exhausted()
-                    # Small sleep before retry with next key
+                    # Distinguish: short retryDelay = rate-limit (temp); no delay = daily quota
+                    from src.models.gemini_llm import APIKeyRotator as _KR
+                    retry_delay = _KR.parse_retry_delay(str(e))
+                    if retry_delay <= 120:
+                        # Per-minute rate limit — put key in cooldown, not exhausted
+                        self.key_rotator.mark_key_rate_limited(retry_delay)
+                    else:
+                        # Daily quota truly exhausted
+                        self.key_rotator.mark_key_exhausted()
                     time.sleep(1)
                     continue
 
@@ -361,7 +368,7 @@ LƯU Ý QUAN TRỌNG:
 
             return MODEL_NAME
         except Exception:
-            return "gemini-2.0-flash"
+            return "gemini-1.5-flash"
 
     # -------------------------------------------------------------------------
     # Response Parser
@@ -513,9 +520,7 @@ LƯU Ý QUAN TRỌNG:
                 "score": risk_score,
                 "level": self._score_to_level(risk_score),
                 "key_factors": ["AI analysis unavailable"],
-                "warnings": [
-                    f"Kết quả sơ bộ — AI không khả dụng{err_detail}"
-                ],
+                "warnings": [f"Kết quả sơ bộ — AI không khả dụng{err_detail}"],
                 "recommendations": ["Thử lại sau khi backend phục hồi"],
             },
             "scam_detection": {
