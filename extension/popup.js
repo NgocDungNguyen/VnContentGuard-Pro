@@ -1581,15 +1581,17 @@ function renderV7Results(data, urlInfo) {
 
     // Vietnamese sentiment labels
     const sentLabelVi = {
-        'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập'
+        'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập',
+        'Mixed': 'Hỗn hợp', 'Very Positive': 'Rất tích cực', 'Very Negative': 'Rất tiêu cực'
     };
     const sentIntensityVi = {
         'Weak': 'Yếu', 'Moderate': 'Vừa', 'Strong': 'Mạnh', 'Very Strong': 'Rất mạnh'
     };
 
     let sentColor = '#3498db';  // Blue for Neutral
-    if (sentLabel === 'Positive') sentColor = '#27ae60';  // Green
-    else if (sentLabel === 'Negative') sentColor = '#e74c3c';  // Red
+    if (sentLabel === 'Positive' || sentLabel === 'Very Positive') sentColor = '#27ae60';  // Green
+    else if (sentLabel === 'Negative' || sentLabel === 'Very Negative') sentColor = '#e74c3c';  // Red
+    else if (sentLabel === 'Mixed') sentColor = '#f39c12';  // Orange
 
     document.getElementById('sentimentStatus').innerHTML = 
         `<strong style="color: ${sentColor};">${sentLabelVi[sentLabel] || sentLabel}</strong> (độ tin cậy ${(sentConf * 100).toFixed(0)}%)`;
@@ -1667,8 +1669,11 @@ function renderV7Results(data, urlInfo) {
     if (evidence.length > 0) {
         let evidenceHTML = '<div style="margin-top: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;"><strong>Bằng chứng:</strong><br/>';
         evidence.slice(0, 3).forEach(ev => {
-            const detail = ev.analysis || ev.claim || ev.description || 'Không có chi tiết';
-            evidenceHTML += `<div style="font-size: 10px; margin: 4px 0;">• ${ev.source || 'Không rõ'}: ${detail.substring(0, 120)}</div>`;
+            const detail = typeof ev === 'string'
+                ? ev
+                : (ev.analysis || ev.claim || ev.description || ev.text || 'Không có chi tiết');
+            const src = typeof ev === 'string' ? null : (ev.source || ev.publisher || null);
+            evidenceHTML += `<div style="font-size: 10px; margin: 4px 0;">• ${src ? src + ': ' : ''}${detail.substring(0, 150)}</div>`;
         });
         if (evidence.length > 3) {
             evidenceHTML += `<div style="font-size: 10px; color: #999;">... và ${evidence.length - 3} bằng chứng khác</div>`;
@@ -1904,7 +1909,7 @@ function renderV2Results(data, urlInfo) {
     document.getElementById('recommendationsCard').style.display = 'none';
 
     // Sentiment
-    const sentLabelVi2 = {'Positive':'Tích cực','Negative':'Tiêu cực','Neutral':'Trung lập','Very Negative':'Rất tiêu cực','Very Positive':'Rất tích cực'};
+    const sentLabelVi2 = {'Positive':'Tích cực','Negative':'Tiêu cực','Neutral':'Trung lập','Mixed':'Hỗn hợp','Very Negative':'Rất tiêu cực','Very Positive':'Rất tích cực'};
     document.getElementById('sentimentStatus').innerHTML = 
         `<strong>${sentLabelVi2[sentiment.label] || sentiment.label}</strong> (độ tin cậy ${(sentiment.score * 100).toFixed(0)}%)`;
 
@@ -2251,7 +2256,7 @@ function exportReport(data, url) {
     const summary = data.article_summary || {};
 
     const riskLevelVi = { 'Low': 'Thấp', 'Medium': 'Trung bình', 'High': 'Cao', 'Critical': 'Nguy hiểm' };
-    const sentLabelVi = { 'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập' };
+    const sentLabelVi = { 'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập', 'Mixed': 'Hỗn hợp', 'Very Positive': 'Rất tích cực', 'Very Negative': 'Rất tiêu cực' };
     const severityVi = { 'None': 'Không', 'Low': 'Thấp', 'Medium': 'Trung bình', 'High': 'Cao', 'Critical': 'Nguy hiểm' };
 
     const riskValue = riskScore.risk_score || 0;
@@ -2563,9 +2568,9 @@ async function renderComparison(data1, data2, url1, url2) {
     const header2 = `${shortTitle2}<br/><span style="font-size:9px;color:var(--text-secondary,#999);">${domain2}</span>`;
 
     const riskColor = (r) => r < 25 ? '#27ae60' : r < 50 ? '#f39c12' : r < 75 ? '#e74c3c' : '#c0392b';
-    const sentColor = (s) => s === 'Positive' ? '#27ae60' : s === 'Negative' ? '#e74c3c' : '#3498db';
+    const sentColor = (s) => s === 'Positive' || s === 'Very Positive' ? '#27ae60' : s === 'Negative' || s === 'Very Negative' ? '#e74c3c' : s === 'Mixed' ? '#f39c12' : '#3498db';
     const riskLabelVi = { 'Low': 'Thấp', 'Medium': 'TB', 'High': 'Cao', 'Critical': 'Nguy hiểm' };
-    const sentLabelVi = { 'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập' };
+    const sentLabelVi = { 'Positive': 'Tích cực', 'Negative': 'Tiêu cực', 'Neutral': 'Trung lập', 'Mixed': 'Hỗn hợp', 'Very Positive': 'Rất tích cực', 'Very Negative': 'Rất tiêu cực' };
 
     // Which is more reliable?
     const moreReliable = fact1 > fact2 ? shortTitle1 : fact2 > fact1 ? shortTitle2 : 'Ngang nhau';
