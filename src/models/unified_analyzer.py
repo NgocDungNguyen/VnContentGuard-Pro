@@ -341,6 +341,7 @@ LƯU Ý QUAN TRỌNG:
                 if "429" in err or "quota" in err or "resource_exhausted" in err:
                     # Distinguish: short retryDelay = rate-limit (temp); no delay = daily quota
                     from src.models.gemini_llm import APIKeyRotator as _KR
+
                     retry_delay = _KR.parse_retry_delay(str(e))
                     if retry_delay <= 120:
                         # Per-minute rate limit — put key in cooldown, not exhausted
@@ -368,7 +369,7 @@ LƯU Ý QUAN TRỌNG:
 
             return MODEL_NAME
         except Exception:
-            return "gemini-1.5-flash"
+            return "gemini-2.0-flash-lite"
 
     # -------------------------------------------------------------------------
     # Response Parser
