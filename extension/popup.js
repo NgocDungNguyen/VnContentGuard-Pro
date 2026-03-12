@@ -224,7 +224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // V7 — Parental control button handler
+    // V7 — Parental control button handler (auth-gated)
     const parentalBtn = document.getElementById('parentalBtn');
     if (parentalBtn) {
         parentalBtn.addEventListener('click', toggleParentalPanel);
@@ -235,12 +235,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         parentalSaveBtn.addEventListener('click', saveParentalSettings);
     }
 
-    const parentalThreshold = document.getElementById('parentalThreshold');
-    if (parentalThreshold) {
-        parentalThreshold.addEventListener('input', (e) => {
-            document.getElementById('parentalThresholdVal').textContent = e.target.value;
-        });
-    }
+    // Init full parental auth overlay listeners
+    initParentalAuthListeners();
 
     // ── feature 7.2 — Domain Blacklist / Whitelist UI ──────────────────────
 
@@ -2841,66 +2837,18 @@ async function submitPageReport() {
 // ============================================================================
 
 function toggleParentalPanel() {
-    const panel = document.getElementById('parentalPanel');
-    if (!panel) return;
-
-    if (panel.classList.contains('hidden')) {
-        panel.classList.remove('hidden');
-        document.getElementById('results').classList.add('hidden');
-        document.getElementById('historyPanel').classList.add('hidden');
-        document.getElementById('comparePanel').classList.add('hidden');
-        document.getElementById('reportPanel').classList.add('hidden');
-
-        // Load current parental settings
-        chrome.runtime.sendMessage({ type: 'GET_PARENTAL_CONTROL' }, (response) => {
-            if (response) {
-                const toggle = document.getElementById('parentalToggle');
-                const threshold = document.getElementById('parentalThreshold');
-                const thresholdVal = document.getElementById('parentalThresholdVal');
-                const pin = document.getElementById('parentalPinInput');
-
-                if (toggle) toggle.checked = response.enabled;
-                if (threshold) threshold.value = response.threshold;
-                if (thresholdVal) thresholdVal.textContent = response.threshold;
-                if (pin) pin.value = response.pin;
-            }
-        });
-
-        // Load incognito mode setting + log count
-        chrome.runtime.sendMessage({ type: 'GET_INCOGNITO_LOG' }, (r) => {
-            if (r) {
-                const sel = document.getElementById('incognitoBlockMode');
-                if (sel) sel.value = r.mode || 'off';
-                const badge = document.getElementById('incognitoLogCount');
-                if (badge) badge.textContent = r.log.length;
-            }
-        });
-
-        // Load domain lists for 6.2
-        loadDomainLists();
-    } else {
-        panel.classList.add('hidden');
-        if (currentResultsData) document.getElementById('results').classList.remove('hidden');
-    }
+    openParentalAuth();
 }
 
 async function saveParentalSettings() {
     const enabled = document.getElementById('parentalToggle')?.checked || false;
-    const pin = document.getElementById('parentalPinInput')?.value || '0000';
     const threshold = parseInt(document.getElementById('parentalThreshold')?.value || '70');
     const incognitoMode = document.getElementById('incognitoBlockMode')?.value || 'off';
 
-    if (pin.length < 4) {
-        alert('Mã PIN phải từ 4 ký tự trở lên.');
-        return;
-    }
-
-    // Save parental + incognito mode in parallel
     await Promise.all([
         chrome.runtime.sendMessage({
             type: 'SET_PARENTAL_CONTROL',
             enabled: enabled,
-            pin: pin,
             threshold: threshold
         }),
         chrome.runtime.sendMessage({ type: 'SET_INCOGNITO_MODE', mode: incognitoMode })
@@ -2911,6 +2859,241 @@ async function saveParentalSettings() {
         statusEl.textContent = enabled ? `🔒 Kiểm soát gia đình: BẬT (ngưỡng ${threshold})` : '🔓 Kiểm soát gia đình: TẮT';
         setTimeout(() => { statusEl.textContent = 'Sẵn sàng quét'; }, 3000);
     }
+}
+
+// ============================================================================
+// PARENTAL AUTH SYSTEM — PIN-gated access, hidden from kids
+// ============================================================================
+// Storage key (not obvious to curious kids browsing DevTools)
+const _PC_STORE_KEY = '__vcg_pc_cfg__';
+
+async function _getPCConfig() {
+    return new Promise(resolve => {
+        chrome.storage.local.get([_PC_STORE_KEY], (r) => resolve(r[_PC_STORE_KEY] || null));
+    });
+}
+async function _setPCConfig(cfg) {
+    return new Promise(resolve => {
+        chrome.storage.local.set({ [_PC_STORE_KEY]: cfg }, resolve);
+    });
+}
+async function _clearPCConfig() {
+    return new Promise(resolve => {
+        chrome.storage.local.remove([_PC_STORE_KEY], resolve);
+    });
+}
+
+function _showOverlayStep(stepId) {
+    ['parentalSetupStep', 'parentalLoginStep', 'parentalResetStep'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+    });
+    document.getElementById(stepId)?.classList.remove('hidden');
+    document.getElementById('parentalAuthOverlay')?.classList.remove('hidden');
+}
+function _hideOverlay() {
+    document.getElementById('parentalAuthOverlay')?.classList.add('hidden');
+}
+
+function _showPanelAfterAuth() {
+    _hideOverlay();
+    const panel = document.getElementById('parentalPanel');
+    if (!panel) return;
+    panel.classList.remove('hidden');
+    ['results','historyPanel','comparePanel','reportPanel','bulkPanel','reportPanel'].forEach(id => {
+        document.getElementById(id)?.classList.add('hidden');
+    });
+    _loadParentalPanelData();
+}
+
+async function _loadParentalPanelData() {
+    // Load toggle + threshold
+    chrome.runtime.sendMessage({ type: 'GET_PARENTAL_CONTROL' }, (response) => {
+        if (response) {
+            const toggle    = document.getElementById('parentalToggle');
+            const threshold = document.getElementById('parentalThreshold');
+            const thVal     = document.getElementById('parentalThresholdVal');
+            if (toggle)    toggle.checked     = response.enabled;
+            if (threshold) threshold.value    = response.threshold;
+            if (thVal)     thVal.textContent  = response.threshold;
+        }
+    });
+    // Load incognito setting + log
+    chrome.runtime.sendMessage({ type: 'GET_INCOGNITO_LOG' }, (r) => {
+        if (r) {
+            const sel   = document.getElementById('incognitoBlockMode');
+            const badge = document.getElementById('incognitoLogCount');
+            if (sel)   sel.value        = r.mode || 'off';
+            if (badge) badge.textContent = r.log.length;
+            document.getElementById('statIncognito').textContent = r.log.length;
+        }
+    });
+    // Load domain lists
+    loadDomainLists();
+    // Load stats
+    _loadParentalStats();
+}
+
+async function _loadParentalStats() {
+    // Blocked-site counters stored by background
+    chrome.storage.local.get(['parentalBlockLog'], (r) => {
+        const log = r.parentalBlockLog || [];
+        const now = Date.now();
+        const dayMs  = 86400000;
+        const weekMs = 7 * dayMs;
+        const today = log.filter(e => now - e.ts < dayMs).length;
+        const week  = log.filter(e => now - e.ts < weekMs).length;
+        document.getElementById('statBlockedToday').textContent = today;
+        document.getElementById('statBlockedWeek').textContent  = week;
+    });
+    // Blacklist count
+    chrome.runtime.sendMessage({ type: 'GET_DOMAIN_BLACKLIST' }, (bl) => {
+        document.getElementById('statBlacklisted').textContent = bl?.list?.length ?? 0;
+    });
+}
+
+async function openParentalAuth() {
+    const cfg = await _getPCConfig();
+    if (!cfg || !cfg.pin) {
+        // First time — show setup wizard
+        _showOverlayStep('parentalSetupStep');
+        document.getElementById('setupPinNew').value     = '';
+        document.getElementById('setupPinConfirm').value = '';
+        document.getElementById('setupPinError').classList.add('hidden');
+        setTimeout(() => document.getElementById('setupPinNew').focus(), 50);
+    } else {
+        // PIN exists — show login
+        _showOverlayStep('parentalLoginStep');
+        document.getElementById('loginPinInput').value = '';
+        document.getElementById('loginPinError').classList.add('hidden');
+        setTimeout(() => document.getElementById('loginPinInput').focus(), 50);
+    }
+}
+
+function initParentalAuthListeners() {
+    // ── SETUP ─────────────────────────────────────────────────────
+    document.getElementById('setupPinBtn')?.addEventListener('click', async () => {
+        const newPin  = document.getElementById('setupPinNew').value.trim();
+        const confirm = document.getElementById('setupPinConfirm').value.trim();
+        const errEl   = document.getElementById('setupPinError');
+
+        if (!/^\d{4,6}$/.test(newPin)) {
+            errEl.textContent = '⚠️ Mã PIN phải là 4–6 chữ số.';
+            errEl.classList.remove('hidden'); return;
+        }
+        if (newPin !== confirm) {
+            errEl.textContent = '⚠️ Hai mã PIN không khớp.';
+            errEl.classList.remove('hidden'); return;
+        }
+        errEl.classList.add('hidden');
+
+        // Save PIN (SHA-256 before storing — never store raw)
+        const hash = await _hashPIN(newPin);
+        await _setPCConfig({ pin: hash, createdAt: Date.now() });
+
+        // Also save for block.html unlock (legacy key — keep in sync)
+        await chrome.storage.local.set({ parentalPIN: newPin });
+
+        _showPanelAfterAuth();
+    });
+
+    document.getElementById('setupPinNew')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('setupPinConfirm').focus();
+    });
+    document.getElementById('setupPinConfirm')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('setupPinBtn').click();
+    });
+    document.getElementById('setupCancelBtn')?.addEventListener('click', _hideOverlay);
+
+    // ── LOGIN ─────────────────────────────────────────────────────
+    document.getElementById('loginPinBtn')?.addEventListener('click', async () => {
+        const pin   = document.getElementById('loginPinInput').value.trim();
+        const errEl = document.getElementById('loginPinError');
+        const cfg   = await _getPCConfig();
+
+        const hash = await _hashPIN(pin);
+        if (hash !== cfg?.pin) {
+            errEl.textContent = '❌ Sai mã PIN. Vui lòng thử lại.';
+            errEl.classList.remove('hidden');
+            document.getElementById('loginPinInput').value = '';
+            document.getElementById('loginPinInput').focus();
+            return;
+        }
+        errEl.classList.add('hidden');
+
+        if (_changePinMode) {
+            // Parent verified identity — now let them set a new PIN
+            _changePinMode = false;
+            _showOverlayStep('parentalSetupStep');
+            document.getElementById('setupPinNew').value     = '';
+            document.getElementById('setupPinConfirm').value = '';
+            document.getElementById('setupPinError').classList.add('hidden');
+            document.getElementById('setupPinNew').focus();
+        } else {
+            _showPanelAfterAuth();
+        }
+    });
+    document.getElementById('loginPinInput')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('loginPinBtn').click();
+    });
+    document.getElementById('loginCancelBtn')?.addEventListener('click', _hideOverlay);
+    document.getElementById('resetPinBtn')?.addEventListener('click', () => {
+        _showOverlayStep('parentalResetStep');
+        document.getElementById('resetPinError').classList.add('hidden');
+    });
+
+    // ── RESET ─────────────────────────────────────────────────────
+    document.getElementById('confirmResetBtn')?.addEventListener('click', async () => {
+        await _clearPCConfig();
+        await chrome.storage.local.remove(['parentalPIN', 'parentalEnabled', 'parentalThreshold',
+                                           'parentalBypass', 'incognitoBlockMode', 'incognitoLog']);
+        _hideOverlay();
+        // Brief feedback then reopen setup
+        setTimeout(() => openParentalAuth(), 200);
+    });
+    document.getElementById('cancelResetBtn')?.addEventListener('click', () => {
+        _showOverlayStep('parentalLoginStep');
+    });
+
+    // ── IN-PANEL ACTIONS ──────────────────────────────────────────
+    document.getElementById('parentalLockBtn')?.addEventListener('click', () => {
+        document.getElementById('parentalPanel').classList.add('hidden');
+        if (currentResultsData) document.getElementById('results').classList.remove('hidden');
+    });
+
+    document.getElementById('parentalChangePinBtn')?.addEventListener('click', () => {
+        // Require current PIN again
+        document.getElementById('parentalPanel').classList.add('hidden');
+        _showOverlayStep('parentalLoginStep');
+        document.getElementById('loginPinInput').value = '';
+        // Override the login action to go to setup after PIN validation
+        _changePinMode = true;
+    });
+
+    // Threshold slider live update
+    document.getElementById('parentalThreshold')?.addEventListener('input', function () {
+        document.getElementById('parentalThresholdVal').textContent = this.value;
+    });
+
+    // Secret triple-click on logo — alternative hidden entry point
+    let _logoClicks = 0, _logoTimer = null;
+    document.querySelector('.header-brand')?.addEventListener('click', () => {
+        _logoClicks++;
+        clearTimeout(_logoTimer);
+        _logoTimer = setTimeout(() => { _logoClicks = 0; }, 600);
+        if (_logoClicks >= 3) {
+            _logoClicks = 0;
+            openParentalAuth();
+        }
+    });
+}
+
+let _changePinMode = false;
+
+async function _hashPIN(pin) {
+    const encoder = new TextEncoder();
+    const data    = encoder.encode('vcg_salt_' + pin);
+    const hashBuf = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 // ============================================================================

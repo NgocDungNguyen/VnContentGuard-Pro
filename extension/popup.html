@@ -64,7 +64,7 @@
                         </button>
                         <div class="dropdown-divider"></div>
                         <div class="dropdown-section-label">Cài đặt</div>
-                        <button id="parentalBtn" class="dropdown-item" title="Chặn các trang không phù hợp, bảo vệ trẻ em và gia đình">
+                        <button id="parentalBtn" class="dropdown-item" title="Chặn các trang không phù hợp — yêu cầu mã PIN phụ huynh">
                             <span class="dropdown-icon">🔒</span>
                             <span class="dropdown-main">
                                 <span class="dropdown-text">Bảo vệ gia đình</span>
@@ -206,92 +206,162 @@
             </div>
         </div>
 
-        <!-- PARENTAL CONTROL PANEL (4.2 + 6.2 + 6.6) -->
-        <div id="parentalPanel" class="hidden">
-            <div class="card" style="border-left: 4px solid #8e44ad;">
-                <h3>🔒 Kiểm soát gia đình V7</h3>
-                <p style="font-size: 11px; color: var(--text-secondary); margin-bottom: 10px;">Tự động chặn trang web có rủi ro cao, danh sách đen & phát hiện ẩn danh.</p>
+        <!-- ════════════════════════════════════════════════════════════
+             PARENTAL AUTH OVERLAY — shown over everything else
+             Kids see a popup → nothing to click; only parent knows PIN
+             ════════════════════════════════════════════════════════════ -->
+        <div id="parentalAuthOverlay" class="parental-overlay hidden">
+            <div class="parental-modal">
 
-                <!-- Basic settings row -->
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
-                    <label style="font-size: 12px; font-weight: bold; min-width: 60px;">Bật/Tắt:</label>
-                    <label class="switch">
-                        <input type="checkbox" id="parentalToggle">
-                        <span class="slider"></span>
-                    </label>
+                <!-- SETUP step (first time — no PIN stored yet) -->
+                <div id="parentalSetupStep" class="hidden">
+                    <div class="parental-modal-icon">🔐</div>
+                    <h2 class="parental-modal-title">Thiết lập Kiểm soát gia đình</h2>
+                    <p class="parental-modal-sub">Tạo mã PIN bí mật để bảo vệ cài đặt này. Trẻ em sẽ không thể truy cập mà không có mã PIN.</p>
+                    <div class="parental-field">
+                        <label>Mã PIN mới (4–6 chữ số)</label>
+                        <input type="password" id="setupPinNew" maxlength="6" placeholder="••••" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password">
+                    </div>
+                    <div class="parental-field">
+                        <label>Xác nhận mã PIN</label>
+                        <input type="password" id="setupPinConfirm" maxlength="6" placeholder="••••" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password">
+                    </div>
+                    <div id="setupPinError" class="parental-error hidden"></div>
+                    <button id="setupPinBtn" class="parental-btn-main">✅ Tạo PIN &amp; mở cài đặt</button>
+                    <button id="setupCancelBtn" class="parental-btn-cancel">Huỷ</button>
                 </div>
-                <div style="margin-bottom: 8px;">
-                    <label style="font-size: 11px; color: var(--text-secondary);">Ngưỡng rủi ro (0-100):</label>
-                    <div style="display: flex; align-items: center; gap: 6px;">
-                        <input type="range" id="parentalThreshold" min="30" max="100" value="70" style="flex: 1;">
-                        <span id="parentalThresholdVal" style="font-size: 12px; font-weight: bold; min-width: 28px;">70</span>
+
+                <!-- LOGIN step (PIN already stored) -->
+                <div id="parentalLoginStep" class="hidden">
+                    <div class="parental-modal-icon">🛡️</div>
+                    <h2 class="parental-modal-title">Kiểm soát gia đình</h2>
+                    <p class="parental-modal-sub">Nhập mã PIN phụ huynh để xem và chỉnh sửa cài đặt.</p>
+                    <div class="parental-field">
+                        <label>Mã PIN</label>
+                        <input type="password" id="loginPinInput" maxlength="6" placeholder="••••" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password">
+                    </div>
+                    <div id="loginPinError" class="parental-error hidden"></div>
+                    <button id="loginPinBtn" class="parental-btn-main">🔓 Mở khóa</button>
+                    <button id="loginCancelBtn" class="parental-btn-cancel">Huỷ</button>
+                    <button id="resetPinBtn" class="parental-btn-link">Quên PIN? Đặt lại</button>
+                </div>
+
+                <!-- RESET step -->
+                <div id="parentalResetStep" class="hidden">
+                    <div class="parental-modal-icon">🔑</div>
+                    <h2 class="parental-modal-title">Đặt lại mã PIN</h2>
+                    <p class="parental-modal-sub">Tất cả cài đặt Kiểm soát gia đình sẽ bị xóa và bạn sẽ thiết lập lại từ đầu.</p>
+                    <div id="resetPinError" class="parental-error hidden"></div>
+                    <button id="confirmResetBtn" class="parental-btn-main" style="background:#e74c3c;">⚠️ Xác nhận đặt lại</button>
+                    <button id="cancelResetBtn" class="parental-btn-cancel">Huỷ</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PARENTAL CONTROL PANEL — only revealed after PIN auth -->
+        <div id="parentalPanel" class="hidden">
+            <div class="card parental-card">
+                <!-- Header row with lock + close -->
+                <div class="parental-panel-header">
+                    <span>🔒 Kiểm soát gia đình</span>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <button id="parentalChangePinBtn" class="btn-secondary" style="padding:3px 8px;font-size:10px;">🔑 Đổi PIN</button>
+                        <button id="parentalLockBtn" class="btn-secondary" style="padding:3px 8px;font-size:10px;">🔒 Khóa</button>
                     </div>
                 </div>
-                <div style="margin-bottom: 10px;">
-                    <label style="font-size: 11px; color: var(--text-secondary);">Mã PIN (4-6 số):</label>
-                    <input type="password" id="parentalPinInput" maxlength="6" placeholder="0000" style="width: 80px; padding: 4px 8px; text-align: center; font-size: 14px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--input-bg, #fff); color: var(--text-primary);">
+
+                <!-- ── STATISTICS DASHBOARD ───────────────────────────── -->
+                <div class="parental-stats-grid" id="parentalStatsGrid">
+                    <div class="parental-stat-card">
+                        <div class="pstat-icon">🚫</div>
+                        <div class="pstat-value" id="statBlockedToday">–</div>
+                        <div class="pstat-label">Chặn hôm nay</div>
+                    </div>
+                    <div class="parental-stat-card">
+                        <div class="pstat-icon">📅</div>
+                        <div class="pstat-value" id="statBlockedWeek">–</div>
+                        <div class="pstat-label">Chặn tuần này</div>
+                    </div>
+                    <div class="parental-stat-card">
+                        <div class="pstat-icon">🕵️</div>
+                        <div class="pstat-value" id="statIncognito">–</div>
+                        <div class="pstat-label">Ẩn danh bị chặn</div>
+                    </div>
+                    <div class="parental-stat-card">
+                        <div class="pstat-icon">📋</div>
+                        <div class="pstat-value" id="statBlacklisted">–</div>
+                        <div class="pstat-label">Tên miền đen</div>
+                    </div>
                 </div>
 
-                <!-- ─── feature 7.6: Incognito detection ─────────────────── -->
-                <div style="border-top: 1px solid var(--border-color); padding-top: 8px; margin-bottom: 10px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                        <span style="font-size: 12px; font-weight: bold;">🕵️ Chế độ ẩn danh:</span>
-                        <select id="incognitoBlockMode" style="font-size: 11px; border: 1px solid var(--border-color); border-radius: 4px; padding: 3px 6px; background: var(--input-bg, #fff); color: var(--text-primary);">
+                <!-- ── CONTROLS ──────────────────────────────────────── -->
+                <div class="parental-section">
+                    <div class="parental-row">
+                        <label class="parental-row-label">Bật Kiểm soát gia đình:</label>
+                        <label class="switch">
+                            <input type="checkbox" id="parentalToggle">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                    <div class="parental-row">
+                        <label class="parental-row-label">Ngưỡng rủi ro (<span id="parentalThresholdVal">70</span>):</label>
+                        <input type="range" id="parentalThreshold" min="30" max="100" value="70" style="flex:1;">
+                    </div>
+                </div>
+
+                <!-- ── INCOGNITO ──────────────────────────────────────── -->
+                <div class="parental-section">
+                    <div class="parental-section-title">🕵️ Chế độ ẩn danh</div>
+                    <div class="parental-row">
+                        <select id="incognitoBlockMode" style="font-size:11px;border:1px solid var(--border-color);border-radius:4px;padding:4px 8px;background:var(--input-bg,#fff);color:var(--text-primary);flex:1;">
                             <option value="off">Tắt (không làm gì)</option>
                             <option value="warn">Cảnh báo + ghi nhật ký</option>
                             <option value="block_all">Chặn hoàn toàn</option>
                         </select>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 11px; color: var(--text-secondary);">Nhật ký ẩn danh:</span>
+                    <div class="parental-row" style="margin-top:6px;">
+                        <span style="font-size:11px;color:var(--text-secondary);">Nhật ký ẩn danh:</span>
                         <span id="incognitoLogCount" class="incognito-count-badge">0</span>
-                        <button id="incognitoLogBtn" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;">📋 Xem</button>
-                        <button id="incognitoLogClearBtn" class="btn-secondary" style="padding: 2px 8px; font-size: 11px;">🗑️</button>
+                        <button id="incognitoLogBtn" class="btn-secondary" style="padding:2px 8px;font-size:11px;">📋 Xem</button>
+                        <button id="incognitoLogClearBtn" class="btn-secondary" style="padding:2px 8px;font-size:11px;">🗑️</button>
                     </div>
-                    <!-- Incognito log viewer (hidden by default) -->
                     <div id="incognitoLogPanel" class="hidden incognito-log-panel">
-                        <div id="incognitoLogList" style="max-height: 120px; overflow-y: auto; font-size: 10px;"></div>
+                        <div id="incognitoLogList" style="max-height:120px;overflow-y:auto;font-size:10px;"></div>
                     </div>
                 </div>
 
-                <button id="parentalSaveBtn" class="btn-primary" style="padding: 8px; margin: 0 0 10px 0; background: #8e44ad;">💾 Lưu cài đặt</button>
+                <button id="parentalSaveBtn" class="btn-primary" style="padding:8px;margin:0 0 10px 0;background:#8e44ad;width:100%;">💾 Lưu cài đặt</button>
 
-                <!-- ─── feature 7.2: Domain Blacklist / Whitelist tabs ─── -->
-                <div style="border-top: 1px solid var(--border-color); padding-top: 8px;">
-                    <div style="font-size: 12px; font-weight: bold; margin-bottom: 6px;">📋 Quản lý tên miền</div>
-
-                    <!-- Tab switcher -->
+                <!-- ── DOMAIN MANAGEMENT ────────────────────────────── -->
+                <div class="parental-section">
+                    <div class="parental-section-title">📋 Quản lý tên miền</div>
                     <div class="domain-control-tabs">
                         <button class="domain-tab-btn active" data-tab="blacklist" id="blacklistTabBtn">🚫 Danh sách đen</button>
                         <button class="domain-tab-btn" data-tab="whitelist" id="whitelistTabBtn">✅ Danh sách trắng</button>
                     </div>
-
-                    <!-- Blacklist tab -->
                     <div id="blacklistTab" class="domain-tab-content">
-                        <p style="font-size: 10px; color: var(--text-secondary); margin: 4px 0 6px;">Tên miền bị chặn kỹ năng lực phụ huynh.</p>
-                        <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                        <p style="font-size:10px;color:var(--text-secondary);margin:4px 0 6px;">Tên miền bị chặn bởi phụ huynh.</p>
+                        <div style="display:flex;gap:4px;margin-bottom:6px;">
                             <input type="text" id="blacklistInput" placeholder="vd: xvideos.com" class="domain-input">
-                            <button id="blacklistAddBtn" class="btn-primary" style="padding: 4px 8px; margin: 0; white-space: nowrap;">+ Thêm</button>
+                            <button id="blacklistAddBtn" class="btn-primary" style="padding:4px 8px;margin:0;white-space:nowrap;">+ Thêm</button>
                         </div>
                         <div id="blacklistItems" class="domain-list"></div>
-                        <div style="display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;">
-                            <button id="blacklistImportBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">📥 Nhập</button>
-                            <button id="blacklistExportBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">📤 Xuất</button>
-                            <button id="loadSeedBlacklistBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">🌐 Tải mặc định</button>
+                        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
+                            <button id="blacklistImportBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">📥 Nhập</button>
+                            <button id="blacklistExportBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">📤 Xuất</button>
+                            <button id="loadSeedBlacklistBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">🌐 Tải mặc định</button>
                         </div>
                     </div>
-
-                    <!-- Whitelist tab -->
                     <div id="whitelistTab" class="domain-tab-content hidden">
-                        <p style="font-size: 10px; color: var(--text-secondary); margin: 4px 0 6px;">Tên miền luôn được phép — ghi đè danh sách đen.</p>
-                        <div style="display: flex; gap: 4px; margin-bottom: 6px;">
+                        <p style="font-size:10px;color:var(--text-secondary);margin:4px 0 6px;">Tên miền luôn được phép — ghi đè danh sách đen.</p>
+                        <div style="display:flex;gap:4px;margin-bottom:6px;">
                             <input type="text" id="whitelistInput" placeholder="vd: wikipedia.org" class="domain-input">
-                            <button id="whitelistAddBtn" class="btn-primary" style="padding: 4px 8px; margin: 0; white-space: nowrap;">+ Thêm</button>
+                            <button id="whitelistAddBtn" class="btn-primary" style="padding:4px 8px;margin:0;white-space:nowrap;">+ Thêm</button>
                         </div>
                         <div id="whitelistItems" class="domain-list"></div>
-                        <div style="display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap;">
-                            <button id="whitelistImportBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">📥 Nhập</button>
-                            <button id="whitelistExportBtn" class="btn-secondary" style="padding: 3px 7px; font-size: 10px;">📤 Xuất</button>
+                        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
+                            <button id="whitelistImportBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">📥 Nhập</button>
+                            <button id="whitelistExportBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">📤 Xuất</button>
                         </div>
                     </div>
                 </div>
