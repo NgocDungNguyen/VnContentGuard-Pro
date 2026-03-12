@@ -820,7 +820,7 @@ async function handleStreamScan(data) {
 
 function buildResultFromModules(modules) {
     return {
-        version: '6.0',
+        version: '7.0',
         article_summary: modules.article_summary || {},
         sentiment_v7: modules.sentiment_v7 || {},
         toxicity_v7: modules.toxicity_v7 || {},

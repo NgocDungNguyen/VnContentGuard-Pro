@@ -254,23 +254,23 @@ function offlineFullAnalysis(articleText, comments, url) {
     else if (riskScore >= 25) riskLevel = "Medium";
 
     return {
-        version: "5.0",
+        version: "7.0",
         offline_mode: true,
         article_summary: {
             summary: "⚡ Chế độ nhanh — Đang chờ phân tích AI đầy đủ...",
             method: "offline",
             cached: false
         },
-        sentiment_v5: sentiment,
-        toxicity_v5: toxicity,
-        fact_check_v5: {
+        sentiment_v7: sentiment,
+        toxicity_v7: toxicity,
+        fact_check_v7: {
             score: 50,
             verdict: "Chờ AI",
             confidence: "Low",
             evidence: [],
             verification_methods: ["offline_pending"]
         },
-        risk_score_v5: {
+        risk_score_v7: {
             risk_score: riskScore,
             risk_level: riskLevel,
             confidence: 0.3,
