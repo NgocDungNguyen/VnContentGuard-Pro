@@ -184,8 +184,10 @@ class FactCheckerV7:
         if not self.google_factcheck_key:
             return None
         try:
-            import requests
             import urllib.parse as _up
+
+            import requests
+
             endpoint = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
             params = {
                 "query": query[:500],
@@ -195,7 +197,9 @@ class FactCheckerV7:
             }
             resp = requests.get(endpoint, params=params, timeout=8)
             if resp.status_code != 200:
-                print(f"⚠️ Google Fact Check API error {resp.status_code}: {resp.text[:200]}")
+                print(
+                    f"⚠️ Google Fact Check API error {resp.status_code}: {resp.text[:200]}"
+                )
                 return None
             data = resp.json()
             claims_raw = data.get("claims", [])
@@ -205,12 +209,14 @@ class FactCheckerV7:
             for item in claims_raw:
                 text = item.get("text", "")
                 for review in item.get("claimReview", []):
-                    claims.append({
-                        "claim": text,
-                        "publisher": review.get("publisher", {}).get("name", ""),
-                        "rating": review.get("textualRating", ""),
-                        "url": review.get("url", ""),
-                    })
+                    claims.append(
+                        {
+                            "claim": text,
+                            "publisher": review.get("publisher", {}).get("name", ""),
+                            "rating": review.get("textualRating", ""),
+                            "url": review.get("url", ""),
+                        }
+                    )
             print(f"✅ Google Fact Check: found {len(claims)} claim reviews")
             return {"claims": claims}
         except Exception as e:
@@ -223,6 +229,7 @@ class FactCheckerV7:
             return None
         try:
             import requests
+
             # Extract short query (first ~80 chars of meaningful text)
             query = text.strip()[:80]
             if not query:
@@ -236,20 +243,27 @@ class FactCheckerV7:
                     "language": "vi",
                     "size": 5,
                 }
-                resp = requests.get("https://newsdata.io/api/1/news",
-                                    params=params, timeout=10)
+                resp = requests.get(
+                    "https://newsdata.io/api/1/news", params=params, timeout=10
+                )
                 if resp.status_code == 200:
                     data = resp.json()
                     articles = data.get("results", [])
-                    sources = list({a.get("source_id", "") for a in articles if a.get("source_id")})
+                    sources = list(
+                        {a.get("source_id", "") for a in articles if a.get("source_id")}
+                    )
                     match_count = len(articles)
                     print(f"✅ NewsData.io: found {match_count} matching articles")
                     return {
                         "match_count": match_count,
                         "sources": sources,
                         "articles": [
-                            {"title": a.get("title", ""), "source": a.get("source_id", ""),
-                             "url": a.get("link", ""), "published": a.get("pubDate", "")}
+                            {
+                                "title": a.get("title", ""),
+                                "source": a.get("source_id", ""),
+                                "url": a.get("link", ""),
+                                "published": a.get("pubDate", ""),
+                            }
                             for a in articles[:5]
                         ],
                     }
@@ -264,20 +278,27 @@ class FactCheckerV7:
                     "lang": "vi",
                     "max": 5,
                 }
-                resp = requests.get("https://gnews.io/api/v4/search",
-                                    params=params, timeout=10)
+                resp = requests.get(
+                    "https://gnews.io/api/v4/search", params=params, timeout=10
+                )
                 if resp.status_code == 200:
                     data = resp.json()
                     articles = data.get("articles", [])
-                    sources = list({a.get("source", {}).get("name", "") for a in articles})
+                    sources = list(
+                        {a.get("source", {}).get("name", "") for a in articles}
+                    )
                     match_count = len(articles)
                     print(f"✅ GNews fallback: found {match_count} matching articles")
                     return {
                         "match_count": match_count,
                         "sources": sources,
                         "articles": [
-                            {"title": a.get("title", ""), "source": a.get("source", {}).get("name", ""),
-                             "url": a.get("url", ""), "published": a.get("publishedAt", "")}
+                            {
+                                "title": a.get("title", ""),
+                                "source": a.get("source", {}).get("name", ""),
+                                "url": a.get("url", ""),
+                                "published": a.get("publishedAt", ""),
+                            }
                             for a in articles[:5]
                         ],
                     }
@@ -471,5 +492,7 @@ if __name__ == "__main__":
         print(f"\nClaim: {text}")
         print(f"Score: {result['score']}/100")
         print(f"Verdict: {result['verdict']}")
+        print(f"Confidence: {result['confidence']}")
+        print(f"Methods: {result['verification_methods']}")
         print(f"Confidence: {result['confidence']}")
         print(f"Methods: {result['verification_methods']}")

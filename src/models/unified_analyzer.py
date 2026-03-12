@@ -85,7 +85,9 @@ class UnifiedAnalyzer:
         normalized_evidence = []
         for ev in fc_evidence:
             if isinstance(ev, str):
-                normalized_evidence.append({"text": ev[:150], "source": "AI Analysis", "url": ""})
+                normalized_evidence.append(
+                    {"text": ev[:150], "source": "AI Analysis", "url": ""}
+                )
             elif isinstance(ev, dict):
                 normalized_evidence.append(ev)
 
@@ -94,25 +96,29 @@ class UnifiedAnalyzer:
         for item in fc_api[:3]:
             claim_text = item.get("claim", item.get("claimText", ""))[:150]
             if claim_text:
-                normalized_evidence.append({
-                    "text": claim_text,
-                    "source": item.get("publisher", "Google Fact Check"),
-                    "url": item.get("url", ""),
-                    "rating": item.get("rating", ""),
-                    "type": "factcheck",
-                })
+                normalized_evidence.append(
+                    {
+                        "text": claim_text,
+                        "source": item.get("publisher", "Google Fact Check"),
+                        "url": item.get("url", ""),
+                        "rating": item.get("rating", ""),
+                        "type": "factcheck",
+                    }
+                )
 
         # Inject NewsData.io results (have real article URLs)
         nd_api = precomputed.get("newsdata_results", [])
         for item in nd_api[:2]:
             title = item.get("title", "")[:150]
             if title:
-                normalized_evidence.append({
-                    "text": title,
-                    "source": item.get("source", item.get("source_id", "NewsData")),
-                    "url": item.get("url", item.get("link", "")),
-                    "type": "news",
-                })
+                normalized_evidence.append(
+                    {
+                        "text": title,
+                        "source": item.get("source", item.get("source_id", "NewsData")),
+                        "url": item.get("url", item.get("link", "")),
+                        "type": "news",
+                    }
+                )
 
         parsed["fact_check"]["evidence"] = normalized_evidence
         return parsed
