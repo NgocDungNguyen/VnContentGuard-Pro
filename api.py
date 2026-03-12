@@ -1909,12 +1909,13 @@ def analyze_unified_v7(req: StructuredScanRequest):
             if len(full_article_text) > 20 and hasattr(
                 fact_checker_v7_engine, "_check_google_factcheck"
             ):
-                factcheck_api_results = (
-                    fact_checker_v7_engine._check_google_factcheck(
-                        full_article_text[:500]
-                    )
-                    or []
+                fc_result = fact_checker_v7_engine._check_google_factcheck(
+                    full_article_text[:500]
                 )
+                if isinstance(fc_result, dict):
+                    factcheck_api_results = fc_result.get("claims", []) or []
+                elif isinstance(fc_result, list):
+                    factcheck_api_results = fc_result
         except Exception as e:
             print(f"⚠️ [unified] GoogleFactCheck API failed: {e}")
 

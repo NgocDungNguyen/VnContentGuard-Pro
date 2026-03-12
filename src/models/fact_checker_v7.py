@@ -181,14 +181,118 @@ class FactCheckerV7:
 
     def _check_google_factcheck(self, query: str) -> Optional[Dict]:
         """Check Google Fact Check Tools API"""
-        # Placeholder - actual API call requires requests library
-        # For now, return None (will be implemented when user adds API key)
-        return None
+        if not self.google_factcheck_key:
+            return None
+        try:
+            import requests
+            import urllib.parse as _up
+            endpoint = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
+            params = {
+                "query": query[:500],
+                "key": self.google_factcheck_key,
+                "languageCode": "vi",
+                "pageSize": 5,
+            }
+            resp = requests.get(endpoint, params=params, timeout=8)
+            if resp.status_code != 200:
+                print(f"⚠️ Google Fact Check API error {resp.status_code}: {resp.text[:200]}")
+                return None
+            data = resp.json()
+            claims_raw = data.get("claims", [])
+            if not claims_raw:
+                return None
+            claims = []
+            for item in claims_raw:
+                text = item.get("text", "")
+                for review in item.get("claimReview", []):
+                    claims.append({
+                        "claim": text,
+                        "publisher": review.get("publisher", {}).get("name", ""),
+                        "rating": review.get("textualRating", ""),
+                        "url": review.get("url", ""),
+                    })
+            print(f"✅ Google Fact Check: found {len(claims)} claim reviews")
+            return {"claims": claims}
+        except Exception as e:
+            print(f"⚠️ Google Fact Check request failed: {e}")
+            return None
 
     def _check_news_crossreference(self, text: str) -> Optional[Dict]:
-        """Cross-reference with NewsData.io"""
-        # Placeholder - actual API call
+        """Cross-reference with NewsData.io, fallback to GNews"""
+        if not self.newsdata_key and not self.gnews_key:
+            return None
+        try:
+            import requests
+            # Extract short query (first ~80 chars of meaningful text)
+            query = text.strip()[:80]
+            if not query:
+                return None
+
+            # Try NewsData.io first
+            if self.newsdata_key:
+                params = {
+                    "apikey": self.newsdata_key,
+                    "q": query,
+                    "language": "vi",
+                    "size": 5,
+                }
+                resp = requests.get("https://newsdata.io/api/1/news",
+                                    params=params, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    articles = data.get("results", [])
+                    sources = list({a.get("source_id", "") for a in articles if a.get("source_id")})
+                    match_count = len(articles)
+                    print(f"✅ NewsData.io: found {match_count} matching articles")
+                    return {
+                        "match_count": match_count,
+                        "sources": sources,
+                        "articles": [
+                            {"title": a.get("title", ""), "source": a.get("source_id", ""),
+                             "url": a.get("link", ""), "published": a.get("pubDate", "")}
+                            for a in articles[:5]
+                        ],
+                    }
+                else:
+                    print(f"⚠️ NewsData.io error {resp.status_code}: {resp.text[:200]}")
+
+            # Fallback to GNews
+            if self.gnews_key:
+                params = {
+                    "apikey": self.gnews_key,
+                    "q": query,
+                    "lang": "vi",
+                    "max": 5,
+                }
+                resp = requests.get("https://gnews.io/api/v4/search",
+                                    params=params, timeout=10)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    articles = data.get("articles", [])
+                    sources = list({a.get("source", {}).get("name", "") for a in articles})
+                    match_count = len(articles)
+                    print(f"✅ GNews fallback: found {match_count} matching articles")
+                    return {
+                        "match_count": match_count,
+                        "sources": sources,
+                        "articles": [
+                            {"title": a.get("title", ""), "source": a.get("source", {}).get("name", ""),
+                             "url": a.get("url", ""), "published": a.get("publishedAt", "")}
+                            for a in articles[:5]
+                        ],
+                    }
+                else:
+                    print(f"⚠️ GNews error {resp.status_code}: {resp.text[:200]}")
+        except Exception as e:
+            print(f"⚠️ News cross-reference failed: {e}")
         return None
+
+    def _check_newsdata(self, text: str) -> Optional[list]:
+        """Alias used by api.py unified endpoint — returns list of article dicts."""
+        result = self._check_news_crossreference(text)
+        if result and result.get("articles"):
+            return result["articles"]
+        return []
 
     def _verify_with_gemini(self, text: str, url: Optional[str]) -> Optional[Dict]:
         """Verify using Gemini AI with key rotation on 429"""
