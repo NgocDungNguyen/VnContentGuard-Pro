@@ -1665,18 +1665,58 @@ function renderV7Results(data, urlInfo) {
     document.getElementById('fakeSummary').textContent = 
         `Đã kiểm tra ${verificationMethods.length} nguồn. Tìm thấy ${evidence.length} bằng chứng.`;
     
-    // Show evidence
+    // Show evidence with clickable source citations
     if (evidence.length > 0) {
-        let evidenceHTML = '<div style="margin-top: 8px; padding: 8px; background: #f9f9f9; border-radius: 4px;"><strong>Bằng chứng:</strong><br/>';
-        evidence.slice(0, 3).forEach(ev => {
-            const detail = typeof ev === 'string'
-                ? ev
-                : (ev.analysis || ev.claim || ev.description || ev.text || 'Không có chi tiết');
-            const src = typeof ev === 'string' ? null : (ev.source || ev.publisher || null);
-            evidenceHTML += `<div style="font-size: 10px; margin: 4px 0;">• ${src ? src + ': ' : ''}${detail.substring(0, 150)}</div>`;
+        const ratingColors = {
+            'True': '#27ae60', 'Đúng': '#27ae60', 'Accurate': '#27ae60',
+            'False': '#e74c3c', 'Sai': '#e74c3c', 'Incorrect': '#e74c3c',
+            'Misleading': '#f39c12', 'Sai lệch': '#f39c12',
+            'Unverified': '#888', 'Chưa xác minh': '#888',
+            'Mixture': '#f39c12', 'Mostly True': '#2ecc71', 'Mostly False': '#e67e22'
+        };
+        let evidenceHTML = '<div style="margin-top: 8px; padding: 8px; background: #f9f9f9; border-radius: 6px;">';
+        evidenceHTML += '<div style="font-size: 11px; font-weight: 600; color: #333; margin-bottom: 6px;">📋 Nguồn kiểm chứng:</div>';
+        evidence.slice(0, 5).forEach(ev => {
+            const isStr = typeof ev === 'string';
+            const text = isStr ? ev : (ev.text || ev.claim || ev.analysis || ev.description || '');
+            const source = isStr ? null : (ev.source || ev.publisher || null);
+            const url = isStr ? '' : (ev.url || '');
+            const rating = isStr ? '' : (ev.rating || '');
+            const itemType = isStr ? 'ai' : (ev.type || (url ? 'news' : 'ai'));
+
+            // Badge color by source type
+            let badgeColor = '#888';  // grey for AI
+            let badgeLabel = source || 'AI Analysis';
+            if (itemType === 'factcheck') { badgeColor = '#2980b9'; }
+            else if (itemType === 'news') { badgeColor = '#27ae60'; }
+
+            // Build link: use real URL or fall back to Google search
+            const searchQuery = encodeURIComponent((text || '').substring(0, 80));
+            const linkUrl = url || `https://www.google.com/search?q=${searchQuery}`;
+            const linkTitle = url ? 'Xem nguồn gốc' : 'Tìm kiếm trên Google';
+
+            let itemHTML = `<div style="font-size: 10px; margin: 5px 0; padding: 5px 6px; background: #fff; border-radius: 4px; border-left: 3px solid ${badgeColor};">`;
+
+            // Source badge (clickable)
+            itemHTML += `<a href="${linkUrl}" target="_blank" title="${linkTitle}" style="display: inline-block; font-size: 9px; font-weight: 600; color: #fff; background: ${badgeColor}; padding: 1px 5px; border-radius: 3px; text-decoration: none; margin-right: 5px; vertical-align: middle;">${badgeLabel}</a>`;
+
+            // Rating badge for fact-check items
+            if (rating) {
+                const rColor = ratingColors[rating] || '#888';
+                itemHTML += `<span style="font-size: 9px; color: ${rColor}; font-weight: 600; margin-right: 4px;">[${rating}]</span>`;
+            }
+
+            // Evidence text (truncated)
+            itemHTML += `<span style="color: #444;">${(text || '').substring(0, 130)}</span>`;
+
+            // Verify link icon
+            itemHTML += ` <a href="${linkUrl}" target="_blank" title="${linkTitle}" style="color: ${badgeColor}; text-decoration: none; font-size: 10px;">🔗</a>`;
+
+            itemHTML += '</div>';
+            evidenceHTML += itemHTML;
         });
-        if (evidence.length > 3) {
-            evidenceHTML += `<div style="font-size: 10px; color: #999;">... và ${evidence.length - 3} bằng chứng khác</div>`;
+        if (evidence.length > 5) {
+            evidenceHTML += `<div style="font-size: 10px; color: #999; margin-top: 4px;">... và ${evidence.length - 5} nguồn khác</div>`;
         }
         evidenceHTML += '</div>';
         document.getElementById('fakeEvidence').innerHTML = evidenceHTML;
