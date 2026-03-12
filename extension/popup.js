@@ -1665,17 +1665,37 @@ function renderV7Results(data, urlInfo) {
     document.getElementById('fakeSummary').textContent = 
         `Đã kiểm tra ${verificationMethods.length} nguồn. Tìm thấy ${evidence.length} bằng chứng.`;
     
-    // Show evidence with clickable source citations
+    // Show evidence with prominent source citation cards
     if (evidence.length > 0) {
-        const ratingColors = {
-            'True': '#27ae60', 'Đúng': '#27ae60', 'Accurate': '#27ae60',
-            'False': '#e74c3c', 'Sai': '#e74c3c', 'Incorrect': '#e74c3c',
-            'Misleading': '#f39c12', 'Sai lệch': '#f39c12',
-            'Unverified': '#888', 'Chưa xác minh': '#888',
-            'Mixture': '#f39c12', 'Mostly True': '#2ecc71', 'Mostly False': '#e67e22'
+        // Rating pill: background + text color pairs
+        const ratingStyle = {
+            'True':         { bg: '#d4edda', color: '#155724', label: '✔ Đúng' },
+            'Accurate':     { bg: '#d4edda', color: '#155724', label: '✔ Chính xác' },
+            'Mostly True':  { bg: '#d4edda', color: '#155724', label: '✔ Gần đúng' },
+            'False':        { bg: '#f8d7da', color: '#721c24', label: '✘ Sai' },
+            'Incorrect':    { bg: '#f8d7da', color: '#721c24', label: '✘ Không đúng' },
+            'Mostly False': { bg: '#fde8d8', color: '#7d3200', label: '✘ Phần lớn sai' },
+            'Misleading':   { bg: '#fff3cd', color: '#856404', label: '⚠ Gây hiểu nhầm' },
+            'Sai lệch':     { bg: '#fff3cd', color: '#856404', label: '⚠ Sai lệch' },
+            'Mixture':      { bg: '#fff3cd', color: '#856404', label: '~ Hỗn hợp' },
+            'Unverified':   { bg: '#e2e3e5', color: '#383d41', label: '? Chưa xác minh' },
         };
-        let evidenceHTML = '<div style="margin-top: 8px; padding: 8px; background: #f9f9f9; border-radius: 6px;">';
-        evidenceHTML += '<div style="font-size: 11px; font-weight: 600; color: #333; margin-bottom: 6px;">📋 Nguồn kiểm chứng:</div>';
+
+        // Config per source type
+        const typeConfig = {
+            factcheck: { icon: '🔍', accentColor: '#1a73e8', label: 'Google Fact Check', bgColor: '#e8f0fe' },
+            news:      { icon: '📰', accentColor: '#0f9d58', label: 'Báo chí',            bgColor: '#e6f4ea' },
+            ai:        { icon: '🤖', accentColor: '#7b1fa2', label: 'AI Analysis',        bgColor: '#f3e5f5' },
+        };
+
+        let evidenceHTML = `
+<div style="margin-top:10px;">
+  <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+    <span style="font-size:13px;">🔎</span>
+    <span style="font-size:12px; font-weight:700; color:#1a1a1a; letter-spacing:0.2px;">Nguồn kiểm chứng</span>
+    <span style="font-size:10px; background:#e0e0e0; color:#555; border-radius:10px; padding:1px 7px; font-weight:600;">${evidence.length} nguồn</span>
+  </div>`;
+
         evidence.slice(0, 5).forEach(ev => {
             const isStr = typeof ev === 'string';
             const text = isStr ? ev : (ev.text || ev.claim || ev.analysis || ev.description || '');
@@ -1684,40 +1704,44 @@ function renderV7Results(data, urlInfo) {
             const rating = isStr ? '' : (ev.rating || '');
             const itemType = isStr ? 'ai' : (ev.type || (url ? 'news' : 'ai'));
 
-            // Badge color by source type
-            let badgeColor = '#888';  // grey for AI
-            let badgeLabel = source || 'AI Analysis';
-            if (itemType === 'factcheck') { badgeColor = '#2980b9'; }
-            else if (itemType === 'news') { badgeColor = '#27ae60'; }
-
-            // Build link: use real URL or fall back to Google search
+            const cfg = typeConfig[itemType] || typeConfig.ai;
             const searchQuery = encodeURIComponent((text || '').substring(0, 80));
             const linkUrl = url || `https://www.google.com/search?q=${searchQuery}`;
-            const linkTitle = url ? 'Xem nguồn gốc' : 'Tìm kiếm trên Google';
+            const hasRealUrl = !!url;
 
-            let itemHTML = `<div style="font-size: 10px; margin: 5px 0; padding: 5px 6px; background: #fff; border-radius: 4px; border-left: 3px solid ${badgeColor};">`;
+            // Source name: prefer real source field, fall back to type label
+            const sourceName = source || cfg.label;
 
-            // Source badge (clickable)
-            itemHTML += `<a href="${linkUrl}" target="_blank" title="${linkTitle}" style="display: inline-block; font-size: 9px; font-weight: 600; color: #fff; background: ${badgeColor}; padding: 1px 5px; border-radius: 3px; text-decoration: none; margin-right: 5px; vertical-align: middle;">${badgeLabel}</a>`;
-
-            // Rating badge for fact-check items
+            // Rating pill
+            let ratingPill = '';
             if (rating) {
-                const rColor = ratingColors[rating] || '#888';
-                itemHTML += `<span style="font-size: 9px; color: ${rColor}; font-weight: 600; margin-right: 4px;">[${rating}]</span>`;
+                const rs = ratingStyle[rating] || { bg: '#e2e3e5', color: '#383d41', label: rating };
+                ratingPill = `<span style="display:inline-block; font-size:9px; font-weight:700; background:${rs.bg}; color:${rs.color}; border-radius:10px; padding:2px 7px; margin-left:6px; vertical-align:middle; white-space:nowrap;">${rs.label}</span>`;
             }
 
-            // Evidence text (truncated)
-            itemHTML += `<span style="color: #444;">${(text || '').substring(0, 130)}</span>`;
-
-            // Verify link icon
-            itemHTML += ` <a href="${linkUrl}" target="_blank" title="${linkTitle}" style="color: ${badgeColor}; text-decoration: none; font-size: 10px;">🔗</a>`;
-
-            itemHTML += '</div>';
-            evidenceHTML += itemHTML;
+            evidenceHTML += `
+<div style="margin-bottom:7px; border-radius:8px; overflow:hidden; border:1px solid ${cfg.accentColor}33; box-shadow:0 1px 3px rgba(0,0,0,0.07);">
+  <!-- Source header -->
+  <div style="background:${cfg.bgColor}; padding:5px 8px; display:flex; align-items:center; gap:5px; border-bottom:1px solid ${cfg.accentColor}22;">
+    <span style="font-size:12px;">${cfg.icon}</span>
+    <span style="font-size:10px; font-weight:700; color:${cfg.accentColor}; flex:1; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${sourceName}">${sourceName}</span>
+    ${ratingPill}
+  </div>
+  <!-- Evidence text -->
+  <div style="background:#fff; padding:6px 8px;">
+    <p style="margin:0 0 5px 0; font-size:10px; color:#222; line-height:1.45;">${(text || 'Không có nội dung chi tiết.').substring(0, 160)}</p>
+    <a href="${linkUrl}" target="_blank"
+       style="display:inline-flex; align-items:center; gap:3px; font-size:9px; font-weight:700; color:#fff; background:${cfg.accentColor}; border-radius:4px; padding:3px 8px; text-decoration:none; letter-spacing:0.2px;">
+      ${hasRealUrl ? '🔗 Xem nguồn gốc' : '🔍 Tìm kiếm Google'} <span style="font-size:9px;">→</span>
+    </a>
+  </div>
+</div>`;
         });
+
         if (evidence.length > 5) {
-            evidenceHTML += `<div style="font-size: 10px; color: #999; margin-top: 4px;">... và ${evidence.length - 5} nguồn khác</div>`;
+            evidenceHTML += `<div style="font-size:10px; color:#888; text-align:center; padding:3px 0;">… và ${evidence.length - 5} nguồn khác</div>`;
         }
+
         evidenceHTML += '</div>';
         document.getElementById('fakeEvidence').innerHTML = evidenceHTML;
     }
