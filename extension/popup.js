@@ -1665,81 +1665,99 @@ function renderV7Results(data, urlInfo) {
     document.getElementById('fakeSummary').textContent = 
         `Đã kiểm tra ${verificationMethods.length} nguồn. Tìm thấy ${evidence.length} bằng chứng.`;
     
-    // Show evidence with prominent source citation cards
+    // Show evidence with prominent source citation cards (dark-mode aware, real URLs only)
     if (evidence.length > 0) {
-        // Rating pill: background + text color pairs
+        const isDark = document.body.classList.contains('dark-mode');
+
+        // Card surface colors
+        const headerBg   = (type) => ({ factcheck: isDark ? '#1a2a4a' : '#e8f0fe', news: isDark ? '#1a3328' : '#e6f4ea', ai: isDark ? '#2d1a3a' : '#f3e5f5' })[type] || (isDark ? '#2d1a3a' : '#f3e5f5');
+        const accent     = (type) => ({ factcheck: isDark ? '#4d9fff' : '#1a73e8', news: isDark ? '#3dcf80' : '#0f9d58', ai: isDark ? '#ce93d8' : '#7b1fa2' })[type] || (isDark ? '#ce93d8' : '#7b1fa2');
+        const cardBodyBg  = isDark ? '#2a2a3d' : '#ffffff';
+        const cardTextClr = isDark ? '#d0d0e8' : '#222222';
+        const titleColor  = isDark ? '#e8e8f0' : '#1a1a1a';
+        const countBg     = isDark ? '#3d3d55' : '#e8e8e8';
+        const countColor  = isDark ? '#b0b0cc' : '#555555';
+        const moreColor   = isDark ? '#8888aa' : '#888888';
+
+        // Rating pill styles
         const ratingStyle = {
-            'True':         { bg: '#d4edda', color: '#155724', label: '✔ Đúng' },
-            'Accurate':     { bg: '#d4edda', color: '#155724', label: '✔ Chính xác' },
-            'Mostly True':  { bg: '#d4edda', color: '#155724', label: '✔ Gần đúng' },
-            'False':        { bg: '#f8d7da', color: '#721c24', label: '✘ Sai' },
-            'Incorrect':    { bg: '#f8d7da', color: '#721c24', label: '✘ Không đúng' },
-            'Mostly False': { bg: '#fde8d8', color: '#7d3200', label: '✘ Phần lớn sai' },
-            'Misleading':   { bg: '#fff3cd', color: '#856404', label: '⚠ Gây hiểu nhầm' },
-            'Sai lệch':     { bg: '#fff3cd', color: '#856404', label: '⚠ Sai lệch' },
-            'Mixture':      { bg: '#fff3cd', color: '#856404', label: '~ Hỗn hợp' },
-            'Unverified':   { bg: '#e2e3e5', color: '#383d41', label: '? Chưa xác minh' },
+            'True':         { bg: isDark ? '#1a3d28' : '#d4edda', color: isDark ? '#5de88a' : '#155724', label: '✔ Đúng' },
+            'Accurate':     { bg: isDark ? '#1a3d28' : '#d4edda', color: isDark ? '#5de88a' : '#155724', label: '✔ Chính xác' },
+            'Mostly True':  { bg: isDark ? '#1a3d28' : '#d4edda', color: isDark ? '#5de88a' : '#155724', label: '✔ Gần đúng' },
+            'False':        { bg: isDark ? '#3d1a20' : '#f8d7da', color: isDark ? '#ff8088' : '#721c24', label: '✘ Sai' },
+            'Incorrect':    { bg: isDark ? '#3d1a20' : '#f8d7da', color: isDark ? '#ff8088' : '#721c24', label: '✘ Không đúng' },
+            'Mostly False': { bg: isDark ? '#3d2510' : '#fde8d8', color: isDark ? '#ffb97a' : '#7d3200', label: '✘ Phần lớn sai' },
+            'Misleading':   { bg: isDark ? '#3d3000' : '#fff3cd', color: isDark ? '#ffd95a' : '#856404', label: '⚠ Gây hiểu nhầm' },
+            'Sai lệch':     { bg: isDark ? '#3d3000' : '#fff3cd', color: isDark ? '#ffd95a' : '#856404', label: '⚠ Sai lệch' },
+            'Mixture':      { bg: isDark ? '#3d3000' : '#fff3cd', color: isDark ? '#ffd95a' : '#856404', label: '~ Hỗn hợp' },
+            'Unverified':   { bg: isDark ? '#2d2d40' : '#e2e3e5', color: isDark ? '#aaaacc' : '#383d41', label: '? Chưa xác minh' },
         };
 
-        // Config per source type
-        const typeConfig = {
-            factcheck: { icon: '🔍', accentColor: '#1a73e8', label: 'Google Fact Check', bgColor: '#e8f0fe' },
-            news:      { icon: '📰', accentColor: '#0f9d58', label: 'Báo chí',            bgColor: '#e6f4ea' },
-            ai:        { icon: '🤖', accentColor: '#7b1fa2', label: 'AI Analysis',        bgColor: '#f3e5f5' },
-        };
+        const typeLabel = { factcheck: 'Google Fact Check', news: 'Báo chí / Tin tức', ai: 'AI Analysis' };
+        const typeIcon  = { factcheck: '🔍', news: '📰', ai: '🤖' };
 
-        let evidenceHTML = `
-<div style="margin-top:10px;">
-  <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-    <span style="font-size:13px;">🔎</span>
-    <span style="font-size:12px; font-weight:700; color:#1a1a1a; letter-spacing:0.2px;">Nguồn kiểm chứng</span>
-    <span style="font-size:10px; background:#e0e0e0; color:#555; border-radius:10px; padding:1px 7px; font-weight:600;">${evidence.length} nguồn</span>
+        let evidenceHTML = `<div style="margin-top:10px;">
+  <div style="display:flex; align-items:center; gap:7px; margin-bottom:9px;">
+    <span style="font-size:14px;">🔎</span>
+    <span style="font-size:12px; font-weight:700; color:${titleColor}; letter-spacing:0.3px;">Nguồn kiểm chứng</span>
+    <span style="font-size:10px; background:${countBg}; color:${countColor}; border-radius:10px; padding:1px 8px; font-weight:600;">${evidence.length} nguồn</span>
   </div>`;
 
-        evidence.slice(0, 5).forEach(ev => {
+        let shown = 0;
+        evidence.forEach(ev => {
+            if (shown >= 5) return;
             const isStr = typeof ev === 'string';
-            const text = isStr ? ev : (ev.text || ev.claim || ev.analysis || ev.description || '');
-            const source = isStr ? null : (ev.source || ev.publisher || null);
-            const url = isStr ? '' : (ev.url || '');
-            const rating = isStr ? '' : (ev.rating || '');
+            const text     = isStr ? ev : (ev.text || ev.claim || ev.analysis || ev.description || '');
+            const source   = isStr ? null : (ev.source || ev.publisher || null);
+            const url      = isStr ? '' : (ev.url || '');
+            const rating   = isStr ? '' : (ev.rating || '');
             const itemType = isStr ? 'ai' : (ev.type || (url ? 'news' : 'ai'));
+            const hasURL   = !!url;
 
-            const cfg = typeConfig[itemType] || typeConfig.ai;
-            const searchQuery = encodeURIComponent((text || '').substring(0, 80));
-            const linkUrl = url || `https://www.google.com/search?q=${searchQuery}`;
-            const hasRealUrl = !!url;
+            // Skip AI items with no real URL — do not fabricate Google search links
+            if (!hasURL && itemType === 'ai' && isStr) return;
 
-            // Source name: prefer real source field, fall back to type label
-            const sourceName = source || cfg.label;
+            const ac         = accent(itemType);
+            const hBg        = headerBg(itemType);
+            const sourceName = source || typeLabel[itemType] || 'AI Analysis';
+            const icon       = typeIcon[itemType] || '🤖';
 
             // Rating pill
             let ratingPill = '';
             if (rating) {
-                const rs = ratingStyle[rating] || { bg: '#e2e3e5', color: '#383d41', label: rating };
-                ratingPill = `<span style="display:inline-block; font-size:9px; font-weight:700; background:${rs.bg}; color:${rs.color}; border-radius:10px; padding:2px 7px; margin-left:6px; vertical-align:middle; white-space:nowrap;">${rs.label}</span>`;
+                const rs = ratingStyle[rating] || { bg: countBg, color: countColor, label: rating };
+                ratingPill = `<span style="font-size:9px; font-weight:700; background:${rs.bg}; color:${rs.color}; border-radius:10px; padding:2px 8px; margin-left:5px; white-space:nowrap;">${rs.label}</span>`;
             }
 
+            // Source type label chip
+            const typeChip = `<span style="font-size:8px; font-weight:600; background:${ac}22; color:${ac}; border-radius:4px; padding:1px 5px; margin-left:4px; white-space:nowrap;">${typeLabel[itemType] || ''}</span>`;
+
+            // Button — only rendered when a real URL exists
+            const btnHTML = hasURL
+                ? `<a href="${url}" target="_blank" rel="noopener noreferrer"
+                     style="display:inline-flex; align-items:center; gap:4px; margin-top:6px; font-size:9px; font-weight:700; color:#fff; background:${ac}; border-radius:5px; padding:4px 10px; text-decoration:none; letter-spacing:0.2px;">
+                     🔗 Xem nguồn trực tiếp <span style="font-size:9px;">→</span>
+                   </a>`
+                : `<span style="display:inline-block; margin-top:5px; font-size:9px; color:${isDark ? '#8888aa' : '#aaaaaa'}; font-style:italic;">Không có liên kết trực tiếp</span>`;
+
             evidenceHTML += `
-<div style="margin-bottom:7px; border-radius:8px; overflow:hidden; border:1px solid ${cfg.accentColor}33; box-shadow:0 1px 3px rgba(0,0,0,0.07);">
-  <!-- Source header -->
-  <div style="background:${cfg.bgColor}; padding:5px 8px; display:flex; align-items:center; gap:5px; border-bottom:1px solid ${cfg.accentColor}22;">
-    <span style="font-size:12px;">${cfg.icon}</span>
-    <span style="font-size:10px; font-weight:700; color:${cfg.accentColor}; flex:1; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${sourceName}">${sourceName}</span>
+<div style="margin-bottom:8px; border-radius:9px; overflow:hidden; border:1px solid ${ac}44; box-shadow:0 2px 6px ${isDark ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.08)'}">
+  <div style="background:${hBg}; padding:6px 10px; display:flex; align-items:center; flex-wrap:wrap; gap:4px; border-bottom:1px solid ${ac}2a;">
+    <span style="font-size:13px;">${icon}</span>
+    <span style="font-size:10px; font-weight:800; color:${ac}; flex:1; min-width:0; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;" title="${sourceName}">${sourceName}</span>
+    ${typeChip}
     ${ratingPill}
   </div>
-  <!-- Evidence text -->
-  <div style="background:#fff; padding:6px 8px;">
-    <p style="margin:0 0 5px 0; font-size:10px; color:#222; line-height:1.45;">${(text || 'Không có nội dung chi tiết.').substring(0, 160)}</p>
-    <a href="${linkUrl}" target="_blank"
-       style="display:inline-flex; align-items:center; gap:3px; font-size:9px; font-weight:700; color:#fff; background:${cfg.accentColor}; border-radius:4px; padding:3px 8px; text-decoration:none; letter-spacing:0.2px;">
-      ${hasRealUrl ? '🔗 Xem nguồn gốc' : '🔍 Tìm kiếm Google'} <span style="font-size:9px;">→</span>
-    </a>
+  <div style="background:${cardBodyBg}; padding:7px 10px;">
+    <p style="margin:0; font-size:10.5px; color:${cardTextClr}; line-height:1.5; word-break:break-word;">${(text || 'Không có nội dung chi tiết.').substring(0, 180)}</p>
+    ${btnHTML}
   </div>
 </div>`;
+            shown++;
         });
 
-        if (evidence.length > 5) {
-            evidenceHTML += `<div style="font-size:10px; color:#888; text-align:center; padding:3px 0;">… và ${evidence.length - 5} nguồn khác</div>`;
+        if (evidence.length > shown) {
+            evidenceHTML += `<div style="font-size:10px; color:${moreColor}; text-align:center; padding:3px 0;">… và ${evidence.length - shown} nguồn khác</div>`;
         }
 
         evidenceHTML += '</div>';
@@ -1763,13 +1781,15 @@ function renderV7Results(data, urlInfo) {
     if (savingsBar) savingsBar.style.display = 'none';
     
     if (toxicCount > 0) {
+        const isDarkCmt = document.body.classList.contains('dark-mode');
+        const cmtCardBg = isDarkCmt ? '#2d2510' : '#fff3cd';
         let commentsHTML = '<div style="margin-top: 8px;">';
         toxicComments.forEach((tc, idx) => {
             if (idx < 8) {
                 const sevColor = tc.severity === 'Critical' ? '#c0392b' : tc.severity === 'High' ? '#e74c3c' : '#f39c12';
                 const sevLabel = severityVi[tc.severity] || tc.severity;
                 commentsHTML += `
-                    <div style="margin: 6px 0; padding: 8px; background: #fff3cd; border-left: 3px solid ${sevColor}; border-radius: 3px;">
+                    <div style="margin: 6px 0; padding: 8px; background: ${cmtCardBg}; border-left: 3px solid ${sevColor}; border-radius: 3px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-size: 12px; color: ${sevColor}; font-weight: bold;">${sevLabel} - ${(tc.score * 100).toFixed(0)}%</span>
                         </div>
