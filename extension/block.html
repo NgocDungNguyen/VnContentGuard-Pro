@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="utf-8">
-    <title>đŸ« Bá»‹ cháº·n â€” VnContentGuard Pro</title>
+    <title>🚫 Bị chặn – VnContentGuard Pro</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -58,48 +58,44 @@
             font-weight: bold; cursor: pointer; transition: all 0.3s;
         }
         .btn-back:hover { background: #229954; }
-        /* Incognito pages: hide PIN section, no unlock available */
         .incognito-mode .pin-section { display: none; }
     </style>
 </head>
 <body>
     <div class="block-container" id="blockContainer">
-        <div class="icon" id="blockIcon">đŸ”’</div>
-        <h1 id="blockTitle">đŸ« TRANG Bá» CHáº¶N</h1>
+        <div class="icon" id="blockIcon">🔒</div>
+        <h1 id="blockTitle">🚫 TRANG BỊ CHẶN</h1>
         <div class="msg" id="blockMsg">
-            Cháº¿ Ä‘á»™ Kiá»ƒm soĂ¡t gia Ä‘Ă¬nh (Parental Control) Ä‘Ă£ cháº·n trang web nĂ y.
+            Chế độ Kiểm soát gia đình (Parental Control) đã chặn trang web này.
         </div>
         <div class="domain" id="domainDisplay">-</div>
-        <span class="reason-badge reason-risk" id="reasonBadge">Rá»§i ro: Cao</span>
+        <span class="reason-badge reason-risk" id="reasonBadge">Rủi ro: Cao</span>
 
-        <button class="btn-back" id="btnBack">đŸ”™ Quay láº¡i an toĂ n</button>
+        <button class="btn-back" id="btnBack">🔙 Quay lại an toàn</button>
 
         <div class="pin-section">
-            <label>đŸ” Nháº­p mĂ£ PIN Ä‘á»ƒ má»Ÿ khĂ³a:</label>
-            <input type="password" class="pin-input" id="pinInput" maxlength="6" placeholder="â€¢â€¢â€¢â€¢">
-            <div class="pin-error" id="pinError">Sai mĂ£ PIN. Vui lĂ²ng thá»­ láº¡i.</div>
+            <label>🔑 Nhập mã PIN để mở khóa:</label>
+            <input type="password" class="pin-input" id="pinInput" maxlength="6" placeholder="••••">
+            <div class="pin-error" id="pinError">Sai mã PIN. Vui lòng thử lại.</div>
             <br>
-            <button class="btn-unlock" id="btnUnlock">Má»Ÿ khĂ³a</button>
+            <button class="btn-unlock" id="btnUnlock">Mở khóa</button>
         </div>
     </div>
 
     <script>
         const params = new URLSearchParams(window.location.search);
 
-        // Support both ?url= (old) and ?blockedUrl= (new from 6.2/6.6)
         const targetUrl = params.get('blockedUrl') || params.get('url') || '';
         const risk      = params.get('risk') || '';
-        const reason    = params.get('reason') || 'risk'; // 'risk' | 'blacklist' | 'incognito'
+        const reason    = params.get('reason') || 'risk';
 
-        // â”€â”€ Display domain â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         try {
             const domain = new URL(targetUrl).hostname.replace('www.', '');
             document.getElementById('domainDisplay').textContent = domain;
         } catch {
-            document.getElementById('domainDisplay').textContent = targetUrl.substring(0, 60) || '(Trang khĂ´ng xĂ¡c Ä‘á»‹nh)';
+            document.getElementById('domainDisplay').textContent = targetUrl.substring(0, 60) || '(Trang không xác định)';
         }
 
-        // â”€â”€ Customise UI per reason â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         const container = document.getElementById('blockContainer');
         const icon      = document.getElementById('blockIcon');
         const title     = document.getElementById('blockTitle');
@@ -107,31 +103,29 @@
         const badge     = document.getElementById('reasonBadge');
 
         if (reason === 'blacklist') {
-            icon.textContent  = 'đŸ«';
-            title.textContent = 'đŸ« TRANG Bá» CHáº¶N Bá»I PHá»¤ HUYNH';
-            msg.textContent   = 'TĂªn miá»n nĂ y náº±m trong danh sĂ¡ch Ä‘en cá»§a Kiá»ƒm soĂ¡t gia Ä‘Ă¬nh. '
-                              + 'Náº¿u báº¡n nghÄ© Ä‘Ă¢y lĂ  nháº§m láº«n, hĂ£y nháº­p mĂ£ PIN Ä‘á»ƒ tiáº¿p tá»¥c.';
-            badge.textContent = 'đŸ« Danh sĂ¡ch Ä‘en';
+            icon.textContent  = '🚫';
+            title.textContent = '🚫 TRANG BỊ CHẶN BỞI PHỤ HUYNH';
+            msg.textContent   = 'Tên miền này nằm trong danh sách đen của Kiểm soát gia đình. '
+                              + 'Nếu bạn nghĩ đây là nhầm lẫn, hãy nhập mã PIN để tiếp tục.';
+            badge.textContent = '🚫 Danh sách đen';
             badge.className   = 'reason-badge reason-blacklist';
 
         } else if (reason === 'incognito') {
-            icon.textContent  = 'đŸ•µï¸';
-            title.textContent = 'đŸ•µï¸ CHáº¾ Äá»˜ áº¨N DANH Bá» Háº N CHáº¾';
-            msg.textContent   = 'Phá»¥ huynh Ä‘Ă£ táº¯t cháº¿ Ä‘á»™ duyá»‡t web áº©n danh. '
-                              + 'Vui lĂ²ng sá»­ dá»¥ng cá»­a sá»• duyá»‡t thĂ´ng thÆ°á»ng.';
-            badge.textContent = 'đŸ•µï¸ áº¨n danh bá»‹ cháº·n';
+            icon.textContent  = '🕵️';
+            title.textContent = '🕵️ CHẾ ĐỘ ẨN DANH BỊ HẠN CHẾ';
+            msg.textContent   = 'Phụ huynh đã tắt chế độ duyệt web ẩn danh. '
+                              + 'Vui lòng sử dụng cửa sổ duyệt thông thường.';
+            badge.textContent = '🕵️ Ẩn danh bị chặn';
             badge.className   = 'reason-badge reason-incognito';
             container.classList.add('incognito-mode');
 
         } else {
-            // Default: risk-based parental block
-            badge.textContent = risk ? `Rá»§i ro: ${risk}` : 'Rá»§i ro cao';
+            badge.textContent = risk ? `Rủi ro: ${risk}` : 'Rủi ro cao';
             badge.className   = 'reason-badge reason-risk';
-            msg.textContent   = 'Cháº¿ Ä‘á»™ Kiá»ƒm soĂ¡t gia Ä‘Ă¬nh (Parental Control) Ä‘Ă£ cháº·n trang web nĂ y '
-                              + 'vĂ¬ Ä‘iá»ƒm rá»§i ro vÆ°á»£t ngÆ°á»¡ng cho phĂ©p.';
+            msg.textContent   = 'Chế độ Kiểm soát gia đình (Parental Control) đã chặn trang web này '
+                              + 'vì điểm rủi ro vượt ngưỡng cho phép.';
         }
 
-        // â”€â”€ Back button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         document.getElementById('btnBack').addEventListener('click', () => {
             if (history.length > 1) {
                 history.back();
@@ -140,14 +134,12 @@
             }
         });
 
-        // â”€â”€ PIN unlock (not shown for incognito mode) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         document.getElementById('btnUnlock').addEventListener('click', () => {
             const pin = document.getElementById('pinInput').value;
             chrome.storage.local.get(['parentalPIN'], (data) => {
                 const storedPIN = data.parentalPIN || '0000';
                 if (pin === storedPIN) {
                     if (!targetUrl) { history.back(); return; }
-                    // Temporarily whitelist this URL for the session
                     chrome.storage.local.get(['parentalBypass'], (d) => {
                         const bypassed = d.parentalBypass || [];
                         bypassed.push(targetUrl);
