@@ -1869,3 +1869,236 @@ body.dark-mode .pc-control-group      { background: #2d2d3d; border-color: #444;
 body.dark-mode .pc-select             { background: #2d2d3d; border-color: #555; color: #eee; }
 body.dark-mode .parental-save-btn     { background: #7d3c98; }
 body.dark-mode .parental-save-btn:hover { background: #6c3483; }
+
+/* ============================================================================
+   STUDENT FOCUS MODE PANEL (V8)
+   ============================================================================ */
+
+.focus-card {
+    border-left: 4px solid #16a085;
+    background: var(--bg-card);
+}
+
+.focus-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.focus-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.focus-status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+    background: #bdc3c7;
+    color: #2c3e50;
+}
+
+.focus-status-badge.active {
+    background: #16a085;
+    color: #fff;
+}
+
+.focus-section {
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.focus-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+}
+
+.focus-mode-toggle {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.focus-mode-btn {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.focus-mode-btn.active {
+    background: #16a085;
+    border-color: #16a085;
+    color: #fff;
+}
+
+.focus-time-presets {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.focus-time-btn {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.focus-time-btn.active {
+    background: #16a085;
+    border-color: #16a085;
+    color: #fff;
+}
+
+.focus-custom-time {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.focus-custom-time label {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.focus-custom-time input {
+    width: 90px;
+    padding: 5px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.focus-open-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    border-radius: 6px;
+    padding: 6px 8px;
+}
+
+.focus-action-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.focus-start-btn { background: #16a085; }
+.focus-start-btn:hover { background: #12876f; }
+.focus-stop-btn { flex: 1; }
+
+.focus-input-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.focus-input-row input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.focus-mini-btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    margin: 0;
+}
+
+.focus-domain-list {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    padding: 6px;
+    max-height: 140px;
+    overflow-y: auto;
+    font-size: 11px;
+}
+
+.focus-domain-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    border-bottom: 1px dashed var(--border-color);
+}
+.focus-domain-item:last-child { border-bottom: none; }
+
+.focus-domain-remove {
+    border: none;
+    background: none;
+    color: #e74c3c;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.focus-report-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.focus-report-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px;
+    text-align: center;
+}
+
+.focus-report-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.focus-report-value {
+    font-size: 14px;
+    font-weight: 800;
+    color: #16a085;
+}
+
+.focus-top-sites {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+@media (max-width: 520px) {
+    .focus-report-grid { grid-template-columns: 1fr; }
+    .focus-time-presets { flex-direction: column; }
+    .focus-mode-toggle { flex-direction: column; }
+}
+
+body.dark-mode .focus-card { border-left-color: #1abc9c; }
+body.dark-mode .focus-status-badge { background: #34495e; color: #ecf0f1; }
+body.dark-mode .focus-status-badge.active { background: #1abc9c; }
+body.dark-mode .focus-mode-btn { background: #2d2d3d; border-color: #444; color: #bbb; }
+body.dark-mode .focus-mode-btn.active { background: #1abc9c; border-color: #1abc9c; color: #fff; }
+body.dark-mode .focus-time-btn { background: #2d2d3d; border-color: #444; color: #ddd; }
+body.dark-mode .focus-time-btn.active { background: #1abc9c; border-color: #1abc9c; color: #fff; }
+body.dark-mode .focus-domain-list { background: #2d2d3d; border-color: #444; }
+body.dark-mode .focus-report-card { background: #2d2d3d; border-color: #444; }

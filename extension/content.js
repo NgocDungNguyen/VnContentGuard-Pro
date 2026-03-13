@@ -16,6 +16,11 @@
     let highlightMap = new Map();    // elem → tooltip element
     let styleEl = null;              // injected <link> for content.css
 
+    // Focus Mode overlay state (V8)
+    let focusOverlayEl = null;
+    let focusTimerId = null;
+    let focusData = null;
+
     // ─── Entry Point: Message Listener ──────────────────────────────────────
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (message.type === 'SHOW_OVERLAY') {
@@ -44,6 +49,19 @@
             sendResponse({ enabled: overlayEnabled, hasResults: !!currentResults });
             return true;
         }
+
+        if (message.type === 'FOCUS_OVERLAY_START') {
+            focusData = message.data || {};
+            renderFocusOverlay(focusData);
+            sendResponse({ ok: true });
+            return true;
+        }
+
+        if (message.type === 'FOCUS_OVERLAY_STOP') {
+            removeFocusOverlay();
+            sendResponse({ ok: true });
+            return true;
+        }
     });
 
     // ─── Main Render ─────────────────────────────────────────────────────────
@@ -67,6 +85,73 @@
                 highlightComments(results.comments_analysis);
             }
         });
+    }
+
+    // ─── Focus Mode Overlay ────────────────────────────────────────────────
+    function renderFocusOverlay(data) {
+        removeFocusOverlay();
+
+        injectStyles(() => {
+            const overlay = document.createElement('div');
+            overlay.id = 'vcg-focus-overlay';
+            const modeLabel = data.mode === 'open' ? 'Tự do' : 'Countdown';
+
+            overlay.innerHTML = `
+                <div class="vcg-focus-card">
+                    <div class="vcg-focus-header">
+                        <span class="vcg-focus-title">🎯 Focus Mode</span>
+                        <span class="vcg-focus-mode">${modeLabel}</span>
+                    </div>
+                    <div id="vcgFocusTime" class="vcg-focus-time">00:00</div>
+                    <div class="vcg-focus-sub">Giữ tập trung — chỉ web học tập</div>
+                    <div class="vcg-focus-actions">
+                        <button id="vcgFocusFinish" class="vcg-focus-btn">${data.mode === 'open' ? 'Finish' : 'Kết thúc sớm'}</button>
+                    </div>
+                </div>
+            `;
+
+            overlay.querySelector('#vcgFocusFinish')?.addEventListener('click', async () => {
+                try {
+                    await chrome.runtime.sendMessage({ type: 'STOP_FOCUS_MODE' });
+                } catch {}
+            });
+
+            document.body.appendChild(overlay);
+            focusOverlayEl = overlay;
+            startFocusTimer();
+        });
+    }
+
+    function startFocusTimer() {
+        if (focusTimerId) clearInterval(focusTimerId);
+        updateFocusTimer();
+        focusTimerId = setInterval(updateFocusTimer, 1000);
+    }
+
+    function updateFocusTimer() {
+        if (!focusOverlayEl || !focusData) return;
+        const now = Date.now();
+        let seconds = 0;
+        if (focusData.mode === 'countdown' && focusData.endTime) {
+            seconds = Math.max(0, Math.floor((focusData.endTime - now) / 1000));
+        } else {
+            seconds = Math.max(0, Math.floor((now - (focusData.startTime || now)) / 1000));
+        }
+        const mm = String(Math.floor(seconds / 60)).padStart(2, '0');
+        const ss = String(seconds % 60).padStart(2, '0');
+        const timeEl = document.getElementById('vcgFocusTime');
+        if (timeEl) timeEl.textContent = `${mm}:${ss}`;
+    }
+
+    function removeFocusOverlay() {
+        if (focusTimerId) {
+            clearInterval(focusTimerId);
+            focusTimerId = null;
+        }
+        if (focusOverlayEl) {
+            focusOverlayEl.remove();
+            focusOverlayEl = null;
+        }
     }
 
     // ─── Risk Badge ──────────────────────────────────────────────────────────

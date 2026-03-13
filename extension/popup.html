@@ -32,6 +32,13 @@
                                 <span class="dropdown-desc">Quét nhiều trang cùng lúc</span>
                             </span>
                         </button>
+                        <button id="focusModeBtn" class="dropdown-item" title="Bật chế độ học tập tập trung">
+                            <span class="dropdown-icon">🎯</span>
+                            <span class="dropdown-main">
+                                <span class="dropdown-text">Focus Mode</span>
+                                <span class="dropdown-desc">Chặn xao nhãng khi học</span>
+                            </span>
+                        </button>
                         <button id="compareBtn" class="dropdown-item" title="So sánh mức độ an toàn giữa 2 trang web với nhau">
                             <span class="dropdown-icon">📊</span>
                             <span class="dropdown-main">
@@ -203,6 +210,82 @@
                 </select>
                 <button id="reportSubmitBtn" class="btn-primary" style="padding: 8px; margin: 0; background: #e74c3c;">🚩 Gửi báo cáo</button>
                 <div id="reportResult" class="hidden" style="margin-top: 8px; font-size: 11px; text-align: center;"></div>
+            </div>
+        </div>
+
+        <!-- STUDENT FOCUS MODE PANEL (V8) -->
+        <div id="focusPanel" class="hidden">
+            <div class="card focus-card">
+                <div class="focus-header">
+                    <div class="focus-title">🎯 Focus Mode — Học tập tập trung</div>
+                    <div id="focusStatusBadge" class="focus-status-badge">TẮT</div>
+                </div>
+
+                <div class="focus-section">
+                    <div class="focus-section-title">⏱️ Chọn chế độ</div>
+                    <div class="focus-mode-toggle">
+                        <button id="focusModeCountdownBtn" class="focus-mode-btn active">Countdown</button>
+                        <button id="focusModeOpenBtn" class="focus-mode-btn">Tự do (đếm lên)</button>
+                    </div>
+
+                    <div id="focusCountdownControls">
+                        <div class="focus-time-presets">
+                            <button class="focus-time-btn" data-min="30">30m</button>
+                            <button class="focus-time-btn" data-min="60">1h</button>
+                            <button class="focus-time-btn" data-min="120">2h</button>
+                        </div>
+                        <div class="focus-custom-time">
+                            <label>Tuỳ chỉnh (phút)</label>
+                            <input type="number" id="focusCustomMinutes" min="5" max="360" value="45">
+                        </div>
+                    </div>
+
+                    <div id="focusOpenControls" class="hidden">
+                        <div class="focus-open-hint">Bấm "Bắt đầu" để đếm từ 0. Bạn kết thúc khi bấm "Finish".</div>
+                    </div>
+
+                    <div class="focus-action-row">
+                        <button id="focusStartBtn" class="btn-primary focus-start-btn">▶ Bắt đầu Focus</button>
+                        <button id="focusStopBtn" class="btn-secondary focus-stop-btn hidden">■ Kết thúc</button>
+                    </div>
+                </div>
+
+                <div class="focus-section">
+                    <div class="focus-section-title">✅ Cho phép trong Focus</div>
+                    <div class="focus-input-row">
+                        <input type="text" id="focusAllowInput" placeholder="vd: youtube.com">
+                        <button id="focusAllowAddBtn" class="btn-primary focus-mini-btn">+ Thêm</button>
+                    </div>
+                    <div id="focusAllowList" class="focus-domain-list"></div>
+                </div>
+
+                <div class="focus-section">
+                    <div class="focus-section-title">⛔ Chặn trong Focus</div>
+                    <div class="focus-input-row">
+                        <input type="text" id="focusBlockInput" placeholder="vd: facebook.com">
+                        <button id="focusBlockAddBtn" class="btn-primary focus-mini-btn">+ Thêm</button>
+                    </div>
+                    <div id="focusBlockList" class="focus-domain-list"></div>
+                </div>
+
+                <div class="focus-section">
+                    <div class="focus-section-title">📊 Báo cáo học tập</div>
+                    <div class="focus-report-grid">
+                        <div class="focus-report-card">
+                            <div class="focus-report-label">Hôm nay</div>
+                            <div id="focusReportToday" class="focus-report-value">0m</div>
+                        </div>
+                        <div class="focus-report-card">
+                            <div class="focus-report-label">Tuần này</div>
+                            <div id="focusReportWeek" class="focus-report-value">0h</div>
+                        </div>
+                        <div class="focus-report-card">
+                            <div class="focus-report-label">Tháng này</div>
+                            <div id="focusReportMonth" class="focus-report-value">0h</div>
+                        </div>
+                    </div>
+                    <div id="focusTopSites" class="focus-top-sites"></div>
+                </div>
             </div>
         </div>
 

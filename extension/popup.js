@@ -211,6 +211,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         reportPageBtn.addEventListener('click', toggleReportPanel);
     }
 
+    // V8 — Focus Mode button handler
+    const focusModeBtn = document.getElementById('focusModeBtn');
+    if (focusModeBtn) {
+        focusModeBtn.addEventListener('click', toggleFocusPanel);
+    }
+
     const reportSubmitBtn = document.getElementById('reportSubmitBtn');
     if (reportSubmitBtn) {
         reportSubmitBtn.addEventListener('click', submitPageReport);
@@ -292,6 +298,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('bulkBtn')?.addEventListener('click', toggleBulkPanel);
     document.getElementById('bulkScanBtn')?.addEventListener('click', runBulkScan);
     document.getElementById('bulkExportBtn')?.addEventListener('click', exportBulkCsv);
+
+    // ── V8 — Focus Mode handlers ─────────────────────────────────────────
+    document.getElementById('focusStartBtn')?.addEventListener('click', startFocusMode);
+    document.getElementById('focusStopBtn')?.addEventListener('click', stopFocusMode);
+    document.getElementById('focusModeCountdownBtn')?.addEventListener('click', () => setFocusModeUI('countdown'));
+    document.getElementById('focusModeOpenBtn')?.addEventListener('click', () => setFocusModeUI('open'));
+    document.querySelectorAll('.focus-time-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.focus-time-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            const mins = parseInt(btn.dataset.min || '30');
+            const custom = document.getElementById('focusCustomMinutes');
+            if (custom) custom.value = mins;
+        });
+    });
+    document.getElementById('focusAllowAddBtn')?.addEventListener('click', () => addFocusDomain('allow'));
+    document.getElementById('focusBlockAddBtn')?.addEventListener('click', () => addFocusDomain('block'));
+    document.getElementById('focusAllowInput')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addFocusDomain('allow');
+    });
+    document.getElementById('focusBlockInput')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') addFocusDomain('block');
+    });
 
     // ── feature 7.9 — Score Correction sliders ────────────────────────────
     document.getElementById('corrRiskSlider')?.addEventListener('input', (e) => {
@@ -2829,6 +2858,219 @@ async function submitPageReport() {
         }
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = '🚩 Gửi báo cáo'; }
+    }
+}
+
+// ============================================================================
+// STUDENT FOCUS MODE (V8)
+// ============================================================================
+
+function toggleFocusPanel() {
+    const panel = document.getElementById('focusPanel');
+    if (!panel) return;
+
+    document.getElementById('headerDropdown')?.classList.add('hidden');
+
+    if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        document.getElementById('results')?.classList.add('hidden');
+        document.getElementById('historyPanel')?.classList.add('hidden');
+        document.getElementById('comparePanel')?.classList.add('hidden');
+        document.getElementById('reportPanel')?.classList.add('hidden');
+        document.getElementById('parentalPanel')?.classList.add('hidden');
+        document.getElementById('bulkPanel')?.classList.add('hidden');
+        document.getElementById('confirmation')?.classList.add('hidden');
+        loadFocusSettings();
+    } else {
+        panel.classList.add('hidden');
+        if (currentResultsData) document.getElementById('results')?.classList.remove('hidden');
+    }
+}
+
+function setFocusModeUI(mode) {
+    const btnCountdown = document.getElementById('focusModeCountdownBtn');
+    const btnOpen = document.getElementById('focusModeOpenBtn');
+    const countdownControls = document.getElementById('focusCountdownControls');
+    const openControls = document.getElementById('focusOpenControls');
+
+    if (btnCountdown) btnCountdown.classList.toggle('active', mode === 'countdown');
+    if (btnOpen) btnOpen.classList.toggle('active', mode === 'open');
+    if (countdownControls) countdownControls.classList.toggle('hidden', mode !== 'countdown');
+    if (openControls) openControls.classList.toggle('hidden', mode !== 'open');
+
+    chrome.storage.local.set({ focusModeMode: mode });
+}
+
+async function loadFocusSettings() {
+    const data = await chrome.storage.local.get([
+        'focusModeMode', 'focusModeWhitelist', 'focusModeBlacklist', 'focusModeSessions'
+    ]);
+    const mode = data.focusModeMode || 'countdown';
+    setFocusModeUI(mode);
+    let allowList = data.focusModeWhitelist || [];
+    let blockList = data.focusModeBlacklist || [];
+
+    if (!allowList.length) {
+        allowList = ['youtube.com', 'youtu.be', 'music.youtube.com', 'spotify.com'];
+        chrome.storage.local.set({ focusModeWhitelist: allowList });
+    }
+    if (!blockList.length) {
+        blockList = ['facebook.com', 'instagram.com', 'messenger.com', 'tiktok.com'];
+        chrome.storage.local.set({ focusModeBlacklist: blockList });
+    }
+
+    renderFocusList('allow', allowList);
+    renderFocusList('block', blockList);
+    renderFocusReports(data.focusModeSessions || []);
+
+    // Load active session status from background
+    const status = await chrome.runtime.sendMessage({ type: 'GET_FOCUS_STATUS' });
+    updateFocusStatusUI(status);
+}
+
+function updateFocusStatusUI(status) {
+    const badge = document.getElementById('focusStatusBadge');
+    const startBtn = document.getElementById('focusStartBtn');
+    const stopBtn = document.getElementById('focusStopBtn');
+
+    if (!status?.enabled) {
+        badge.textContent = 'TẮT';
+        badge.classList.remove('active');
+        if (startBtn) startBtn.classList.remove('hidden');
+        if (stopBtn) stopBtn.classList.add('hidden');
+        return;
+    }
+
+    badge.textContent = status.mode === 'open' ? 'ĐANG HỌC' : 'ĐANG ĐẾM';
+    badge.classList.add('active');
+    if (startBtn) startBtn.classList.add('hidden');
+    if (stopBtn) stopBtn.classList.remove('hidden');
+}
+
+async function startFocusMode() {
+    const mode = document.getElementById('focusModeOpenBtn')?.classList.contains('active') ? 'open' : 'countdown';
+    let minutes = parseInt(document.getElementById('focusCustomMinutes')?.value || '45');
+    if (mode === 'countdown') {
+        if (isNaN(minutes) || minutes < 5 || minutes > 360) {
+            alert('Thời lượng không hợp lệ. Vui lòng nhập 5–360 phút.');
+            return;
+        }
+    } else {
+        minutes = 0;
+    }
+
+    const result = await chrome.runtime.sendMessage({
+        type: 'START_FOCUS_MODE',
+        mode: mode,
+        minutes: minutes
+    });
+
+    if (result?.ok) {
+        updateFocusStatusUI({ enabled: true, mode: mode });
+    } else {
+        alert(result?.error || 'Không thể bắt đầu Focus Mode.');
+    }
+}
+
+async function stopFocusMode() {
+    const result = await chrome.runtime.sendMessage({ type: 'STOP_FOCUS_MODE' });
+    if (result?.ok) {
+        updateFocusStatusUI({ enabled: false });
+        // Refresh reports after stopping
+        const data = await chrome.storage.local.get(['focusModeSessions']);
+        renderFocusReports(data.focusModeSessions || []);
+    } else {
+        alert(result?.error || 'Không thể dừng Focus Mode.');
+    }
+}
+
+function cleanFocusDomain(input) {
+    if (!input) return '';
+    let s = input.trim().toLowerCase();
+    if (!s.startsWith('http://') && !s.startsWith('https://')) s = 'https://' + s;
+    try { return new URL(s).hostname.replace(/^www\./, ''); }
+    catch { return input.trim().toLowerCase().replace(/^www\./, '').split('/')[0]; }
+}
+
+async function addFocusDomain(type) {
+    const input = document.getElementById(type === 'allow' ? 'focusAllowInput' : 'focusBlockInput');
+    if (!input) return;
+    const domain = cleanFocusDomain(input.value);
+    if (!domain) return;
+
+    const key = type === 'allow' ? 'focusModeWhitelist' : 'focusModeBlacklist';
+    const data = await chrome.storage.local.get([key]);
+    const list = data[key] || [];
+    if (list.includes(domain)) {
+        alert('Tên miền đã tồn tại.');
+        return;
+    }
+    list.push(domain);
+    list.sort();
+    await chrome.storage.local.set({ [key]: list });
+    renderFocusList(type, list);
+    input.value = '';
+}
+
+async function removeFocusDomain(type, domain) {
+    const key = type === 'allow' ? 'focusModeWhitelist' : 'focusModeBlacklist';
+    const data = await chrome.storage.local.get([key]);
+    const list = (data[key] || []).filter(d => d !== domain);
+    await chrome.storage.local.set({ [key]: list });
+    renderFocusList(type, list);
+}
+
+function renderFocusList(type, list) {
+    const container = document.getElementById(type === 'allow' ? 'focusAllowList' : 'focusBlockList');
+    if (!container) return;
+
+    if (!list.length) {
+        container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:6px;">Chưa có tên miền.</div>';
+        return;
+    }
+
+    container.innerHTML = list.map(d => `
+        <div class="focus-domain-item">
+            <span>${escapeHtml(d)}</span>
+            <button class="focus-domain-remove" data-domain="${escapeHtml(d)}" data-type="${type}">✕</button>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('.focus-domain-remove').forEach(btn => {
+        btn.addEventListener('click', () => removeFocusDomain(btn.dataset.type, btn.dataset.domain));
+    });
+}
+
+function renderFocusReports(sessions) {
+    const now = Date.now();
+    const dayMs = 86400000;
+    const weekMs = 7 * dayMs;
+    const monthMs = 30 * dayMs;
+
+    const sumDur = (arr) => arr.reduce((s, it) => s + (it.durationSec || 0), 0);
+    const today = sumDur(sessions.filter(s => now - s.endTime < dayMs));
+    const week = sumDur(sessions.filter(s => now - s.endTime < weekMs));
+    const month = sumDur(sessions.filter(s => now - s.endTime < monthMs));
+
+    document.getElementById('focusReportToday').textContent = `${Math.round(today / 60)}m`;
+    document.getElementById('focusReportWeek').textContent = `${(week / 3600).toFixed(1)}h`;
+    document.getElementById('focusReportMonth').textContent = `${(month / 3600).toFixed(1)}h`;
+
+    // Top sites in last 7 days
+    const top = {};
+    sessions.filter(s => now - s.endTime < weekMs).forEach(s => {
+        (s.topDomains || []).forEach(d => {
+            top[d.domain] = (top[d.domain] || 0) + d.count;
+        });
+    });
+    const topList = Object.entries(top)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([domain, count]) => `${domain} (${count})`);
+
+    const topEl = document.getElementById('focusTopSites');
+    if (topEl) {
+        topEl.textContent = topList.length ? `Top sites (7 ngày): ${topList.join(', ')}` : 'Chưa có dữ liệu truy cập.';
     }
 }
 

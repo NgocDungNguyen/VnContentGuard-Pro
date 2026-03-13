@@ -102,7 +102,15 @@
         const msg       = document.getElementById('blockMsg');
         const badge     = document.getElementById('reasonBadge');
 
-        if (reason === 'blacklist') {
+        if (reason === 'focus') {
+            icon.textContent  = '🎯';
+            title.textContent = '🎯 FOCUS MODE ĐANG BẬT';
+            msg.textContent   = 'Bạn đang ở chế độ học tập. Trang này bị chặn để tránh xao nhãng.';
+            badge.textContent = '🎯 Focus Mode';
+            badge.className   = 'reason-badge reason-incognito';
+            container.classList.add('incognito-mode');
+
+        } else if (reason === 'blacklist') {
             icon.textContent  = '🚫';
             title.textContent = '🚫 TRANG BỊ CHẶN BỞI PHỤ HUYNH';
             msg.textContent   = 'Tên miền này nằm trong danh sách đen của Kiểm soát gia đình. '

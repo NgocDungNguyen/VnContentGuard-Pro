@@ -89,6 +89,134 @@ const autoScanTimestamps = {};
 let incognitoLog = [];
 
 // ============================================================================
+// STUDENT FOCUS MODE (V8)
+// ============================================================================
+
+const FOCUS_DEFAULT_ALLOW = [
+    'youtube.com', 'youtu.be', 'music.youtube.com', 'spotify.com'
+];
+
+const FOCUS_DEFAULT_BLOCK = [
+    'facebook.com', 'instagram.com', 'messenger.com', 'tiktok.com'
+];
+
+function cleanFocusDomain(input) {
+    if (!input) return '';
+    let s = input.trim().toLowerCase();
+    if (!s.startsWith('http://') && !s.startsWith('https://')) s = 'https://' + s;
+    try {
+        return new URL(s).hostname.replace(/^www\./, '').split(':')[0];
+    } catch {
+        return s.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0].split(':')[0];
+    }
+}
+
+function focusDomainMatches(hostname, entry) {
+    return hostname === entry || hostname.endsWith('.' + entry);
+}
+
+async function getFocusState() {
+    return chrome.storage.local.get([
+        'focusModeEnabled', 'focusModeMode', 'focusModeStartTime', 'focusModeEndTime',
+        'focusModeWhitelist', 'focusModeBlacklist', 'focusModeSessions',
+        'focusModeCurrent', 'focusModeBlockedAttempts'
+    ]);
+}
+
+async function broadcastFocusOverlay() {
+    const state = await getFocusState();
+    if (!state.focusModeEnabled) return;
+    const payload = {
+        mode: state.focusModeMode || 'countdown',
+        startTime: state.focusModeStartTime || Date.now(),
+        endTime: state.focusModeEndTime || null
+    };
+    const tabs = await chrome.tabs.query({});
+    tabs.forEach(tab => {
+        if (!tab.id || !tab.url) return;
+        if (tab.url.startsWith('chrome') || tab.url.startsWith('about') || tab.url.startsWith(chrome.runtime.getURL(''))) return;
+        chrome.tabs.sendMessage(tab.id, { type: 'FOCUS_OVERLAY_START', data: payload }).catch(() => {});
+    });
+}
+
+async function stopFocusOverlay() {
+    const tabs = await chrome.tabs.query({});
+    tabs.forEach(tab => {
+        if (!tab.id || !tab.url) return;
+        if (tab.url.startsWith('chrome') || tab.url.startsWith('about') || tab.url.startsWith(chrome.runtime.getURL(''))) return;
+        chrome.tabs.sendMessage(tab.id, { type: 'FOCUS_OVERLAY_STOP' }).catch(() => {});
+    });
+}
+
+async function startFocusMode(mode, minutes) {
+    const state = await getFocusState();
+    if (state.focusModeEnabled) return { ok: false, error: 'Focus Mode đang chạy.' };
+
+    const now = Date.now();
+    const endTime = mode === 'countdown' ? now + (minutes * 60 * 1000) : null;
+
+    const whitelist = state.focusModeWhitelist?.length ? state.focusModeWhitelist : FOCUS_DEFAULT_ALLOW;
+    const blacklist = state.focusModeBlacklist?.length ? state.focusModeBlacklist : FOCUS_DEFAULT_BLOCK;
+
+    await chrome.storage.local.set({
+        focusModeEnabled: true,
+        focusModeMode: mode,
+        focusModeStartTime: now,
+        focusModeEndTime: endTime,
+        focusModeWhitelist: whitelist,
+        focusModeBlacklist: blacklist,
+        focusModeCurrent: { startTime: now, mode, domainCounts: {}, blockedAttempts: 0 }
+    });
+
+    if (mode === 'countdown' && endTime) {
+        chrome.alarms.create('focusModeEnd', { when: endTime });
+    }
+
+    await broadcastFocusOverlay();
+    return { ok: true };
+}
+
+async function stopFocusMode(reason = 'manual') {
+    const state = await getFocusState();
+    if (!state.focusModeEnabled) return { ok: false, error: 'Focus Mode chưa bật.' };
+
+    const endTime = Date.now();
+    const startTime = state.focusModeStartTime || endTime;
+    const durationSec = Math.max(0, Math.round((endTime - startTime) / 1000));
+
+    const current = state.focusModeCurrent || {};
+    const domainCounts = current.domainCounts || {};
+    const topDomains = Object.entries(domainCounts)
+        .map(([domain, count]) => ({ domain, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+    const sessions = state.focusModeSessions || [];
+    sessions.unshift({
+        startTime,
+        endTime,
+        durationSec,
+        mode: state.focusModeMode || 'countdown',
+        reason,
+        blockedAttempts: current.blockedAttempts || 0,
+        topDomains
+    });
+
+    await chrome.storage.local.set({
+        focusModeEnabled: false,
+        focusModeMode: null,
+        focusModeStartTime: null,
+        focusModeEndTime: null,
+        focusModeCurrent: null,
+        focusModeSessions: sessions.slice(0, 200)
+    });
+
+    chrome.alarms.clear('focusModeEnd');
+    await stopFocusOverlay();
+    return { ok: true };
+}
+
+// ============================================================================
 // MESSAGE HANDLER — Receives requests from popup.js
 // ============================================================================
 
@@ -156,6 +284,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 enabled: !!d.parentalEnabled,
                 pin: d.parentalPIN || '0000',
                 threshold: d.parentalThreshold || 70
+            });
+        });
+        return true;
+    }
+
+    // ── V8 — Focus Mode ───────────────────────────────────────────────────
+    if (message.type === 'START_FOCUS_MODE') {
+        startFocusMode(message.mode || 'countdown', message.minutes || 30).then(r => sendResponse(r));
+        return true;
+    }
+    if (message.type === 'STOP_FOCUS_MODE') {
+        stopFocusMode('manual').then(r => sendResponse(r));
+        return true;
+    }
+    if (message.type === 'GET_FOCUS_STATUS') {
+        getFocusState().then(async (s) => {
+            if (s.focusModeEnabled && s.focusModeEndTime && Date.now() > s.focusModeEndTime) {
+                await stopFocusMode('time_end');
+                sendResponse({ enabled: false, mode: null, startTime: null, endTime: null });
+                return;
+            }
+            sendResponse({
+                enabled: !!s.focusModeEnabled,
+                mode: s.focusModeMode || 'countdown',
+                startTime: s.focusModeStartTime || null,
+                endTime: s.focusModeEndTime || null
             });
         });
         return true;
@@ -922,6 +1076,31 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     if (details.url.startsWith(chrome.runtime.getURL(''))) return;
 
     try {
+        // ── Focus Mode intercept (V8) ─────────────────────────────────────
+        const focusState = await getFocusState();
+        if (focusState.focusModeEnabled) {
+            const host = new URL(details.url).hostname.replace(/^www\./, '').toLowerCase();
+            const allowList = (focusState.focusModeWhitelist?.length ? focusState.focusModeWhitelist : FOCUS_DEFAULT_ALLOW)
+                .map(cleanFocusDomain);
+            const blockList = (focusState.focusModeBlacklist?.length ? focusState.focusModeBlacklist : FOCUS_DEFAULT_BLOCK)
+                .map(cleanFocusDomain);
+
+            const isAllowed = allowList.some(entry => focusDomainMatches(host, entry));
+            const isBlocked = blockList.some(entry => focusDomainMatches(host, entry));
+
+            if (!isAllowed && isBlocked) {
+                // Increment blocked attempts in current session
+                const current = focusState.focusModeCurrent || { blockedAttempts: 0, domainCounts: {} };
+                current.blockedAttempts = (current.blockedAttempts || 0) + 1;
+                await chrome.storage.local.set({ focusModeCurrent: current });
+
+                const blockUrl = chrome.runtime.getURL('block.html') +
+                    `?reason=focus&blockedUrl=${encodeURIComponent(details.url)}`;
+                chrome.tabs.update(details.tabId, { url: blockUrl });
+                return;
+            }
+        }
+
         const { parentalEnabled } = await chrome.storage.local.get(['parentalEnabled']);
         if (!parentalEnabled) return;
 
@@ -981,6 +1160,23 @@ chrome.tabs.onCreated.addListener(async (tab) => {
     } catch (err) {
         console.log('[BG] Incognito detect error:', err.message);
     }
+});
+
+// Broadcast Focus Mode overlay when a tab finishes loading
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo.status !== 'complete') return;
+    if (!tab?.url || tab.url.startsWith('chrome') || tab.url.startsWith('about')) return;
+    if (tab.url.startsWith(chrome.runtime.getURL(''))) return;
+
+    getFocusState().then(state => {
+        if (!state.focusModeEnabled) return;
+        const payload = {
+            mode: state.focusModeMode || 'countdown',
+            startTime: state.focusModeStartTime || Date.now(),
+            endTime: state.focusModeEndTime || null
+        };
+        chrome.tabs.sendMessage(tabId, { type: 'FOCUS_OVERLAY_START', data: payload }).catch(() => {});
+    });
 });
 
 // ============================================================================
@@ -1045,6 +1241,15 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
         const url = details.url;
         const domain = new URL(url).hostname.replace('www.', '');
 
+        // ── Focus Mode visit logging (V8) ───────────────────────────────
+        const focusState = await getFocusState();
+        if (focusState.focusModeEnabled) {
+            const current = focusState.focusModeCurrent || { domainCounts: {}, blockedAttempts: 0 };
+            current.domainCounts = current.domainCounts || {};
+            current.domainCounts[domain] = (current.domainCounts[domain] || 0) + 1;
+            await chrome.storage.local.set({ focusModeCurrent: current });
+        }
+
         // Check whitelisted domains
         const storage = await chrome.storage.local.get([
             'whitelistedDomains', 'warningAcknowledged',
@@ -1104,6 +1309,9 @@ chrome.alarms.create('weeklyReport', {
 chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'weeklyReport') {
         generateWeeklyReportNotification();
+    }
+    if (alarm.name === 'focusModeEnd') {
+        stopFocusMode('time_end');
     }
     if (alarm.name === 'keepAlive') {
         // Ping backend to prevent Render cold-start
@@ -1400,9 +1608,29 @@ chrome.runtime.onInstalled.addListener(() => {
 
     // Clear old parental bypass on install
     chrome.storage.local.set({ parentalBypass: [] });
+
+    // Initialize Focus Mode defaults (V8)
+    chrome.storage.local.get(['focusModeWhitelist', 'focusModeBlacklist'], (d) => {
+        if (!d.focusModeWhitelist || !d.focusModeWhitelist.length) {
+            chrome.storage.local.set({ focusModeWhitelist: FOCUS_DEFAULT_ALLOW });
+        }
+        if (!d.focusModeBlacklist || !d.focusModeBlacklist.length) {
+            chrome.storage.local.set({ focusModeBlacklist: FOCUS_DEFAULT_BLOCK });
+        }
+    });
 });
 
 // Keep service worker alive during scans
 chrome.runtime.onStartup.addListener(() => {
     console.log('[BG] Service worker started');
+    getFocusState().then(state => {
+        if (state.focusModeEnabled && state.focusModeEndTime && Date.now() > state.focusModeEndTime) {
+            stopFocusMode('time_end');
+        } else if (state.focusModeEnabled && state.focusModeEndTime) {
+            chrome.alarms.create('focusModeEnd', { when: state.focusModeEndTime });
+            broadcastFocusOverlay();
+        } else if (state.focusModeEnabled) {
+            broadcastFocusOverlay();
+        }
+    });
 });
