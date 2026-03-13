@@ -359,6 +359,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('focusExportCsv')?.addEventListener('click', exportFocusCsv);
     document.getElementById('focusClearHistory')?.addEventListener('click', clearFocusHistory);
+    document.getElementById('focusSessionSearch')?.addEventListener('input', () => renderFocusSessions(_focusSessionsCache));
+    document.getElementById('focusSessionMode')?.addEventListener('change', () => renderFocusSessions(_focusSessionsCache));
 
     // ── V8 — Parent panel navigation ─────────────────────────────────────
     document.querySelectorAll('.parent-nav-btn').forEach(btn => {
@@ -377,6 +379,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
+    // ── V8 — Schedule presets ───────────────────────────────────────────
+    document.querySelectorAll('.schedule-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => applySchedulePreset(btn.dataset.preset));
+    });
+
     // ── V8 — Parent report actions ───────────────────────────────────────
     document.getElementById('exportParentShare')?.addEventListener('click', exportParentShareLink);
     document.getElementById('exportParentEmail')?.addEventListener('click', exportParentEmail);
@@ -384,6 +391,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── V8 — Admin tools (General) ───────────────────────────────────────
     document.getElementById('adminExportAll')?.addEventListener('click', exportAllData);
     document.getElementById('adminResetStats')?.addEventListener('click', resetGeneralStats);
+    document.getElementById('impactRefreshBtn')?.addEventListener('click', loadGeneralImpact);
 
     // ── feature 7.9 — Score Correction sliders ────────────────────────────
     document.getElementById('corrRiskSlider')?.addEventListener('input', (e) => {
@@ -3231,16 +3239,28 @@ function renderFocusReports(sessions) {
     renderFocusSessions(sessions);
 }
 
+let _focusSessionsCache = [];
+
 function renderFocusSessions(sessions) {
+    _focusSessionsCache = sessions || [];
     const list = document.getElementById('focusSessionList');
     const detail = document.getElementById('focusSessionDetail');
     if (!list) return;
-    if (!sessions.length) {
+    const search = (document.getElementById('focusSessionSearch')?.value || '').trim().toLowerCase();
+    const modeFilter = document.getElementById('focusSessionMode')?.value || 'all';
+
+    let filtered = sessions || [];
+    if (modeFilter !== 'all') filtered = filtered.filter(s => (s.mode || '') === modeFilter);
+    if (search) {
+        filtered = filtered.filter(s => (s.topDomains || []).some(d => (d.domain || '').includes(search)));
+    }
+
+    if (!filtered.length) {
         list.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Chưa có phiên Focus.</div>';
         if (detail) detail.classList.add('hidden');
         return;
     }
-    const subset = sessions.slice(0, 10);
+    const subset = filtered.slice(0, 10);
     list.innerHTML = subset.map((s, idx) => {
         const start = new Date(s.startTime).toLocaleString();
         const durMin = Math.round((s.durationSec || 0) / 60);
@@ -3386,6 +3406,30 @@ async function addScheduleRule() {
     rules.unshift({ id: 'r' + Date.now(), days, start, end, mode });
     await chrome.storage.local.set({ parentScheduleRules: rules });
     renderScheduleRules(rules);
+}
+
+function applySchedulePreset(preset) {
+    const daysSel = document.getElementById('scheduleDays');
+    const start = document.getElementById('scheduleStart');
+    const end = document.getElementById('scheduleEnd');
+    const mode = document.getElementById('scheduleMode');
+    if (!daysSel || !start || !end || !mode) return;
+
+    const selectDays = (arr) => {
+        Array.from(daysSel.options).forEach(o => { o.selected = arr.includes(o.value); });
+    };
+
+    if (preset === 'school') {
+        selectDays(['1','2','3','4','5']);
+        start.value = '07:00';
+        end.value = '21:00';
+        mode.value = 'block';
+    } else if (preset === 'weekend') {
+        selectDays(['6','0']);
+        start.value = '22:00';
+        end.value = '06:00';
+        mode.value = 'strict';
+    }
 }
 
 function renderScheduleRules(rules) {

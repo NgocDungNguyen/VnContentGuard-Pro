@@ -2049,6 +2049,23 @@ body.dark-mode .parental-save-btn:hover { background: #6c3483; }
     font-size: 11px;
 }
 
+.focus-session-filter {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.focus-session-filter input,
+.focus-session-filter select {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
 .focus-session-item {
     padding: 6px;
     border-bottom: 1px dashed var(--border-color);
@@ -2273,6 +2290,12 @@ body.dark-mode .parent-nav-btn.active { background: #8e44ad; border-color: #8e44
 .schedule-row {
     display: flex;
     align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.schedule-presets {
+    display: flex;
     gap: 6px;
     margin-bottom: 8px;
 }

@@ -225,6 +225,9 @@
         <!-- COMMUNITY IMPACT (V8) -->
         <div class="card" style="border-left: 4px solid #1abc9c;">
             <h3>🌐 Cộng đồng & Tác động</h3>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+                <button id="impactRefreshBtn" class="btn-secondary" style="padding:4px 8px;font-size:10px;">🔄 Làm mới</button>
+            </div>
             <div class="impact-grid">
                 <div class="impact-item"><div class="impact-label">Lượt quét</div><div id="impactScans" class="impact-value">0</div></div>
                 <div class="impact-item"><div class="impact-label">Báo cáo</div><div id="impactReports" class="impact-value">0</div></div>
@@ -321,6 +324,14 @@
 
                 <div class="focus-section">
                     <div class="focus-section-title">🗂️ Lịch sử Focus</div>
+                    <div class="focus-session-filter">
+                        <input type="text" id="focusSessionSearch" placeholder="Tìm theo domain...">
+                        <select id="focusSessionMode">
+                            <option value="all">Tất cả</option>
+                            <option value="countdown">Countdown</option>
+                            <option value="open">Tự do</option>
+                        </select>
+                    </div>
                     <div class="focus-action-row" style="margin-top:0;">
                         <button id="focusExportCsv" class="btn-secondary">📥 Xuất CSV</button>
                         <button id="focusClearHistory" class="btn-secondary">🗑️ Xóa lịch sử</button>
@@ -503,6 +514,10 @@
         <div id="parentSchedulePanel" class="hidden">
             <div class="card" style="border-left: 4px solid #2980b9;">
                 <h3>🗓️ Lịch chặn</h3>
+                <div class="schedule-presets">
+                    <button class="btn-secondary schedule-preset-btn" data-preset="school">🏫 Trường học</button>
+                    <button class="btn-secondary schedule-preset-btn" data-preset="weekend">🌙 Cuối tuần</button>
+                </div>
                 <div class="schedule-row">
                     <label>Ngày</label>
                     <select id="scheduleDays" multiple>
