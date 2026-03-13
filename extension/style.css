@@ -1510,10 +1510,10 @@ body.dark-mode .bulk-result-table th { background: #2d2d2d; }
 body.dark-mode .bulk-result-table td { border-color: #444; }
 
 /* ════════════════════════════════════════════════════════════════
-   PARENTAL CONTROL AUTH OVERLAY + PANEL — V7.1
+   PARENTAL CONTROL AUTH OVERLAY + PANEL — V7.2
    ════════════════════════════════════════════════════════════════ */
 
-/* Full-screen dimmed overlay */
+/* Full-screen dimmed overlay — z-index 10000 to stay above warning-overlay (9999) */
 .parental-overlay {
     position: fixed;
     inset: 0;
@@ -1521,14 +1521,14 @@ body.dark-mode .bulk-result-table td { border-color: #444; }
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 9999;
+    z-index: 10000;
     backdrop-filter: blur(3px);
 }
 .parental-overlay.hidden { display: none; }
 
-/* Modal card */
+/* Modal card — use correct CSS variable --bg-card */
 .parental-modal {
-    background: var(--card-bg, #fff);
+    background: var(--bg-card, #fff);
     border-radius: 16px;
     padding: 28px 24px 20px;
     width: 320px;
@@ -1623,27 +1623,70 @@ body.dark-mode .bulk-result-table td { border-color: #444; }
 }
 .parental-btn-link:hover { color: #6c3483; }
 
-/* ── PARENTAL PANEL styling ─────────────────────────────────── */
-.parental-card { border-left: 4px solid #8e44ad; padding: 12px; }
+/* ── PARENTAL PANEL ───────────────────────────────────────────── */
 
+/* Danger variant for destructive confirm buttons */
+.parental-btn-danger {
+    background: #e74c3c !important;
+    border-color: #e74c3c !important;
+}
+.parental-btn-danger:hover { background: #c0392b !important; }
+
+/* Panel card — scrollable container, left accent border */
+.parental-card {
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid #8e44ad;
+    border-radius: 10px;
+    overflow: hidden;
+    max-height: calc(100vh - 48px);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Sticky header with action buttons */
 .parental-panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-card, #fff);
+    position: sticky;
+    top: 0;
+    z-index: 2;
     font-size: 14px;
     font-weight: 700;
     color: var(--text-primary);
-    margin-bottom: 12px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
+.parental-header-actions { display: flex; gap: 6px; }
+.parental-header-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary, #f8f8f8);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.parental-header-btn:hover { background: var(--bg-secondary, #eee); }
+.parental-lock-btn {
+    background: #8e44ad;
+    color: #fff;
+    border-color: #8e44ad;
+}
+.parental-lock-btn:hover { background: #7d3c98; }
 
-/* Stats grid */
+/* Stats grid — 4 columns */
 .parental-stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 6px;
-    margin-bottom: 14px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 .parental-stat-card {
     background: rgba(142, 68, 173, 0.06);
@@ -1652,41 +1695,133 @@ body.dark-mode .bulk-result-table td { border-color: #444; }
     padding: 8px 4px;
     text-align: center;
 }
-body.dark-mode .parental-stat-card {
-    background: rgba(142, 68, 173, 0.15);
-    border-color: rgba(142, 68, 173, 0.35);
-}
-.pstat-icon  { font-size: 18px; line-height: 1.2; }
+.pstat-icon  { font-size: 16px; line-height: 1.2; }
 .pstat-value { font-size: 18px; font-weight: 800; color: #8e44ad; line-height: 1.2; }
 .pstat-label { font-size: 9px; color: var(--text-secondary); margin-top: 2px; line-height: 1.2; }
 
-.parental-section {
-    margin-bottom: 12px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
+/* Inner tab bar */
+.parental-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    padding: 0 14px;
+    flex-shrink: 0;
 }
-.parental-section-title {
+.ptab-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    transition: color 0.15s;
+}
+.ptab-btn.active { color: #8e44ad; border-bottom-color: #8e44ad; }
+.ptab-btn:not(.active):hover { color: var(--text-primary); }
+
+/* Tab content panels */
+.ptab-content {
+    padding: 12px 14px;
+    overflow-y: auto;
+    flex: 1;
+}
+.ptab-content.hidden { display: none; }
+
+/* Control groups inside tabs */
+.pc-control-group {
+    background: var(--bg-primary, #f8f9fa);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+}
+.pc-group-title {
     font-size: 12px;
     font-weight: 700;
     margin-bottom: 8px;
     color: var(--text-primary);
 }
-.parental-row {
+.pc-control-row {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
 }
-.parental-row-label {
+.pc-control-row:last-child { margin-bottom: 0; }
+.pc-control-label {
     font-size: 12px;
-    font-weight: 600;
-    min-width: 80px;
     color: var(--text-primary);
+    flex: 1;
+}
+.pc-select {
+    font-size: 11px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 5px 8px;
+    background: var(--input-bg, #fff);
+    color: var(--text-primary);
+    cursor: pointer;
+}
+.pc-threshold-hints {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--text-secondary);
+    width: 100%;
+    margin-top: 2px;
 }
 
-/* Dark mode extras */
-body.dark-mode .parental-modal { background: #1e1e2e; border-color: #a855f7; }
-body.dark-mode .parental-field input { background: #2d2d3d; border-color: #444; color: #eee; }
+/* Helper text + button rows */
+.pc-tab-desc {
+    font-size: 10px;
+    color: var(--text-secondary);
+    margin: 4px 0 8px;
+    line-height: 1.5;
+}
+.pc-btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+/* Save button */
+.parental-save-btn {
+    width: 100%;
+    padding: 10px;
+    background: #8e44ad;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: background 0.2s, transform 0.15s;
+}
+.parental-save-btn:hover { background: #7d3c98; transform: translateY(-1px); }
+
+/* ── Dark mode ────────────────────────────────────────────────── */
+body.dark-mode .parental-modal         { background: #1e1e2e; border-color: #a855f7; }
+body.dark-mode .parental-field input   { background: #2d2d3d; border-color: #444; color: #eee; }
 body.dark-mode .parental-field input:focus { border-color: #a855f7; }
-body.dark-mode .parental-btn-cancel { border-color: #555; color: #bbb; }
+body.dark-mode .parental-btn-cancel    { border-color: #555; color: #bbb; }
 body.dark-mode .parental-btn-cancel:hover { background: rgba(255,255,255,0.06); }
+
+body.dark-mode .parental-card         { background: #1a1a2e; border-color: #555; border-left-color: #a855f7; }
+body.dark-mode .parental-panel-header { background: #1a1a2e; border-color: #444; }
+body.dark-mode .parental-header-btn   { background: #2d2d3d; border-color: #555; color: #eee; }
+body.dark-mode .parental-lock-btn     { background: #7d3c98; border-color: #7d3c98; color: #fff; }
+body.dark-mode .parental-stats-grid   { border-color: #444; }
+body.dark-mode .parental-stat-card    { background: rgba(142,68,173,0.15); border-color: rgba(142,68,173,0.35); }
+body.dark-mode .parental-tabs         { border-color: #444; }
+body.dark-mode .ptab-btn              { color: #aaa; }
+body.dark-mode .ptab-btn.active       { color: #c084fc; border-bottom-color: #c084fc; }
+body.dark-mode .ptab-btn:not(.active):hover { color: #eee; }
+body.dark-mode .pc-control-group      { background: #2d2d3d; border-color: #444; }
+body.dark-mode .pc-select             { background: #2d2d3d; border-color: #555; color: #eee; }
+body.dark-mode .parental-save-btn     { background: #7d3c98; }
+body.dark-mode .parental-save-btn:hover { background: #6c3483; }

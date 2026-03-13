@@ -206,71 +206,22 @@
             </div>
         </div>
 
-        <!-- ════════════════════════════════════════════════════════════
-             PARENTAL AUTH OVERLAY — shown over everything else
-             Kids see a popup → nothing to click; only parent knows PIN
-             ════════════════════════════════════════════════════════════ -->
-        <div id="parentalAuthOverlay" class="parental-overlay hidden">
-            <div class="parental-modal">
-
-                <!-- SETUP step (first time — no PIN stored yet) -->
-                <div id="parentalSetupStep" class="hidden">
-                    <div class="parental-modal-icon">🔐</div>
-                    <h2 class="parental-modal-title">Thiết lập Kiểm soát gia đình</h2>
-                    <p class="parental-modal-sub">Tạo mã PIN bí mật để bảo vệ cài đặt này. Trẻ em sẽ không thể truy cập mà không có mã PIN.</p>
-                    <div class="parental-field">
-                        <label>Mã PIN mới (4–6 chữ số)</label>
-                        <input type="password" id="setupPinNew" maxlength="6" placeholder="••••" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password">
-                    </div>
-                    <div class="parental-field">
-                        <label>Xác nhận mã PIN</label>
-                        <input type="password" id="setupPinConfirm" maxlength="6" placeholder="••••" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password">
-                    </div>
-                    <div id="setupPinError" class="parental-error hidden"></div>
-                    <button id="setupPinBtn" class="parental-btn-main">✅ Tạo PIN &amp; mở cài đặt</button>
-                    <button id="setupCancelBtn" class="parental-btn-cancel">Huỷ</button>
-                </div>
-
-                <!-- LOGIN step (PIN already stored) -->
-                <div id="parentalLoginStep" class="hidden">
-                    <div class="parental-modal-icon">🛡️</div>
-                    <h2 class="parental-modal-title">Kiểm soát gia đình</h2>
-                    <p class="parental-modal-sub">Nhập mã PIN phụ huynh để xem và chỉnh sửa cài đặt.</p>
-                    <div class="parental-field">
-                        <label>Mã PIN</label>
-                        <input type="password" id="loginPinInput" maxlength="6" placeholder="••••" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password">
-                    </div>
-                    <div id="loginPinError" class="parental-error hidden"></div>
-                    <button id="loginPinBtn" class="parental-btn-main">🔓 Mở khóa</button>
-                    <button id="loginCancelBtn" class="parental-btn-cancel">Huỷ</button>
-                    <button id="resetPinBtn" class="parental-btn-link">Quên PIN? Đặt lại</button>
-                </div>
-
-                <!-- RESET step -->
-                <div id="parentalResetStep" class="hidden">
-                    <div class="parental-modal-icon">🔑</div>
-                    <h2 class="parental-modal-title">Đặt lại mã PIN</h2>
-                    <p class="parental-modal-sub">Tất cả cài đặt Kiểm soát gia đình sẽ bị xóa và bạn sẽ thiết lập lại từ đầu.</p>
-                    <div id="resetPinError" class="parental-error hidden"></div>
-                    <button id="confirmResetBtn" class="parental-btn-main" style="background:#e74c3c;">⚠️ Xác nhận đặt lại</button>
-                    <button id="cancelResetBtn" class="parental-btn-cancel">Huỷ</button>
-                </div>
-            </div>
-        </div>
+        <!-- PARENTAL AUTH OVERLAY moved to body level below -->
 
         <!-- PARENTAL CONTROL PANEL — only revealed after PIN auth -->
         <div id="parentalPanel" class="hidden">
-            <div class="card parental-card">
-                <!-- Header row with lock + close -->
+            <div class="parental-card">
+
+                <!-- ── STICKY HEADER ─────────────────────────────── -->
                 <div class="parental-panel-header">
                     <span>🔒 Kiểm soát gia đình</span>
                     <div style="display:flex;gap:6px;align-items:center;">
-                        <button id="parentalChangePinBtn" class="btn-secondary" style="padding:3px 8px;font-size:10px;">🔑 Đổi PIN</button>
-                        <button id="parentalLockBtn" class="btn-secondary" style="padding:3px 8px;font-size:10px;">🔒 Khóa</button>
+                        <button id="parentalChangePinBtn" class="parental-header-btn">🔑 Đổi PIN</button>
+                        <button id="parentalLockBtn" class="parental-header-btn parental-lock-btn">🔒 Khóa</button>
                     </div>
                 </div>
 
-                <!-- ── STATISTICS DASHBOARD ───────────────────────────── -->
+                <!-- ── STATS (always visible) ─────────────────────── -->
                 <div class="parental-stats-grid" id="parentalStatsGrid">
                     <div class="parental-stat-card">
                         <div class="pstat-icon">🚫</div>
@@ -285,7 +236,7 @@
                     <div class="parental-stat-card">
                         <div class="pstat-icon">🕵️</div>
                         <div class="pstat-value" id="statIncognito">–</div>
-                        <div class="pstat-label">Ẩn danh bị chặn</div>
+                        <div class="pstat-label">Ẩn danh chặn</div>
                     </div>
                     <div class="parental-stat-card">
                         <div class="pstat-icon">📋</div>
@@ -294,77 +245,91 @@
                     </div>
                 </div>
 
-                <!-- ── CONTROLS ──────────────────────────────────────── -->
-                <div class="parental-section">
-                    <div class="parental-row">
-                        <label class="parental-row-label">Bật Kiểm soát gia đình:</label>
-                        <label class="switch">
-                            <input type="checkbox" id="parentalToggle">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div class="parental-row">
-                        <label class="parental-row-label">Ngưỡng rủi ro (<span id="parentalThresholdVal">70</span>):</label>
-                        <input type="range" id="parentalThreshold" min="30" max="100" value="70" style="flex:1;">
-                    </div>
+                <!-- ── INNER TABS ──────────────────────────────────── -->
+                <div class="parental-tabs">
+                    <button class="ptab-btn active" data-ptab="settings" id="ptabSettingsBtn">⚙️ Cài đặt</button>
+                    <button class="ptab-btn" data-ptab="domains" id="ptabDomainsBtn">📋 Tên miền</button>
                 </div>
 
-                <!-- ── INCOGNITO ──────────────────────────────────────── -->
-                <div class="parental-section">
-                    <div class="parental-section-title">🕵️ Chế độ ẩn danh</div>
-                    <div class="parental-row">
-                        <select id="incognitoBlockMode" style="font-size:11px;border:1px solid var(--border-color);border-radius:4px;padding:4px 8px;background:var(--input-bg,#fff);color:var(--text-primary);flex:1;">
-                            <option value="off">Tắt (không làm gì)</option>
-                            <option value="warn">Cảnh báo + ghi nhật ký</option>
-                            <option value="block_all">Chặn hoàn toàn</option>
-                        </select>
+                <!-- ── TAB: CÀI ĐẶT ───────────────────────────────── -->
+                <div id="ptab-settings" class="ptab-content">
+
+                    <div class="pc-control-group">
+                        <div class="pc-control-row">
+                            <span class="pc-control-label">Bật Kiểm soát gia đình</span>
+                            <label class="switch">
+                                <input type="checkbox" id="parentalToggle">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <div class="pc-control-row" style="flex-direction:column;align-items:flex-start;gap:6px;">
+                            <span class="pc-control-label">Tự động chặn khi điểm rủi ro ≥ <strong id="parentalThresholdVal">70</strong></span>
+                            <input type="range" id="parentalThreshold" min="30" max="100" value="70" style="width:100%;accent-color:#8e44ad;">
+                            <div class="pc-threshold-hints">
+                                <span>Chặt (30)</span><span>Cân bằng (70)</span><span>Thoải mái (100)</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="parental-row" style="margin-top:6px;">
-                        <span style="font-size:11px;color:var(--text-secondary);">Nhật ký ẩn danh:</span>
-                        <span id="incognitoLogCount" class="incognito-count-badge">0</span>
-                        <button id="incognitoLogBtn" class="btn-secondary" style="padding:2px 8px;font-size:11px;">📋 Xem</button>
-                        <button id="incognitoLogClearBtn" class="btn-secondary" style="padding:2px 8px;font-size:11px;">🗑️</button>
+
+                    <div class="pc-control-group">
+                        <div class="pc-group-title">🕵️ Chế độ ẩn danh (Incognito)</div>
+                        <div class="pc-control-row">
+                            <span class="pc-control-label">Khi con dùng ẩn danh:</span>
+                            <select id="incognitoBlockMode" class="pc-select">
+                                <option value="off">Không làm gì</option>
+                                <option value="warn">Cảnh báo &amp; ghi log</option>
+                                <option value="block_all">Chặn hoàn toàn</option>
+                            </select>
+                        </div>
+                        <div class="pc-control-row">
+                            <span class="pc-control-label">Lịch sử ẩn danh:</span>
+                            <div style="display:flex;align-items:center;gap:6px;">
+                                <span id="incognitoLogCount" class="incognito-count-badge">0</span>
+                                <button id="incognitoLogBtn" class="parental-header-btn">📋 Xem</button>
+                                <button id="incognitoLogClearBtn" class="parental-header-btn">🗑️ Xóa</button>
+                            </div>
+                        </div>
+                        <div id="incognitoLogPanel" class="hidden incognito-log-panel">
+                            <div id="incognitoLogList" style="max-height:100px;overflow-y:auto;font-size:10px;"></div>
+                        </div>
                     </div>
-                    <div id="incognitoLogPanel" class="hidden incognito-log-panel">
-                        <div id="incognitoLogList" style="max-height:120px;overflow-y:auto;font-size:10px;"></div>
-                    </div>
+
+                    <button id="parentalSaveBtn" class="parental-save-btn">💾 Lưu cài đặt</button>
                 </div>
 
-                <button id="parentalSaveBtn" class="btn-primary" style="padding:8px;margin:0 0 10px 0;background:#8e44ad;width:100%;">💾 Lưu cài đặt</button>
-
-                <!-- ── DOMAIN MANAGEMENT ────────────────────────────── -->
-                <div class="parental-section">
-                    <div class="parental-section-title">📋 Quản lý tên miền</div>
+                <!-- ── TAB: TÊN MIỀN ──────────────────────────────── -->
+                <div id="ptab-domains" class="ptab-content hidden">
                     <div class="domain-control-tabs">
                         <button class="domain-tab-btn active" data-tab="blacklist" id="blacklistTabBtn">🚫 Danh sách đen</button>
                         <button class="domain-tab-btn" data-tab="whitelist" id="whitelistTabBtn">✅ Danh sách trắng</button>
                     </div>
                     <div id="blacklistTab" class="domain-tab-content">
-                        <p style="font-size:10px;color:var(--text-secondary);margin:4px 0 6px;">Tên miền bị chặn bởi phụ huynh.</p>
-                        <div style="display:flex;gap:4px;margin-bottom:6px;">
+                        <p class="pc-tab-desc">Các trang này sẽ luôn bị chặn, bất kể điểm rủi ro.</p>
+                        <div style="display:flex;gap:6px;margin-bottom:8px;">
                             <input type="text" id="blacklistInput" placeholder="vd: xvideos.com" class="domain-input">
-                            <button id="blacklistAddBtn" class="btn-primary" style="padding:4px 8px;margin:0;white-space:nowrap;">+ Thêm</button>
+                            <button id="blacklistAddBtn" class="btn-primary" style="padding:5px 12px;margin:0;white-space:nowrap;">+ Thêm</button>
                         </div>
                         <div id="blacklistItems" class="domain-list"></div>
-                        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
-                            <button id="blacklistImportBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">📥 Nhập</button>
-                            <button id="blacklistExportBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">📤 Xuất</button>
-                            <button id="loadSeedBlacklistBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">🌐 Tải mặc định</button>
+                        <div class="pc-btn-row">
+                            <button id="blacklistImportBtn" class="parental-header-btn">📥 Nhập</button>
+                            <button id="blacklistExportBtn" class="parental-header-btn">📤 Xuất</button>
+                            <button id="loadSeedBlacklistBtn" class="parental-header-btn">🌐 Tải mặc định</button>
                         </div>
                     </div>
                     <div id="whitelistTab" class="domain-tab-content hidden">
-                        <p style="font-size:10px;color:var(--text-secondary);margin:4px 0 6px;">Tên miền luôn được phép — ghi đè danh sách đen.</p>
-                        <div style="display:flex;gap:4px;margin-bottom:6px;">
+                        <p class="pc-tab-desc">Các trang này luôn được phép — ghi đè danh sách đen.</p>
+                        <div style="display:flex;gap:6px;margin-bottom:8px;">
                             <input type="text" id="whitelistInput" placeholder="vd: wikipedia.org" class="domain-input">
-                            <button id="whitelistAddBtn" class="btn-primary" style="padding:4px 8px;margin:0;white-space:nowrap;">+ Thêm</button>
+                            <button id="whitelistAddBtn" class="btn-primary" style="padding:5px 12px;margin:0;white-space:nowrap;">+ Thêm</button>
                         </div>
                         <div id="whitelistItems" class="domain-list"></div>
-                        <div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap;">
-                            <button id="whitelistImportBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">📥 Nhập</button>
-                            <button id="whitelistExportBtn" class="btn-secondary" style="padding:3px 7px;font-size:10px;">📤 Xuất</button>
+                        <div class="pc-btn-row">
+                            <button id="whitelistImportBtn" class="parental-header-btn">📥 Nhập</button>
+                            <button id="whitelistExportBtn" class="parental-header-btn">📤 Xuất</button>
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
 
@@ -555,5 +520,53 @@
     </div>
     <script src="offline_analyzer.js"></script>
     <script src="popup.js"></script>
+    <!-- PARENTAL AUTH OVERLAY — body-level so position:fixed is always viewport-relative -->
+    <div id="parentalAuthOverlay" class="parental-overlay hidden">
+        <div class="parental-modal">
+
+            <!-- SETUP step (first time — no PIN stored yet) -->
+            <div id="parentalSetupStep" class="hidden">
+                <div class="parental-modal-icon">🔐</div>
+                <h2 class="parental-modal-title">Thiết lập Kiểm soát gia đình</h2>
+                <p class="parental-modal-sub">Tạo mã PIN bí mật. Trẻ em sẽ không thể truy cập cài đặt này.</p>
+                <div class="parental-field">
+                    <label>Mã PIN mới (4–6 chữ số)</label>
+                    <input type="password" id="setupPinNew" maxlength="6" placeholder="••••" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password">
+                </div>
+                <div class="parental-field">
+                    <label>Xác nhận mã PIN</label>
+                    <input type="password" id="setupPinConfirm" maxlength="6" placeholder="••••" inputmode="numeric" pattern="[0-9]*" autocomplete="new-password">
+                </div>
+                <div id="setupPinError" class="parental-error hidden"></div>
+                <button id="setupPinBtn" class="parental-btn-main">✅ Tạo PIN &amp; mở cài đặt</button>
+                <button id="setupCancelBtn" class="parental-btn-cancel">Huỷ</button>
+            </div>
+
+            <!-- LOGIN step (PIN already stored) -->
+            <div id="parentalLoginStep" class="hidden">
+                <div class="parental-modal-icon">🛡️</div>
+                <h2 class="parental-modal-title">Kiểm soát gia đình</h2>
+                <p class="parental-modal-sub">Nhập mã PIN phụ huynh để xem và chỉnh sửa cài đặt.</p>
+                <div class="parental-field">
+                    <label>Mã PIN</label>
+                    <input type="password" id="loginPinInput" maxlength="6" placeholder="••••" inputmode="numeric" pattern="[0-9]*" autocomplete="current-password">
+                </div>
+                <div id="loginPinError" class="parental-error hidden"></div>
+                <button id="loginPinBtn" class="parental-btn-main">🔓 Mở khóa</button>
+                <button id="loginCancelBtn" class="parental-btn-cancel">Huỷ</button>
+                <button id="resetPinBtn" class="parental-btn-link">Quên PIN? Đặt lại toàn bộ</button>
+            </div>
+
+            <!-- RESET confirmation step -->
+            <div id="parentalResetStep" class="hidden">
+                <div class="parental-modal-icon">⚠️</div>
+                <h2 class="parental-modal-title">Đặt lại toàn bộ?</h2>
+                <p class="parental-modal-sub">Tất cả cài đặt Kiểm soát gia đình (PIN, blocklist, cài đặt chặn) sẽ bị xóa vĩnh viễn.</p>
+                <div id="resetPinError" class="parental-error hidden"></div>
+                <button id="confirmResetBtn" class="parental-btn-main parental-btn-danger">🗑️ Xác nhận xóa toàn bộ</button>
+                <button id="cancelResetBtn" class="parental-btn-cancel">← Quay lại</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

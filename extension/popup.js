@@ -2899,7 +2899,7 @@ function _showPanelAfterAuth() {
     const panel = document.getElementById('parentalPanel');
     if (!panel) return;
     panel.classList.remove('hidden');
-    ['results','historyPanel','comparePanel','reportPanel','bulkPanel','reportPanel'].forEach(id => {
+    ['results','historyPanel','comparePanel','reportPanel','bulkPanel','reportPanel','confirmation'].forEach(id => {
         document.getElementById(id)?.classList.add('hidden');
     });
     _loadParentalPanelData();
@@ -2952,6 +2952,8 @@ async function _loadParentalStats() {
 }
 
 async function openParentalAuth() {
+    // Close the header dropdown if it's open
+    document.getElementById('headerDropdown')?.classList.add('hidden');
     const cfg = await _getPCConfig();
     if (!cfg || !cfg.pin) {
         // First time — show setup wizard
@@ -2970,6 +2972,17 @@ async function openParentalAuth() {
 }
 
 function initParentalAuthListeners() {
+    // ── INNER TAB SWITCHING ───────────────────────────────────────
+    document.querySelectorAll('.ptab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.ptab;
+            document.querySelectorAll('.ptab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.ptab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('ptab-' + tab)?.classList.remove('hidden');
+        });
+    });
+
     // ── SETUP ─────────────────────────────────────────────────────
     document.getElementById('setupPinBtn')?.addEventListener('click', async () => {
         const newPin  = document.getElementById('setupPinNew').value.trim();
