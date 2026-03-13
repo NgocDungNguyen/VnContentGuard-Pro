@@ -312,6 +312,7 @@
 .vcg-focus-actions {
     display: flex;
     justify-content: center;
+    gap: 6px;
 }
 
 .vcg-focus-btn {
@@ -323,6 +324,7 @@
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .vcg-focus-btn:hover { background: #12876f; }

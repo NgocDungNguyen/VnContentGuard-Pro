@@ -46,6 +46,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Fetch and display system stats (V7)
         loadUsageDashboard();
 
+            // Load general community impact stats
+            loadGeneralImpact();
+
         // Apply saved dark mode preference
         chrome.storage.sync.get(['darkMode'], (result) => {
             if (result.darkMode) {
@@ -334,6 +337,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ── V8 — Focus Mode handlers ─────────────────────────────────────────
     document.getElementById('focusStartBtn')?.addEventListener('click', startFocusMode);
     document.getElementById('focusStopBtn')?.addEventListener('click', stopFocusMode);
+    document.getElementById('focusPauseBtn')?.addEventListener('click', toggleFocusPause);
     document.getElementById('focusModeCountdownBtn')?.addEventListener('click', () => setFocusModeUI('countdown'));
     document.getElementById('focusModeOpenBtn')?.addEventListener('click', () => setFocusModeUI('open'));
     document.querySelectorAll('.focus-time-btn').forEach(btn => {
@@ -353,6 +357,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('focusBlockInput')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') addFocusDomain('block');
     });
+    document.getElementById('focusExportCsv')?.addEventListener('click', exportFocusCsv);
+    document.getElementById('focusClearHistory')?.addEventListener('click', clearFocusHistory);
 
     // ── V8 — Parent panel navigation ─────────────────────────────────────
     document.querySelectorAll('.parent-nav-btn').forEach(btn => {
@@ -370,6 +376,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (target === 'parentProfilesPanel') loadParentProfiles();
         });
     });
+
+    // ── V8 — Parent report actions ───────────────────────────────────────
+    document.getElementById('exportParentShare')?.addEventListener('click', exportParentShareLink);
+    document.getElementById('exportParentEmail')?.addEventListener('click', exportParentEmail);
+
+    // ── V8 — Admin tools (General) ───────────────────────────────────────
+    document.getElementById('adminExportAll')?.addEventListener('click', exportAllData);
+    document.getElementById('adminResetStats')?.addEventListener('click', resetGeneralStats);
 
     // ── feature 7.9 — Score Correction sliders ────────────────────────────
     document.getElementById('corrRiskSlider')?.addEventListener('input', (e) => {
@@ -399,6 +413,37 @@ function showScanInProgress(scanStatus) {
     document.getElementById('scanBtn').disabled = true;
     document.getElementById('scanBtn').textContent = '⏳ Đang phân tích...';
     document.getElementById('status').textContent = scanStatus.progress || 'Đang phân tích... (có thể mất 1-2 phút)';
+}
+
+async function loadGeneralImpact() {
+    const data = await chrome.storage.local.get([
+        'scanHistory', 'parentBlockLog', 'focusModeSessions'
+    ]);
+    const scans = (data.scanHistory || []).length;
+    const reports = (data.parentBlockLog || []).filter(l => l.reason === 'blacklist' || l.reason === 'risk' || l.reason === 'schedule').length;
+    const blocked = (data.parentBlockLog || []).length;
+    const focusSessions = data.focusModeSessions || [];
+    const focusSec = focusSessions.reduce((s, it) => s + (it.durationSec || 0), 0);
+    const focusHours = (focusSec / 3600).toFixed(1);
+
+    document.getElementById('impactScans').textContent = scans;
+    document.getElementById('impactReports').textContent = reports;
+    document.getElementById('impactBlocked').textContent = blocked;
+    document.getElementById('impactStudy').textContent = focusHours + 'h';
+}
+
+async function exportAllData() {
+    const data = await chrome.storage.local.get(null);
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    chrome.tabs.create({ url });
+}
+
+async function resetGeneralStats() {
+    if (!confirm('Xóa toàn bộ thống kê (scan, block log, focus)?')) return;
+    await chrome.storage.local.set({ scanHistory: [], parentBlockLog: [], focusModeSessions: [] });
+    loadGeneralImpact();
+    alert('Đã xóa thống kê.');
 }
 
 function startPollingForResults(url) {
@@ -3002,19 +3047,29 @@ function updateFocusStatusUI(status) {
     const badge = document.getElementById('focusStatusBadge');
     const startBtn = document.getElementById('focusStartBtn');
     const stopBtn = document.getElementById('focusStopBtn');
+    const pauseBtn = document.getElementById('focusPauseBtn');
 
     if (!status?.enabled) {
         badge.textContent = 'TẮT';
         badge.classList.remove('active');
         if (startBtn) startBtn.classList.remove('hidden');
         if (stopBtn) stopBtn.classList.add('hidden');
+        if (pauseBtn) pauseBtn.classList.add('hidden');
         return;
     }
 
-    badge.textContent = status.mode === 'open' ? 'ĐANG HỌC' : 'ĐANG ĐẾM';
+    if (status.paused) {
+        badge.textContent = 'TẠM DỪNG';
+        badge.classList.add('active');
+        if (pauseBtn) pauseBtn.textContent = '▶ Tiếp tục';
+    } else {
+        badge.textContent = status.mode === 'open' ? 'ĐANG HỌC' : 'ĐANG ĐẾM';
+        if (pauseBtn) pauseBtn.textContent = '⏸ Tạm dừng';
+    }
     badge.classList.add('active');
     if (startBtn) startBtn.classList.add('hidden');
     if (stopBtn) stopBtn.classList.remove('hidden');
+    if (pauseBtn) pauseBtn.classList.remove('hidden');
 }
 
 async function startFocusMode() {
@@ -3042,6 +3097,20 @@ async function startFocusMode() {
     }
 }
 
+async function toggleFocusPause() {
+    const status = await chrome.runtime.sendMessage({ type: 'GET_FOCUS_STATUS' });
+    if (!status?.enabled) return;
+    if (status.paused) {
+        const r = await chrome.runtime.sendMessage({ type: 'RESUME_FOCUS_MODE' });
+        if (!r?.ok) alert(r?.error || 'Không thể tiếp tục Focus Mode.');
+    } else {
+        const r = await chrome.runtime.sendMessage({ type: 'PAUSE_FOCUS_MODE' });
+        if (!r?.ok) alert(r?.error || 'Không thể tạm dừng Focus Mode.');
+    }
+    const refreshed = await chrome.runtime.sendMessage({ type: 'GET_FOCUS_STATUS' });
+    updateFocusStatusUI(refreshed);
+}
+
 async function stopFocusMode() {
     const result = await chrome.runtime.sendMessage({ type: 'STOP_FOCUS_MODE' });
     if (result?.ok) {
@@ -3049,6 +3118,7 @@ async function stopFocusMode() {
         // Refresh reports after stopping
         const data = await chrome.storage.local.get(['focusModeSessions']);
         renderFocusReports(data.focusModeSessions || []);
+        loadGeneralImpact();
     } else {
         alert(result?.error || 'Không thể dừng Focus Mode.');
     }
@@ -3142,6 +3212,46 @@ function renderFocusReports(sessions) {
     if (topEl) {
         topEl.textContent = topList.length ? `Top sites (7 ngày): ${topList.join(', ')}` : 'Chưa có dữ liệu truy cập.';
     }
+
+    renderFocusSessions(sessions);
+}
+
+function renderFocusSessions(sessions) {
+    const list = document.getElementById('focusSessionList');
+    if (!list) return;
+    if (!sessions.length) {
+        list.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Chưa có phiên Focus.</div>';
+        return;
+    }
+    list.innerHTML = sessions.slice(0, 10).map(s => {
+        const start = new Date(s.startTime).toLocaleString();
+        const durMin = Math.round((s.durationSec || 0) / 60);
+        const top = (s.topDomains || []).map(d => d.domain).join(', ');
+        return `<div class="focus-session-item"><strong>${start}</strong> • ${durMin} phút • ${s.mode || ''}<br>Top: ${escapeHtml(top || 'N/A')}</div>`;
+    }).join('');
+}
+
+async function exportFocusCsv() {
+    const data = await chrome.storage.local.get(['focusModeSessions']);
+    const sessions = data.focusModeSessions || [];
+    const header = 'start,end,mode,duration_minutes,blocked_attempts,top_domains\n';
+    const rows = sessions.map(s => {
+        const start = new Date(s.startTime).toISOString();
+        const end = new Date(s.endTime).toISOString();
+        const dur = Math.round((s.durationSec || 0) / 60);
+        const top = (s.topDomains || []).map(d => d.domain).join('|');
+        return `${start},${end},${s.mode || ''},${dur},${s.blockedAttempts || 0},${top}`;
+    }).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    chrome.tabs.create({ url });
+}
+
+async function clearFocusHistory() {
+    if (!confirm('Xóa toàn bộ lịch sử Focus?')) return;
+    await chrome.storage.local.set({ focusModeSessions: [] });
+    renderFocusSessions([]);
+    loadGeneralImpact();
 }
 
 // ============================================================================
@@ -3159,10 +3269,20 @@ async function loadParentBlockLogs() {
 function renderParentBlockLogs(allLogs) {
     const search = (document.getElementById('parentLogSearch')?.value || '').trim().toLowerCase();
     const filter = document.getElementById('parentLogFilter')?.value || 'all';
+    const riskFilter = document.getElementById('parentLogRisk')?.value || 'all';
 
     let logs = allLogs;
     if (search) logs = logs.filter(l => (l.domain || '').includes(search));
     if (filter !== 'all') logs = logs.filter(l => l.reason === filter);
+    if (riskFilter !== 'all') {
+        logs = logs.filter(l => {
+            const r = Number(l.risk || 0);
+            if (riskFilter === 'high') return r >= 70;
+            if (riskFilter === 'mid') return r >= 40 && r < 70;
+            if (riskFilter === 'low') return r < 40;
+            return true;
+        });
+    }
 
     const totalPages = Math.max(1, Math.ceil(logs.length / parentLogPageSize));
     parentLogPage = Math.min(parentLogPage, totalPages);
@@ -3198,6 +3318,10 @@ document.getElementById('parentLogSearch')?.addEventListener('input', () => {
     loadParentBlockLogs();
 });
 document.getElementById('parentLogFilter')?.addEventListener('change', () => {
+    parentLogPage = 1;
+    loadParentBlockLogs();
+});
+document.getElementById('parentLogRisk')?.addEventListener('change', () => {
     parentLogPage = 1;
     loadParentBlockLogs();
 });
@@ -3252,13 +3376,24 @@ async function loadParentProfiles() {
 
 async function addParentProfile() {
     const name = document.getElementById('profileNameInput')?.value?.trim();
+    const pinRaw = document.getElementById('profilePinInput')?.value?.trim();
     if (!name) { alert('Nhập tên hồ sơ.'); return; }
+
+    let pinHash = null;
+    if (pinRaw) {
+        if (!/^\d{4,6}$/.test(pinRaw)) {
+            alert('PIN phải 4-6 chữ số.');
+            return;
+        }
+        pinHash = await _hashPIN(pinRaw);
+    }
 
     const data = await chrome.storage.local.get(['parentProfiles', 'parentActiveProfileId', 'domainBlacklist', 'domainWhitelist', 'parentalThreshold', 'parentalEnabled']);
     const profiles = data.parentProfiles || [];
     const id = 'p' + Date.now();
     profiles.push({
         id, name,
+        pinHash,
         blacklist: data.domainBlacklist || [],
         whitelist: data.domainWhitelist || [],
         threshold: data.parentalThreshold || 70,
@@ -3266,6 +3401,7 @@ async function addParentProfile() {
     });
     await chrome.storage.local.set({ parentProfiles: profiles, parentActiveProfileId: id });
     document.getElementById('profileNameInput').value = '';
+    if (document.getElementById('profilePinInput')) document.getElementById('profilePinInput').value = '';
     renderParentProfiles(profiles, id);
 }
 
@@ -3273,6 +3409,16 @@ async function switchParentProfile(id) {
     const data = await chrome.storage.local.get(['parentProfiles']);
     const profile = (data.parentProfiles || []).find(p => p.id === id);
     if (!profile) return;
+
+    if (profile.pinHash) {
+        const pin = prompt('Nhập PIN của hồ sơ này:');
+        if (!pin || !/^\d{4,6}$/.test(pin)) return;
+        const hash = await _hashPIN(pin);
+        if (hash !== profile.pinHash) {
+            alert('Sai PIN hồ sơ.');
+            return;
+        }
+    }
     await chrome.storage.local.set({
         parentActiveProfileId: id,
         domainBlacklist: profile.blacklist || [],
@@ -3295,6 +3441,7 @@ function renderParentProfiles(profiles, activeId) {
             <span>${escapeHtml(p.name)}</span>
             <div style="display:flex;gap:6px;align-items:center;">
                 <button class="btn-secondary" data-action="switch" data-id="${p.id}">${p.id === activeId ? 'Đang dùng' : 'Dùng'}</button>
+                <button class="btn-secondary" data-action="pin" data-id="${p.id}">🔑</button>
                 <button class="focus-domain-remove" data-action="remove" data-id="${p.id}">✕</button>
             </div>
         </div>
@@ -3311,6 +3458,27 @@ function renderParentProfiles(profiles, activeId) {
             const newActive = active === btn.dataset.id ? null : active;
             await chrome.storage.local.set({ parentProfiles: next, parentActiveProfileId: newActive });
             renderParentProfiles(next, newActive);
+        });
+    });
+
+    container.querySelectorAll('button[data-action="pin"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const data = await chrome.storage.local.get(['parentProfiles']);
+            const profiles = data.parentProfiles || [];
+            const idx = profiles.findIndex(p => p.id === btn.dataset.id);
+            if (idx < 0) return;
+            const pin = prompt('Đặt PIN mới (4-6 chữ số), để trống để xoá PIN:');
+            if (pin === null) return;
+            if (pin === '') {
+                profiles[idx].pinHash = null;
+            } else if (/^\d{4,6}$/.test(pin)) {
+                profiles[idx].pinHash = await _hashPIN(pin);
+            } else {
+                alert('PIN không hợp lệ.');
+                return;
+            }
+            await chrome.storage.local.set({ parentProfiles: profiles });
+            renderParentProfiles(profiles, activeId);
         });
     });
 }
@@ -3336,6 +3504,21 @@ document.getElementById('exportParentCsv')?.addEventListener('click', async () =
     const url = URL.createObjectURL(blob);
     chrome.tabs.create({ url });
 });
+
+async function exportParentShareLink() {
+    const data = await chrome.storage.local.get(['parentBlockLog']);
+    const blob = new Blob([JSON.stringify(data.parentBlockLog || [], null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    chrome.tabs.create({ url });
+}
+
+async function exportParentEmail() {
+    const data = await chrome.storage.local.get(['parentBlockLog']);
+    const logs = data.parentBlockLog || [];
+    const summary = `Tong so bi chan: ${logs.length}\nMoi nhat: ${logs[0]?.domain || 'N/A'}\n`;
+    const mailto = `mailto:?subject=VnContentGuard%20Report&body=${encodeURIComponent(summary)}`;
+    chrome.tabs.create({ url: mailto });
+}
 
 const RECOVERY_WORDS = ['sach','hoc','tap','viet','anh','toan','ly','hoa','sinh','su','dia','van','bai','lop','truong','kien','thuc','tien','bo','taptrung','muctieu','thoigian','phut','gio','nghi','phan','em','me','bo','tre','an','toan','tin','mang','dong','ban'];
 
@@ -3498,8 +3681,8 @@ async function _loadParentalPanelData() {
 
 async function _loadParentalStats() {
     // Blocked-site counters stored by background
-    chrome.storage.local.get(['parentalBlockLog'], (r) => {
-        const log = r.parentalBlockLog || [];
+    chrome.storage.local.get(['parentBlockLog'], (r) => {
+        const log = r.parentBlockLog || [];
         const now = Date.now();
         const dayMs  = 86400000;
         const weekMs = 7 * dayMs;

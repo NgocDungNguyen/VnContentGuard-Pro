@@ -2038,6 +2038,23 @@ body.dark-mode .parental-save-btn:hover { background: #6c3483; }
     font-size: 11px;
 }
 
+.focus-session-list {
+    margin-top: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    padding: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+    font-size: 11px;
+}
+
+.focus-session-item {
+    padding: 6px;
+    border-bottom: 1px dashed var(--border-color);
+}
+.focus-session-item:last-child { border-bottom: none; }
+
 .focus-domain-item {
     display: flex;
     justify-content: space-between;
@@ -2102,6 +2119,7 @@ body.dark-mode .focus-time-btn { background: #2d2d3d; border-color: #444; color:
 body.dark-mode .focus-time-btn.active { background: #1abc9c; border-color: #1abc9c; color: #fff; }
 body.dark-mode .focus-domain-list { background: #2d2d3d; border-color: #444; }
 body.dark-mode .focus-report-card { background: #2d2d3d; border-color: #444; }
+body.dark-mode .focus-session-list { background: #2d2d3d; border-color: #444; }
 
 /* ============================================================================
    TOP-LEVEL TABS (GENERAL / STUDENT / PARENT)
@@ -2129,6 +2147,35 @@ body.dark-mode .focus-report-card { background: #2d2d3d; border-color: #444; }
     background: #3498db;
     color: #fff;
     border-color: #3498db;
+}
+
+.impact-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.impact-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 6px;
+    text-align: center;
+}
+
+.impact-label {
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.impact-value {
+    font-size: 14px;
+    font-weight: 800;
+    color: #1abc9c;
+}
+
+@media (max-width: 520px) {
+    .impact-grid { grid-template-columns: 1fr 1fr; }
 }
 
 body.dark-mode .top-tab { background: #2d2d3d; border-color: #444; color: #bbb; }

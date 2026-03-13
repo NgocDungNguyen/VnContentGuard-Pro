@@ -119,7 +119,8 @@ async function getFocusState() {
     return chrome.storage.local.get([
         'focusModeEnabled', 'focusModeMode', 'focusModeStartTime', 'focusModeEndTime',
         'focusModeWhitelist', 'focusModeBlacklist', 'focusModeSessions',
-        'focusModeCurrent', 'focusModeBlockedAttempts'
+        'focusModeCurrent', 'focusModeBlockedAttempts',
+        'focusModePaused', 'focusModePausedAt', 'focusModePausedSnapshotSec'
     ]);
 }
 
@@ -129,7 +130,9 @@ async function broadcastFocusOverlay() {
     const payload = {
         mode: state.focusModeMode || 'countdown',
         startTime: state.focusModeStartTime || Date.now(),
-        endTime: state.focusModeEndTime || null
+        endTime: state.focusModeEndTime || null,
+        paused: !!state.focusModePaused,
+        pausedSnapshotSec: state.focusModePausedSnapshotSec || null
     };
     const tabs = await chrome.tabs.query({});
     tabs.forEach(tab => {
@@ -163,6 +166,9 @@ async function startFocusMode(mode, minutes) {
         focusModeMode: mode,
         focusModeStartTime: now,
         focusModeEndTime: endTime,
+        focusModePaused: false,
+        focusModePausedAt: null,
+        focusModePausedSnapshotSec: null,
         focusModeWhitelist: whitelist,
         focusModeBlacklist: blacklist,
         focusModeCurrent: { startTime: now, mode, domainCounts: {}, blockedAttempts: 0 }
@@ -171,6 +177,58 @@ async function startFocusMode(mode, minutes) {
     if (mode === 'countdown' && endTime) {
         chrome.alarms.create('focusModeEnd', { when: endTime });
     }
+
+    await broadcastFocusOverlay();
+    return { ok: true };
+}
+
+async function pauseFocusMode() {
+    const state = await getFocusState();
+    if (!state.focusModeEnabled) return { ok: false, error: 'Focus Mode chưa bật.' };
+    if (state.focusModePaused) return { ok: true };
+
+    const now = Date.now();
+    let snapshotSec = 0;
+    if (state.focusModeMode === 'countdown') {
+        snapshotSec = Math.max(0, Math.floor((state.focusModeEndTime - now) / 1000));
+    } else {
+        snapshotSec = Math.max(0, Math.floor((now - state.focusModeStartTime) / 1000));
+    }
+
+    await chrome.storage.local.set({
+        focusModePaused: true,
+        focusModePausedAt: now,
+        focusModePausedSnapshotSec: snapshotSec
+    });
+    chrome.alarms.clear('focusModeEnd');
+    await broadcastFocusOverlay();
+    return { ok: true };
+}
+
+async function resumeFocusMode() {
+    const state = await getFocusState();
+    if (!state.focusModeEnabled) return { ok: false, error: 'Focus Mode chưa bật.' };
+    if (!state.focusModePaused) return { ok: true };
+
+    const now = Date.now();
+    const snapshot = state.focusModePausedSnapshotSec || 0;
+    let newStart = state.focusModeStartTime;
+    let newEnd = state.focusModeEndTime;
+
+    if (state.focusModeMode === 'countdown') {
+        newEnd = now + (snapshot * 1000);
+        chrome.alarms.create('focusModeEnd', { when: newEnd });
+    } else {
+        newStart = now - (snapshot * 1000);
+    }
+
+    await chrome.storage.local.set({
+        focusModeStartTime: newStart,
+        focusModeEndTime: newEnd,
+        focusModePaused: false,
+        focusModePausedAt: null,
+        focusModePausedSnapshotSec: null
+    });
 
     await broadcastFocusOverlay();
     return { ok: true };
@@ -207,6 +265,9 @@ async function stopFocusMode(reason = 'manual') {
         focusModeMode: null,
         focusModeStartTime: null,
         focusModeEndTime: null,
+        focusModePaused: false,
+        focusModePausedAt: null,
+        focusModePausedSnapshotSec: null,
         focusModeCurrent: null,
         focusModeSessions: sessions.slice(0, 200)
     });
@@ -335,9 +396,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 enabled: !!s.focusModeEnabled,
                 mode: s.focusModeMode || 'countdown',
                 startTime: s.focusModeStartTime || null,
-                endTime: s.focusModeEndTime || null
+                endTime: s.focusModeEndTime || null,
+                paused: !!s.focusModePaused,
+                pausedSnapshotSec: s.focusModePausedSnapshotSec || null
             });
         });
+        return true;
+    }
+    if (message.type === 'PAUSE_FOCUS_MODE') {
+        pauseFocusMode().then(r => sendResponse(r));
+        return true;
+    }
+    if (message.type === 'RESUME_FOCUS_MODE') {
+        resumeFocusMode().then(r => sendResponse(r));
         return true;
     }
 
@@ -1104,7 +1175,7 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
     try {
         // ── Focus Mode intercept (V8) ─────────────────────────────────────
         const focusState = await getFocusState();
-        if (focusState.focusModeEnabled) {
+        if (focusState.focusModeEnabled && !focusState.focusModePaused) {
             const host = new URL(details.url).hostname.replace(/^www\./, '').toLowerCase();
             const allowList = (focusState.focusModeWhitelist?.length ? focusState.focusModeWhitelist : FOCUS_DEFAULT_ALLOW)
                 .map(cleanFocusDomain);
@@ -1303,7 +1374,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
 
         // ── Focus Mode visit logging (V8) ───────────────────────────────
         const focusState = await getFocusState();
-        if (focusState.focusModeEnabled) {
+        if (focusState.focusModeEnabled && !focusState.focusModePaused) {
             const current = focusState.focusModeCurrent || { domainCounts: {}, blockedAttempts: 0 };
             current.domainCounts = current.domainCounts || {};
             current.domainCounts[domain] = (current.domainCounts[domain] || 0) + 1;
@@ -1702,6 +1773,8 @@ chrome.runtime.onStartup.addListener(() => {
     getFocusState().then(state => {
         if (state.focusModeEnabled && state.focusModeEndTime && Date.now() > state.focusModeEndTime) {
             stopFocusMode('time_end');
+        } else if (state.focusModeEnabled && state.focusModePaused) {
+            broadcastFocusOverlay();
         } else if (state.focusModeEnabled && state.focusModeEndTime) {
             chrome.alarms.create('focusModeEnd', { when: state.focusModeEndTime });
             broadcastFocusOverlay();

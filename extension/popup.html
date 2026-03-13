@@ -222,6 +222,24 @@
             </div>
         </div>
 
+        <!-- COMMUNITY IMPACT (V8) -->
+        <div class="card" style="border-left: 4px solid #1abc9c;">
+            <h3>🌐 Cộng đồng & Tác động</h3>
+            <div class="impact-grid">
+                <div class="impact-item"><div class="impact-label">Lượt quét</div><div id="impactScans" class="impact-value">0</div></div>
+                <div class="impact-item"><div class="impact-label">Báo cáo</div><div id="impactReports" class="impact-value">0</div></div>
+                <div class="impact-item"><div class="impact-label">Đã chặn</div><div id="impactBlocked" class="impact-value">0</div></div>
+                <div class="impact-item"><div class="impact-label">Giờ học</div><div id="impactStudy" class="impact-value">0h</div></div>
+            </div>
+        </div>
+
+        <!-- ADMIN TOOLS (V8) -->
+        <div class="card" style="border-left: 4px solid #34495e;">
+            <h3>🛠️ Công cụ quản trị</h3>
+            <button id="adminExportAll" class="btn-primary" style="padding: 8px;">📦 Xuất toàn bộ dữ liệu</button>
+            <button id="adminResetStats" class="btn-secondary" style="margin-top:6px;">🧹 Xóa thống kê</button>
+        </div>
+
         </div>
 
         <div id="studentSection" class="hidden">
@@ -260,6 +278,7 @@
                     <div class="focus-action-row">
                         <button id="focusStartBtn" class="btn-primary focus-start-btn">▶ Bắt đầu Focus</button>
                         <button id="focusStopBtn" class="btn-secondary focus-stop-btn hidden">■ Kết thúc</button>
+                        <button id="focusPauseBtn" class="btn-secondary focus-stop-btn hidden">⏸ Tạm dừng</button>
                     </div>
                 </div>
 
@@ -298,6 +317,15 @@
                         </div>
                     </div>
                     <div id="focusTopSites" class="focus-top-sites"></div>
+                </div>
+
+                <div class="focus-section">
+                    <div class="focus-section-title">🗂️ Lịch sử Focus</div>
+                    <div class="focus-action-row" style="margin-top:0;">
+                        <button id="focusExportCsv" class="btn-secondary">📥 Xuất CSV</button>
+                        <button id="focusClearHistory" class="btn-secondary">🗑️ Xóa lịch sử</button>
+                    </div>
+                    <div id="focusSessionList" class="focus-session-list"></div>
                 </div>
             </div>
         </div>
@@ -454,6 +482,12 @@
                         <option value="risk">Rủi ro</option>
                         <option value="schedule">Theo lịch</option>
                     </select>
+                    <select id="parentLogRisk">
+                        <option value="all">Mọi mức</option>
+                        <option value="high">Cao (>=70)</option>
+                        <option value="mid">Trung (40-69)</option>
+                        <option value="low">Thấp (&lt;40)</option>
+                    </select>
                 </div>
                 <div id="parentLogList" class="parent-log-list"></div>
                 <div class="parent-log-pager">
@@ -504,6 +538,7 @@
                 <h3>👨‍👩‍👧 Hồ sơ trẻ</h3>
                 <div class="profile-row">
                     <input type="text" id="profileNameInput" placeholder="Tên hồ sơ">
+                    <input type="password" id="profilePinInput" placeholder="PIN (4-6 số)">
                     <button id="profileAddBtn" class="btn-primary">+ Tạo</button>
                 </div>
                 <div id="profileList" class="profile-list"></div>
@@ -516,6 +551,8 @@
                 <h3>📤 Báo cáo</h3>
                 <button id="exportParentJson" class="btn-primary" style="padding: 8px;">📥 Xuất JSON</button>
                 <button id="exportParentCsv" class="btn-secondary" style="margin-top:6px;">📥 Xuất CSV</button>
+                <button id="exportParentShare" class="btn-secondary" style="margin-top:6px;">🔗 Tạo link chia sẻ</button>
+                <button id="exportParentEmail" class="btn-secondary" style="margin-top:6px;">✉️ Gửi email</button>
             </div>
         </div>
 

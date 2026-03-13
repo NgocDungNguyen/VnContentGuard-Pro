@@ -95,20 +95,29 @@
             const overlay = document.createElement('div');
             overlay.id = 'vcg-focus-overlay';
             const modeLabel = data.mode === 'open' ? 'Tự do' : 'Countdown';
+            const paused = !!data.paused;
+            const pauseText = paused ? '▶ Tiếp tục' : '⏸ Tạm dừng';
 
             overlay.innerHTML = `
                 <div class="vcg-focus-card">
                     <div class="vcg-focus-header">
                         <span class="vcg-focus-title">🎯 Focus Mode</span>
-                        <span class="vcg-focus-mode">${modeLabel}</span>
+                        <span class="vcg-focus-mode">${paused ? 'Tạm dừng' : modeLabel}</span>
                     </div>
                     <div id="vcgFocusTime" class="vcg-focus-time">00:00</div>
                     <div class="vcg-focus-sub">Giữ tập trung — chỉ web học tập</div>
                     <div class="vcg-focus-actions">
+                        <button id="vcgFocusPause" class="vcg-focus-btn">${pauseText}</button>
                         <button id="vcgFocusFinish" class="vcg-focus-btn">${data.mode === 'open' ? 'Finish' : 'Kết thúc sớm'}</button>
                     </div>
                 </div>
             `;
+
+            overlay.querySelector('#vcgFocusPause')?.addEventListener('click', async () => {
+                try {
+                    await chrome.runtime.sendMessage({ type: paused ? 'RESUME_FOCUS_MODE' : 'PAUSE_FOCUS_MODE' });
+                } catch {}
+            });
 
             overlay.querySelector('#vcgFocusFinish')?.addEventListener('click', async () => {
                 try {
@@ -125,14 +134,18 @@
     function startFocusTimer() {
         if (focusTimerId) clearInterval(focusTimerId);
         updateFocusTimer();
-        focusTimerId = setInterval(updateFocusTimer, 1000);
+        if (!focusData?.paused) {
+            focusTimerId = setInterval(updateFocusTimer, 1000);
+        }
     }
 
     function updateFocusTimer() {
         if (!focusOverlayEl || !focusData) return;
         const now = Date.now();
         let seconds = 0;
-        if (focusData.mode === 'countdown' && focusData.endTime) {
+        if (focusData.paused && focusData.pausedSnapshotSec != null) {
+            seconds = Math.max(0, parseInt(focusData.pausedSnapshotSec, 10));
+        } else if (focusData.mode === 'countdown' && focusData.endTime) {
             seconds = Math.max(0, Math.floor((focusData.endTime - now) / 1000));
         } else {
             seconds = Math.max(0, Math.floor((now - (focusData.startTime || now)) / 1000));
