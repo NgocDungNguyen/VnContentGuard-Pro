@@ -2102,3 +2102,181 @@ body.dark-mode .focus-time-btn { background: #2d2d3d; border-color: #444; color:
 body.dark-mode .focus-time-btn.active { background: #1abc9c; border-color: #1abc9c; color: #fff; }
 body.dark-mode .focus-domain-list { background: #2d2d3d; border-color: #444; }
 body.dark-mode .focus-report-card { background: #2d2d3d; border-color: #444; }
+
+/* ============================================================================
+   TOP-LEVEL TABS (GENERAL / STUDENT / PARENT)
+   ============================================================================ */
+
+.top-tabs {
+    display: flex;
+    gap: 6px;
+    margin: 8px 0 10px;
+}
+
+.top-tab {
+    flex: 1;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.top-tab.active {
+    background: #3498db;
+    color: #fff;
+    border-color: #3498db;
+}
+
+body.dark-mode .top-tab { background: #2d2d3d; border-color: #444; color: #bbb; }
+body.dark-mode .top-tab.active { background: #3498db; border-color: #3498db; color: #fff; }
+
+/* ============================================================================
+   PARENT PANELS (V8)
+   ============================================================================ */
+
+.parent-log-controls {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.parent-nav {
+    display: flex;
+    gap: 6px;
+    margin: 6px 0 10px;
+    flex-wrap: wrap;
+}
+
+.parent-nav-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.parent-nav-btn.active {
+    background: #8e44ad;
+    border-color: #8e44ad;
+    color: #fff;
+}
+
+body.dark-mode .parent-nav-btn { background: #2d2d3d; border-color: #444; color: #bbb; }
+body.dark-mode .parent-nav-btn.active { background: #8e44ad; border-color: #8e44ad; color: #fff; }
+
+.parent-log-controls input,
+.parent-log-controls select {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.parent-log-list {
+    max-height: 220px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px;
+    background: var(--bg-primary);
+}
+
+.parent-log-item {
+    padding: 6px 8px;
+    border-bottom: 1px dashed var(--border-color);
+    font-size: 11px;
+}
+.parent-log-item:last-child { border-bottom: none; }
+
+.parent-log-pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.schedule-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.schedule-row input,
+.schedule-row select {
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.schedule-list {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px;
+    background: var(--bg-primary);
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 11px;
+}
+
+.schedule-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.profile-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.profile-row input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 12px;
+}
+
+.profile-list {
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 6px;
+    background: var(--bg-primary);
+    font-size: 11px;
+}
+
+.profile-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 6px;
+    border-bottom: 1px dashed var(--border-color);
+}
+.profile-item:last-child { border-bottom: none; }
+
+body.dark-mode .parent-log-list,
+body.dark-mode .schedule-list,
+body.dark-mode .profile-list {
+    background: #2d2d3d;
+    border-color: #444;
+}

@@ -102,7 +102,15 @@
         const msg       = document.getElementById('blockMsg');
         const badge     = document.getElementById('reasonBadge');
 
-        if (reason === 'focus') {
+        if (reason === 'schedule') {
+            icon.textContent  = '🗓️';
+            title.textContent = '🗓️ CHẶN THEO LỊCH';
+            msg.textContent   = 'Trang này bị chặn theo lịch cài đặt của phụ huynh.';
+            badge.textContent = '🗓️ Lịch chặn';
+            badge.className   = 'reason-badge reason-blacklist';
+            container.classList.add('incognito-mode');
+
+        } else if (reason === 'focus') {
             icon.textContent  = '🎯';
             title.textContent = '🎯 FOCUS MODE ĐANG BẬT';
             msg.textContent   = 'Bạn đang ở chế độ học tập. Trang này bị chặn để tránh xao nhãng.';

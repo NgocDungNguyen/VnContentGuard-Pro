@@ -107,6 +107,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // ── Top-level tabs (General / Student / Parent) ─────────────────────────
+    document.querySelectorAll('.top-tab').forEach(tabBtn => {
+        tabBtn.addEventListener('click', () => {
+            document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+            tabBtn.classList.add('active');
+            const target = tabBtn.dataset.top;
+
+            document.getElementById('generalSection')?.classList.toggle('hidden', target !== 'general');
+            document.getElementById('studentSection')?.classList.toggle('hidden', target !== 'student');
+            document.getElementById('parentSection')?.classList.toggle('hidden', target !== 'parent');
+
+            // Hide inner panels if switching away
+            if (target !== 'student') {
+                document.getElementById('focusPanel')?.classList.add('hidden');
+            }
+            if (target !== 'parent') {
+                document.getElementById('parentalPanel')?.classList.add('hidden');
+                document.getElementById('parentLogPanel')?.classList.add('hidden');
+                document.getElementById('parentSchedulePanel')?.classList.add('hidden');
+                document.getElementById('parentProfilesPanel')?.classList.add('hidden');
+                document.getElementById('parentReportsPanel')?.classList.add('hidden');
+                document.getElementById('parentRecoveryPanel')?.classList.add('hidden');
+            } else {
+                // Activate parent overview by default
+                document.querySelectorAll('.parent-nav-btn').forEach(b => b.classList.remove('active'));
+                const first = document.querySelector('.parent-nav-btn[data-parent="parentalPanel"]');
+                if (first) first.classList.add('active');
+                document.getElementById('parentalPanel')?.classList.remove('hidden');
+            }
+        });
+    });
+
     // ── Results tab switching ────────────────────────────────────────────────────
     document.querySelectorAll('.result-tab').forEach(tab => {
         tab.addEventListener('click', () => {
@@ -320,6 +352,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     document.getElementById('focusBlockInput')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') addFocusDomain('block');
+    });
+
+    // ── V8 — Parent panel navigation ─────────────────────────────────────
+    document.querySelectorAll('.parent-nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.parent;
+            document.querySelectorAll('.parent-nav-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            ['parentalPanel','parentLogPanel','parentSchedulePanel','parentProfilesPanel','parentReportsPanel','parentRecoveryPanel']
+                .forEach(id => document.getElementById(id)?.classList.add('hidden'));
+            document.getElementById(target)?.classList.remove('hidden');
+
+            if (target === 'parentLogPanel') loadParentBlockLogs();
+            if (target === 'parentSchedulePanel') loadScheduleRules();
+            if (target === 'parentProfilesPanel') loadParentProfiles();
+        });
     });
 
     // ── feature 7.9 — Score Correction sliders ────────────────────────────
@@ -2251,6 +2300,11 @@ function showWarningModal(fake, sentiment, toxicity) {
 // ============================================================================
 
 async function toggleHistory() {
+    document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('topTabGeneral')?.classList.add('active');
+    document.getElementById('generalSection')?.classList.remove('hidden');
+    document.getElementById('studentSection')?.classList.add('hidden');
+    document.getElementById('parentSection')?.classList.add('hidden');
     const historyPanel = document.getElementById('historyPanel');
     if (!historyPanel) return;
 
@@ -2574,6 +2628,11 @@ async function submitFeedbackToBackend(rating, correction) {
 // ============================================================================
 
 async function toggleComparePanel() {
+    document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('topTabGeneral')?.classList.add('active');
+    document.getElementById('generalSection')?.classList.remove('hidden');
+    document.getElementById('studentSection')?.classList.add('hidden');
+    document.getElementById('parentSection')?.classList.add('hidden');
     const comparePanel = document.getElementById('comparePanel');
     if (!comparePanel) return;
 
@@ -2789,6 +2848,11 @@ async function checkBlocklistStatus(url) {
 // ============================================================================
 
 function toggleReportPanel() {
+    document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('topTabGeneral')?.classList.add('active');
+    document.getElementById('generalSection')?.classList.remove('hidden');
+    document.getElementById('studentSection')?.classList.add('hidden');
+    document.getElementById('parentSection')?.classList.add('hidden');
     const panel = document.getElementById('reportPanel');
     if (!panel) return;
 
@@ -2870,6 +2934,12 @@ function toggleFocusPanel() {
     if (!panel) return;
 
     document.getElementById('headerDropdown')?.classList.add('hidden');
+    // Switch to student section
+    document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('topTabStudent')?.classList.add('active');
+    document.getElementById('generalSection')?.classList.add('hidden');
+    document.getElementById('studentSection')?.classList.remove('hidden');
+    document.getElementById('parentSection')?.classList.add('hidden');
 
     if (panel.classList.contains('hidden')) {
         panel.classList.remove('hidden');
@@ -3075,10 +3145,259 @@ function renderFocusReports(sessions) {
 }
 
 // ============================================================================
+// PARENT TOOLS (V8)
+// ============================================================================
+
+let parentLogPage = 1;
+const parentLogPageSize = 10;
+
+async function loadParentBlockLogs() {
+    const data = await chrome.storage.local.get(['parentBlockLog']);
+    renderParentBlockLogs(data.parentBlockLog || []);
+}
+
+function renderParentBlockLogs(allLogs) {
+    const search = (document.getElementById('parentLogSearch')?.value || '').trim().toLowerCase();
+    const filter = document.getElementById('parentLogFilter')?.value || 'all';
+
+    let logs = allLogs;
+    if (search) logs = logs.filter(l => (l.domain || '').includes(search));
+    if (filter !== 'all') logs = logs.filter(l => l.reason === filter);
+
+    const totalPages = Math.max(1, Math.ceil(logs.length / parentLogPageSize));
+    parentLogPage = Math.min(parentLogPage, totalPages);
+
+    const start = (parentLogPage - 1) * parentLogPageSize;
+    const pageLogs = logs.slice(start, start + parentLogPageSize);
+
+    const container = document.getElementById('parentLogList');
+    if (!container) return;
+    if (!pageLogs.length) {
+        container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Chưa có dữ liệu.</div>';
+    } else {
+        container.innerHTML = pageLogs.map(l => {
+            const ts = new Date(l.ts).toLocaleString();
+            const risk = l.risk !== undefined ? ` • Rủi ro: ${l.risk}` : '';
+            return `<div class="parent-log-item"><strong>${escapeHtml(l.domain || '')}</strong> — ${escapeHtml(l.url || '')}<br>${ts} • ${escapeHtml(l.reason || '')}${risk}</div>`;
+        }).join('');
+    }
+
+    document.getElementById('parentLogPage').textContent = `${parentLogPage}/${totalPages}`;
+}
+
+document.getElementById('parentLogPrev')?.addEventListener('click', () => {
+    if (parentLogPage > 1) parentLogPage--;
+    loadParentBlockLogs();
+});
+document.getElementById('parentLogNext')?.addEventListener('click', () => {
+    parentLogPage++;
+    loadParentBlockLogs();
+});
+document.getElementById('parentLogSearch')?.addEventListener('input', () => {
+    parentLogPage = 1;
+    loadParentBlockLogs();
+});
+document.getElementById('parentLogFilter')?.addEventListener('change', () => {
+    parentLogPage = 1;
+    loadParentBlockLogs();
+});
+
+async function loadScheduleRules() {
+    const data = await chrome.storage.local.get(['parentScheduleRules']);
+    renderScheduleRules(data.parentScheduleRules || []);
+}
+
+async function addScheduleRule() {
+    const days = Array.from(document.getElementById('scheduleDays')?.selectedOptions || []).map(o => o.value);
+    const start = document.getElementById('scheduleStart')?.value || '07:00';
+    const end = document.getElementById('scheduleEnd')?.value || '21:00';
+    const mode = document.getElementById('scheduleMode')?.value || 'block';
+
+    if (!days.length) { alert('Vui lòng chọn ít nhất 1 ngày.'); return; }
+
+    const data = await chrome.storage.local.get(['parentScheduleRules']);
+    const rules = data.parentScheduleRules || [];
+    rules.unshift({ id: 'r' + Date.now(), days, start, end, mode });
+    await chrome.storage.local.set({ parentScheduleRules: rules });
+    renderScheduleRules(rules);
+}
+
+function renderScheduleRules(rules) {
+    const container = document.getElementById('scheduleList');
+    if (!container) return;
+    if (!rules.length) {
+        container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Chưa có lịch.</div>';
+        return;
+    }
+    container.innerHTML = rules.map(r => {
+        const days = r.days.join(',');
+        return `<div class="schedule-item">${days} • ${r.start}-${r.end} • ${r.mode}<button class="focus-domain-remove" data-id="${r.id}">✕</button></div>`;
+    }).join('');
+    container.querySelectorAll('.focus-domain-remove').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const data = await chrome.storage.local.get(['parentScheduleRules']);
+            const next = (data.parentScheduleRules || []).filter(r => r.id !== btn.dataset.id);
+            await chrome.storage.local.set({ parentScheduleRules: next });
+            renderScheduleRules(next);
+        });
+    });
+}
+
+document.getElementById('scheduleAddBtn')?.addEventListener('click', addScheduleRule);
+
+async function loadParentProfiles() {
+    const data = await chrome.storage.local.get(['parentProfiles', 'parentActiveProfileId']);
+    renderParentProfiles(data.parentProfiles || [], data.parentActiveProfileId || null);
+}
+
+async function addParentProfile() {
+    const name = document.getElementById('profileNameInput')?.value?.trim();
+    if (!name) { alert('Nhập tên hồ sơ.'); return; }
+
+    const data = await chrome.storage.local.get(['parentProfiles', 'parentActiveProfileId', 'domainBlacklist', 'domainWhitelist', 'parentalThreshold', 'parentalEnabled']);
+    const profiles = data.parentProfiles || [];
+    const id = 'p' + Date.now();
+    profiles.push({
+        id, name,
+        blacklist: data.domainBlacklist || [],
+        whitelist: data.domainWhitelist || [],
+        threshold: data.parentalThreshold || 70,
+        enabled: !!data.parentalEnabled
+    });
+    await chrome.storage.local.set({ parentProfiles: profiles, parentActiveProfileId: id });
+    document.getElementById('profileNameInput').value = '';
+    renderParentProfiles(profiles, id);
+}
+
+async function switchParentProfile(id) {
+    const data = await chrome.storage.local.get(['parentProfiles']);
+    const profile = (data.parentProfiles || []).find(p => p.id === id);
+    if (!profile) return;
+    await chrome.storage.local.set({
+        parentActiveProfileId: id,
+        domainBlacklist: profile.blacklist || [],
+        domainWhitelist: profile.whitelist || [],
+        parentalThreshold: profile.threshold || 70,
+        parentalEnabled: !!profile.enabled
+    });
+    renderParentProfiles(data.parentProfiles || [], id);
+}
+
+function renderParentProfiles(profiles, activeId) {
+    const container = document.getElementById('profileList');
+    if (!container) return;
+    if (!profiles.length) {
+        container.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Chưa có hồ sơ.</div>';
+        return;
+    }
+    container.innerHTML = profiles.map(p => `
+        <div class="profile-item">
+            <span>${escapeHtml(p.name)}</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+                <button class="btn-secondary" data-action="switch" data-id="${p.id}">${p.id === activeId ? 'Đang dùng' : 'Dùng'}</button>
+                <button class="focus-domain-remove" data-action="remove" data-id="${p.id}">✕</button>
+            </div>
+        </div>
+    `).join('');
+
+    container.querySelectorAll('button[data-action="switch"]').forEach(btn => {
+        btn.addEventListener('click', () => switchParentProfile(btn.dataset.id));
+    });
+    container.querySelectorAll('button[data-action="remove"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const data = await chrome.storage.local.get(['parentProfiles', 'parentActiveProfileId']);
+            const next = (data.parentProfiles || []).filter(p => p.id !== btn.dataset.id);
+            const active = data.parentActiveProfileId;
+            const newActive = active === btn.dataset.id ? null : active;
+            await chrome.storage.local.set({ parentProfiles: next, parentActiveProfileId: newActive });
+            renderParentProfiles(next, newActive);
+        });
+    });
+}
+
+document.getElementById('profileAddBtn')?.addEventListener('click', addParentProfile);
+
+document.getElementById('exportParentJson')?.addEventListener('click', async () => {
+    const data = await chrome.storage.local.get(['parentBlockLog']);
+    const blob = new Blob([JSON.stringify(data.parentBlockLog || [], null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    chrome.tabs.create({ url });
+});
+
+document.getElementById('exportParentCsv')?.addEventListener('click', async () => {
+    const data = await chrome.storage.local.get(['parentBlockLog']);
+    const logs = data.parentBlockLog || [];
+    const header = 'time,domain,url,reason,risk\n';
+    const rows = logs.map(l => {
+        const time = new Date(l.ts).toISOString();
+        return `${time},${l.domain || ''},${(l.url || '').replace(/,/g, ' ')},${l.reason || ''},${l.risk ?? ''}`;
+    }).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    chrome.tabs.create({ url });
+});
+
+const RECOVERY_WORDS = ['sach','hoc','tap','viet','anh','toan','ly','hoa','sinh','su','dia','van','bai','lop','truong','kien','thuc','tien','bo','taptrung','muctieu','thoigian','phut','gio','nghi','phan','em','me','bo','tre','an','toan','tin','mang','dong','ban'];
+
+document.getElementById('generateRecoveryBtn')?.addEventListener('click', async () => {
+    const phrase = Array.from({ length: 12 }).map(() => RECOVERY_WORDS[Math.floor(Math.random() * RECOVERY_WORDS.length)]).join(' ');
+    await chrome.storage.local.set({ parentRecoveryPhrase: phrase });
+    const el = document.getElementById('recoveryPhrase');
+    if (el) {
+        el.textContent = phrase;
+        el.classList.remove('hidden');
+    }
+});
+
+document.getElementById('recoveryResetBtn')?.addEventListener('click', async () => {
+    const input = document.getElementById('recoveryInput')?.value?.trim();
+    const data = await chrome.storage.local.get(['parentRecoveryPhrase']);
+    if (!input || input !== data.parentRecoveryPhrase) {
+        alert('Cụm khôi phục không đúng.');
+        return;
+    }
+    await chrome.storage.local.remove(['parentRecoveryPhrase', 'parentalPIN', '__vcg_pc_cfg__']);
+    alert('Đã đặt lại PIN. Vui lòng thiết lập lại trong phần Phụ huynh.');
+});
+
+async function syncActiveParentProfile() {
+    const data = await chrome.storage.local.get([
+        'parentProfiles', 'parentActiveProfileId',
+        'domainBlacklist', 'domainWhitelist',
+        'parentalThreshold', 'parentalEnabled'
+    ]);
+    const id = data.parentActiveProfileId;
+    if (!id) return;
+    const profiles = data.parentProfiles || [];
+    const idx = profiles.findIndex(p => p.id === id);
+    if (idx < 0) return;
+
+    profiles[idx] = {
+        ...profiles[idx],
+        blacklist: data.domainBlacklist || [],
+        whitelist: data.domainWhitelist || [],
+        threshold: data.parentalThreshold || 70,
+        enabled: !!data.parentalEnabled
+    };
+    await chrome.storage.local.set({ parentProfiles: profiles });
+}
+
+// ============================================================================
 // PARENTAL CONTROL (V7.0)
 // ============================================================================
 
 function toggleParentalPanel() {
+    // Switch to parent section
+    document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('topTabParent')?.classList.add('active');
+    document.getElementById('generalSection')?.classList.add('hidden');
+    document.getElementById('studentSection')?.classList.add('hidden');
+    document.getElementById('parentSection')?.classList.remove('hidden');
+
+    document.querySelectorAll('.parent-nav-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.querySelector('.parent-nav-btn[data-parent="parentalPanel"]');
+    if (btn) btn.classList.add('active');
+
     openParentalAuth();
 }
 
@@ -3095,6 +3414,8 @@ async function saveParentalSettings() {
         }),
         chrome.runtime.sendMessage({ type: 'SET_INCOGNITO_MODE', mode: incognitoMode })
     ]);
+
+    await syncActiveParentProfile();
 
     const statusEl = document.getElementById('status');
     if (statusEl) {
@@ -3395,6 +3716,7 @@ function renderDomainList(listType, list) {
             const msgType = listType === 'blacklist' ? 'REMOVE_FROM_BLACKLIST' : 'REMOVE_FROM_WHITELIST';
             await chrome.runtime.sendMessage({ type: msgType, domain });
             await loadDomainLists();
+            await syncActiveParentProfile();
         });
     });
 }
@@ -3411,6 +3733,7 @@ async function addDomainToList(listType) {
     if (result?.ok) {
         if (input) input.value = '';
         await loadDomainLists();
+        await syncActiveParentProfile();
     } else {
         showStatusMessage('⚠️ ' + (result?.error || 'Không thể thêm tên miền'));
     }
@@ -3428,6 +3751,7 @@ async function importDomainList(listType) {
     if (result?.ok) {
         showStatusMessage(`✅ Đã thêm ${result.added} tên miền (tổng: ${result.total})`);
         await loadDomainLists();
+        await syncActiveParentProfile();
     }
 }
 
@@ -3828,12 +4152,17 @@ const BULK_API = 'https://vncontentguard-pro.onrender.com/analyze/v7/bulk';
 let _lastBulkResults = null;
 
 function toggleBulkPanel() {
+    document.querySelectorAll('.top-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('topTabGeneral')?.classList.add('active');
+    document.getElementById('generalSection')?.classList.remove('hidden');
+    document.getElementById('studentSection')?.classList.add('hidden');
+    document.getElementById('parentSection')?.classList.add('hidden');
     const panel = document.getElementById('bulkPanel');
     if (!panel) return;
 
     const isHidden = panel.classList.contains('hidden');
     // Hide other panels
-    ['historyPanel','comparePanel','reportPanel','parentalPanel'].forEach(id => {
+    ['historyPanel','comparePanel','reportPanel','parentalPanel','focusPanel'].forEach(id => {
         document.getElementById(id)?.classList.add('hidden');
     });
     if (isHidden) {

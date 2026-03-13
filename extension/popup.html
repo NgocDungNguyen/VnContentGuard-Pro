@@ -84,6 +84,15 @@
         </div>
         <div id="status" class="status-badge">Sẵn sàng quét</div>
 
+        <!-- TOP-LEVEL SECTIONS (V8) -->
+        <div class="top-tabs">
+            <button class="top-tab active" data-top="general" id="topTabGeneral">Chung</button>
+            <button class="top-tab" data-top="student" id="topTabStudent">Học sinh</button>
+            <button class="top-tab" data-top="parent" id="topTabParent">Phụ huynh</button>
+        </div>
+
+        <div id="generalSection">
+
         <!-- API USAGE DASHBOARD (V7) -->
         <div id="usageDashboard" class="usage-dashboard">
             <div class="usage-row">
@@ -213,6 +222,10 @@
             </div>
         </div>
 
+        </div>
+
+        <div id="studentSection" class="hidden">
+
         <!-- STUDENT FOCUS MODE PANEL (V8) -->
         <div id="focusPanel" class="hidden">
             <div class="card focus-card">
@@ -289,7 +302,20 @@
             </div>
         </div>
 
+        </div>
+
         <!-- PARENTAL AUTH OVERLAY moved to body level below -->
+
+        <div id="parentSection" class="hidden">
+
+        <div class="parent-nav">
+            <button class="parent-nav-btn active" data-parent="parentalPanel">Tổng quan</button>
+            <button class="parent-nav-btn" data-parent="parentLogPanel">Nhật ký</button>
+            <button class="parent-nav-btn" data-parent="parentSchedulePanel">Lịch chặn</button>
+            <button class="parent-nav-btn" data-parent="parentProfilesPanel">Hồ sơ</button>
+            <button class="parent-nav-btn" data-parent="parentReportsPanel">Báo cáo</button>
+            <button class="parent-nav-btn" data-parent="parentRecoveryPanel">Khôi phục</button>
+        </div>
 
         <!-- PARENTAL CONTROL PANEL — only revealed after PIN auth -->
         <div id="parentalPanel" class="hidden">
@@ -414,6 +440,99 @@
                 </div>
 
             </div>
+        </div>
+
+        <!-- PARENT LOG VIEWER (V8) -->
+        <div id="parentLogPanel" class="hidden">
+            <div class="card" style="border-left: 4px solid #e67e22;">
+                <h3>📜 Nhật ký chặn</h3>
+                <div class="parent-log-controls">
+                    <input type="text" id="parentLogSearch" placeholder="Tìm theo domain...">
+                    <select id="parentLogFilter">
+                        <option value="all">Tất cả</option>
+                        <option value="blacklist">Danh sách đen</option>
+                        <option value="risk">Rủi ro</option>
+                        <option value="schedule">Theo lịch</option>
+                    </select>
+                </div>
+                <div id="parentLogList" class="parent-log-list"></div>
+                <div class="parent-log-pager">
+                    <button id="parentLogPrev" class="btn-secondary">◀</button>
+                    <span id="parentLogPage">1</span>
+                    <button id="parentLogNext" class="btn-secondary">▶</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- PARENT SCHEDULE RULES (V8) -->
+        <div id="parentSchedulePanel" class="hidden">
+            <div class="card" style="border-left: 4px solid #2980b9;">
+                <h3>🗓️ Lịch chặn</h3>
+                <div class="schedule-row">
+                    <label>Ngày</label>
+                    <select id="scheduleDays" multiple>
+                        <option value="1">T2</option>
+                        <option value="2">T3</option>
+                        <option value="3">T4</option>
+                        <option value="4">T5</option>
+                        <option value="5">T6</option>
+                        <option value="6">T7</option>
+                        <option value="0">CN</option>
+                    </select>
+                </div>
+                <div class="schedule-row">
+                    <label>Bắt đầu</label>
+                    <input type="time" id="scheduleStart" value="07:00">
+                    <label>Kết thúc</label>
+                    <input type="time" id="scheduleEnd" value="21:00">
+                </div>
+                <div class="schedule-row">
+                    <label>Chế độ</label>
+                    <select id="scheduleMode">
+                        <option value="block">Chặn theo danh sách</option>
+                        <option value="strict">Chỉ cho phép whitelist</option>
+                    </select>
+                </div>
+                <button id="scheduleAddBtn" class="btn-primary" style="padding: 8px;">➕ Thêm lịch</button>
+                <div id="scheduleList" class="schedule-list"></div>
+            </div>
+        </div>
+
+        <!-- PARENT PROFILES (V8) -->
+        <div id="parentProfilesPanel" class="hidden">
+            <div class="card" style="border-left: 4px solid #8e44ad;">
+                <h3>👨‍👩‍👧 Hồ sơ trẻ</h3>
+                <div class="profile-row">
+                    <input type="text" id="profileNameInput" placeholder="Tên hồ sơ">
+                    <button id="profileAddBtn" class="btn-primary">+ Tạo</button>
+                </div>
+                <div id="profileList" class="profile-list"></div>
+            </div>
+        </div>
+
+        <!-- PARENT REPORTS (V8) -->
+        <div id="parentReportsPanel" class="hidden">
+            <div class="card" style="border-left: 4px solid #16a085;">
+                <h3>📤 Báo cáo</h3>
+                <button id="exportParentJson" class="btn-primary" style="padding: 8px;">📥 Xuất JSON</button>
+                <button id="exportParentCsv" class="btn-secondary" style="margin-top:6px;">📥 Xuất CSV</button>
+            </div>
+        </div>
+
+        <!-- PARENT RECOVERY (V8) -->
+        <div id="parentRecoveryPanel" class="hidden">
+            <div class="card" style="border-left: 4px solid #c0392b;">
+                <h3>🔑 Khôi phục PIN</h3>
+                <p style="font-size:11px;color:var(--text-secondary);">Lưu cụm khôi phục an toàn. Dùng để đặt lại PIN nếu quên.</p>
+                <button id="generateRecoveryBtn" class="btn-primary" style="padding: 8px;">Tạo cụm khôi phục</button>
+                <div id="recoveryPhrase" class="hidden" style="margin-top:8px;font-size:12px;line-height:1.4;background:var(--bg-primary);padding:8px;border-radius:6px;"></div>
+                <div class="profile-row" style="margin-top:8px;">
+                    <input type="text" id="recoveryInput" placeholder="Nhập cụm khôi phục">
+                    <button id="recoveryResetBtn" class="btn-secondary">Đặt lại PIN</button>
+                </div>
+            </div>
+        </div>
+
         </div>
 
         <div id="results" class="hidden">

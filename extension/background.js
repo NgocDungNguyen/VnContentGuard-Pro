@@ -216,6 +216,32 @@ async function stopFocusMode(reason = 'manual') {
     return { ok: true };
 }
 
+// Parent block log helper
+async function logParentBlock(reason, url, risk = null) {
+    try {
+        const domain = new URL(url).hostname.replace(/^www\./, '');
+        const data = await chrome.storage.local.get(['parentBlockLog']);
+        const list = data.parentBlockLog || [];
+        list.unshift({ ts: Date.now(), url, domain, reason, risk });
+        await chrome.storage.local.set({ parentBlockLog: list.slice(0, 500) });
+    } catch {}
+}
+
+function isScheduleActive(rule, now = new Date()) {
+    try {
+        const day = now.getDay().toString();
+        if (!rule.days || !rule.days.includes(day)) return false;
+        const [sh, sm] = rule.start.split(':').map(Number);
+        const [eh, em] = rule.end.split(':').map(Number);
+        const start = sh * 60 + sm;
+        const end = eh * 60 + em;
+        const cur = now.getHours() * 60 + now.getMinutes();
+        if (start <= end) return cur >= start && cur <= end;
+        // overnight
+        return cur >= start || cur <= end;
+    } catch { return false; }
+}
+
 // ============================================================================
 // MESSAGE HANDLER — Receives requests from popup.js
 // ============================================================================
@@ -1101,11 +1127,45 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
             }
         }
 
+        // ── Parent schedule rules (V8) ───────────────────────────────────-
+        const scheduleData = await chrome.storage.local.get(['parentScheduleRules', 'domainBlacklist', 'domainWhitelist']);
+        const rules = scheduleData.parentScheduleRules || [];
+        if (rules.length) {
+            const host = new URL(details.url).hostname.replace(/^www\./, '').toLowerCase();
+            const whitelist = (scheduleData.domainWhitelist || []).map(cleanFocusDomain);
+            const blacklist = (scheduleData.domainBlacklist || []).map(cleanFocusDomain);
+
+            const activeRule = rules.find(r => isScheduleActive(r));
+            if (activeRule) {
+                const isAllowed = whitelist.some(entry => focusDomainMatches(host, entry));
+                const isBlocked = blacklist.some(entry => focusDomainMatches(host, entry));
+
+                if (activeRule.mode === 'strict') {
+                    if (!isAllowed) {
+                        await logParentBlock('schedule', details.url, null);
+                        const blockUrl = chrome.runtime.getURL('block.html') +
+                            `?reason=schedule&blockedUrl=${encodeURIComponent(details.url)}`;
+                        chrome.tabs.update(details.tabId, { url: blockUrl });
+                        return;
+                    }
+                } else if (activeRule.mode === 'block') {
+                    if (!isAllowed && isBlocked) {
+                        await logParentBlock('schedule', details.url, null);
+                        const blockUrl = chrome.runtime.getURL('block.html') +
+                            `?reason=schedule&blockedUrl=${encodeURIComponent(details.url)}`;
+                        chrome.tabs.update(details.tabId, { url: blockUrl });
+                        return;
+                    }
+                }
+            }
+        }
+
         const { parentalEnabled } = await chrome.storage.local.get(['parentalEnabled']);
         if (!parentalEnabled) return;
 
         const blocked = await DomainControl.isBlacklisted(details.url);
         if (blocked) {
+            await logParentBlock('blacklist', details.url, null);
             const blockUrl = chrome.runtime.getURL('block.html') +
                 `?reason=blacklist&blockedUrl=${encodeURIComponent(details.url)}`;
             chrome.tabs.update(details.tabId, { url: blockUrl });
@@ -1284,6 +1344,7 @@ chrome.webNavigation.onCompleted.addListener(async (details) => {
             if (cached) {
                 const risk = cached.risk_score_v7?.risk_score || 0;
                 if (risk >= threshold) {
+                    await logParentBlock('risk', url, risk);
                     const blockUrl = chrome.runtime.getURL('block.html') +
                         `?url=${encodeURIComponent(url)}&risk=${risk >= 70 ? 'Cao' : 'Trung bình'}`;
                     chrome.tabs.update(details.tabId, { url: blockUrl });
@@ -1616,6 +1677,21 @@ chrome.runtime.onInstalled.addListener(() => {
         }
         if (!d.focusModeBlacklist || !d.focusModeBlacklist.length) {
             chrome.storage.local.set({ focusModeBlacklist: FOCUS_DEFAULT_BLOCK });
+        }
+    });
+
+    // Initialize default parent profile (V8)
+    chrome.storage.local.get(['parentProfiles', 'domainBlacklist', 'domainWhitelist', 'parentalThreshold', 'parentalEnabled'], (d) => {
+        if (!d.parentProfiles || !d.parentProfiles.length) {
+            const profile = {
+                id: 'p_default',
+                name: 'Mặc định',
+                blacklist: d.domainBlacklist || [],
+                whitelist: d.domainWhitelist || [],
+                threshold: d.parentalThreshold || 70,
+                enabled: !!d.parentalEnabled
+            };
+            chrome.storage.local.set({ parentProfiles: [profile], parentActiveProfileId: 'p_default' });
         }
     });
 });
