@@ -1523,16 +1523,19 @@ body.dark-mode .bulk-result-table td { border-color: #444; }
     justify-content: center;
     z-index: 10000;
     backdrop-filter: blur(3px);
+    padding: 14px;
+    overflow-y: auto;
 }
 .parental-overlay.hidden { display: none; }
 
-/* Modal card — use correct CSS variable --bg-card */
+/* Modal card — large by default, responsive on smaller popup heights */
 .parental-modal {
     background: var(--bg-card, #fff);
     border-radius: 16px;
-    padding: 28px 24px 20px;
-    width: 320px;
-    max-width: 90vw;
+    padding: 30px 26px 22px;
+    width: min(560px, calc(100vw - 28px));
+    max-height: calc(100vh - 28px);
+    overflow-y: auto;
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
     border: 2px solid #8e44ad;
     text-align: center;
@@ -1542,26 +1545,42 @@ body.dark-mode .bulk-result-table td { border-color: #444; }
     from { transform: translateY(-20px); opacity: 0; }
     to   { transform: translateY(0);     opacity: 1; }
 }
-.parental-modal-icon  { font-size: 48px; margin-bottom: 8px; line-height: 1; }
-.parental-modal-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--text-primary); }
-.parental-modal-sub   { font-size: 12px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
+.parental-modal-icon  { font-size: 56px; margin-bottom: 10px; line-height: 1; }
+.parental-modal-title { font-size: 21px; font-weight: 800; margin-bottom: 8px; color: var(--text-primary); }
+.parental-modal-sub   { font-size: 14px; color: var(--text-secondary); margin-bottom: 18px; line-height: 1.55; }
 
-.parental-field { margin-bottom: 12px; text-align: left; }
+@media (max-width: 480px), (max-height: 620px) {
+    .parental-overlay {
+        align-items: flex-start;
+        padding-top: 10px;
+    }
+    .parental-modal {
+        width: calc(100vw - 16px);
+        max-height: calc(100vh - 20px);
+        border-radius: 12px;
+        padding: 18px 14px 14px;
+    }
+    .parental-modal-icon { font-size: 38px; margin-bottom: 6px; }
+    .parental-modal-title { font-size: 17px; margin-bottom: 5px; }
+    .parental-modal-sub { font-size: 12px; margin-bottom: 12px; }
+}
+
+.parental-field { margin-bottom: 14px; text-align: left; }
 .parental-field label {
     display: block;
-    font-size: 11px;
-    font-weight: 600;
+    font-size: 12px;
+    font-weight: 700;
     color: var(--text-secondary);
-    margin-bottom: 4px;
+    margin-bottom: 5px;
 }
 .parental-field input {
     width: 100%;
-    padding: 10px 14px;
-    font-size: 18px;
-    letter-spacing: 6px;
+    padding: 12px 14px;
+    font-size: 20px;
+    letter-spacing: 7px;
     text-align: center;
     border: 2px solid var(--border-color, #ddd);
-    border-radius: 8px;
+    border-radius: 10px;
     background: var(--input-bg, #fff);
     color: var(--text-primary);
     outline: none;
@@ -1569,6 +1588,17 @@ body.dark-mode .bulk-result-table td { border-color: #444; }
     transition: border-color 0.2s;
 }
 .parental-field input:focus { border-color: #8e44ad; }
+
+@media (max-width: 480px), (max-height: 620px) {
+    .parental-field { margin-bottom: 10px; }
+    .parental-field label { font-size: 11px; }
+    .parental-field input {
+        font-size: 17px;
+        letter-spacing: 5px;
+        padding: 9px 10px;
+        border-radius: 8px;
+    }
+}
 
 .parental-error {
     font-size: 12px;
@@ -1583,32 +1613,46 @@ body.dark-mode .bulk-result-table td { border-color: #444; }
 
 .parental-btn-main {
     width: 100%;
-    padding: 12px;
+    padding: 13px;
     background: #8e44ad;
     color: #fff;
     border: none;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 700;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 800;
     cursor: pointer;
-    margin-bottom: 8px;
+    margin-bottom: 9px;
     transition: background 0.2s, transform 0.15s;
 }
 .parental-btn-main:hover { background: #7d3c98; transform: translateY(-1px); }
 
 .parental-btn-cancel {
     width: 100%;
-    padding: 9px;
+    padding: 10px;
     background: transparent;
     color: var(--text-secondary);
     border: 1px solid var(--border-color, #ddd);
-    border-radius: 8px;
-    font-size: 13px;
+    border-radius: 10px;
+    font-size: 14px;
     cursor: pointer;
     margin-bottom: 6px;
     transition: background 0.2s;
 }
 .parental-btn-cancel:hover { background: rgba(0,0,0,0.05); }
+
+@media (max-width: 480px), (max-height: 620px) {
+    .parental-btn-main {
+        font-size: 14px;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 7px;
+    }
+    .parental-btn-cancel {
+        font-size: 13px;
+        border-radius: 8px;
+        padding: 8px;
+    }
+}
 
 .parental-btn-link {
     background: none;
