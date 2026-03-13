@@ -419,12 +419,27 @@ async function loadGeneralImpact() {
     const data = await chrome.storage.local.get([
         'scanHistory', 'parentBlockLog', 'focusModeSessions'
     ]);
-    const scans = (data.scanHistory || []).length;
-    const reports = (data.parentBlockLog || []).filter(l => l.reason === 'blacklist' || l.reason === 'risk' || l.reason === 'schedule').length;
-    const blocked = (data.parentBlockLog || []).length;
+    const scansLocal = (data.scanHistory || []).length;
+    const reportsLocal = (data.parentBlockLog || []).filter(l => l.reason === 'blacklist' || l.reason === 'risk' || l.reason === 'schedule').length;
+    const blockedLocal = (data.parentBlockLog || []).length;
     const focusSessions = data.focusModeSessions || [];
     const focusSec = focusSessions.reduce((s, it) => s + (it.durationSec || 0), 0);
     const focusHours = (focusSec / 3600).toFixed(1);
+
+    let scans = scansLocal;
+    let reports = reportsLocal;
+    let blocked = blockedLocal;
+
+    try {
+        const stats = await chrome.runtime.sendMessage({ type: 'GET_COMMUNITY_STATS' });
+        if (stats && stats.community) {
+            scans = stats.community.total_scans ?? scansLocal;
+            reports = stats.community.total_reports ?? reportsLocal;
+            blocked = stats.community.total_blocked ?? blockedLocal;
+        }
+    } catch {
+        // Use local stats if backend unavailable
+    }
 
     document.getElementById('impactScans').textContent = scans;
     document.getElementById('impactReports').textContent = reports;
@@ -3218,17 +3233,44 @@ function renderFocusReports(sessions) {
 
 function renderFocusSessions(sessions) {
     const list = document.getElementById('focusSessionList');
+    const detail = document.getElementById('focusSessionDetail');
     if (!list) return;
     if (!sessions.length) {
         list.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:8px;">Chưa có phiên Focus.</div>';
+        if (detail) detail.classList.add('hidden');
         return;
     }
-    list.innerHTML = sessions.slice(0, 10).map(s => {
+    const subset = sessions.slice(0, 10);
+    list.innerHTML = subset.map((s, idx) => {
         const start = new Date(s.startTime).toLocaleString();
         const durMin = Math.round((s.durationSec || 0) / 60);
         const top = (s.topDomains || []).map(d => d.domain).join(', ');
-        return `<div class="focus-session-item"><strong>${start}</strong> • ${durMin} phút • ${s.mode || ''}<br>Top: ${escapeHtml(top || 'N/A')}</div>`;
+        return `<div class="focus-session-item" data-idx="${idx}"><strong>${start}</strong> • ${durMin} phút • ${s.mode || ''}<br>Top: ${escapeHtml(top || 'N/A')}</div>`;
     }).join('');
+
+    list.querySelectorAll('.focus-session-item').forEach(item => {
+        item.addEventListener('click', () => {
+            list.querySelectorAll('.focus-session-item').forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            const idx = parseInt(item.dataset.idx || '0', 10);
+            const s = subset[idx];
+            if (!detail || !s) return;
+            const start = new Date(s.startTime).toLocaleString();
+            const end = new Date(s.endTime).toLocaleString();
+            const durMin = Math.round((s.durationSec || 0) / 60);
+            const top = (s.topDomains || []).map(d => `${d.domain} (${d.count})`).join(', ');
+            detail.innerHTML = `
+                <strong>Chi tiết phiên</strong><br>
+                Bắt đầu: ${start}<br>
+                Kết thúc: ${end}<br>
+                Thời lượng: ${durMin} phút<br>
+                Chế độ: ${s.mode || ''}<br>
+                Chặn: ${s.blockedAttempts || 0} lần<br>
+                Top domain: ${escapeHtml(top || 'N/A')}
+            `;
+            detail.classList.remove('hidden');
+        });
+    });
 }
 
 async function exportFocusCsv() {
@@ -3515,7 +3557,16 @@ async function exportParentShareLink() {
 async function exportParentEmail() {
     const data = await chrome.storage.local.get(['parentBlockLog']);
     const logs = data.parentBlockLog || [];
-    const summary = `Tong so bi chan: ${logs.length}\nMoi nhat: ${logs[0]?.domain || 'N/A'}\n`;
+    const header = 'time,domain,url,reason,risk\n';
+    const rows = logs.map(l => {
+        const time = new Date(l.ts).toISOString();
+        return `${time},${l.domain || ''},${(l.url || '').replace(/,/g, ' ')},${l.reason || ''},${l.risk ?? ''}`;
+    }).join('\n');
+    const blob = new Blob([header + rows], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    chrome.tabs.create({ url });
+
+    const summary = `Tong so bi chan: ${logs.length}\nMoi nhat: ${logs[0]?.domain || 'N/A'}\nDinh kem file CSV vua mo.`;
     const mailto = `mailto:?subject=VnContentGuard%20Report&body=${encodeURIComponent(summary)}`;
     chrome.tabs.create({ url: mailto });
 }

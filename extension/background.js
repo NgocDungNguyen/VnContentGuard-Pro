@@ -428,6 +428,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
+    if (message.type === 'GET_COMMUNITY_STATS') {
+        fetchSystemStats().then(result => sendResponse(result));
+        return true;
+    }
+
     // ── feature 7.2 — Domain Blacklist / Whitelist ────────────────────────────
     if (message.type === 'GET_DOMAIN_BLACKLIST') {
         DomainControl.getBlacklist().then(list => sendResponse({ list }));

@@ -2052,8 +2052,24 @@ body.dark-mode .parental-save-btn:hover { background: #6c3483; }
 .focus-session-item {
     padding: 6px;
     border-bottom: 1px dashed var(--border-color);
+    cursor: pointer;
 }
 .focus-session-item:last-child { border-bottom: none; }
+
+.focus-session-item.active {
+    background: rgba(22,160,133,0.08);
+    border-radius: 6px;
+}
+
+.focus-session-detail {
+    margin-top: 8px;
+    padding: 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    font-size: 11px;
+    line-height: 1.4;
+}
 
 .focus-domain-item {
     display: flex;
@@ -2120,6 +2136,7 @@ body.dark-mode .focus-time-btn.active { background: #1abc9c; border-color: #1abc
 body.dark-mode .focus-domain-list { background: #2d2d3d; border-color: #444; }
 body.dark-mode .focus-report-card { background: #2d2d3d; border-color: #444; }
 body.dark-mode .focus-session-list { background: #2d2d3d; border-color: #444; }
+body.dark-mode .focus-session-detail { background: #2d2d3d; border-color: #444; }
 
 /* ============================================================================
    TOP-LEVEL TABS (GENERAL / STUDENT / PARENT)
@@ -2327,3 +2344,5 @@ body.dark-mode .profile-list {
     background: #2d2d3d;
     border-color: #444;
 }
+
+body.dark-mode .impact-item { background: #2d2d3d; border-color: #444; }
